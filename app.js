@@ -1099,7 +1099,7 @@
       else if (rlow.includes(lower)) score += 30;
       if (text.includes(lower)) score += 10;
       if (score <= 0) return;
-      const routeKey = `${r.co}|${r.route}|${r.service}`;
+      const routeKey = `${r.co}|${r.route}`;
       const prior = seenRoutes.get(routeKey);
       if (prior) {
         if (score > prior.score) {
@@ -1218,7 +1218,7 @@
           ? (m.data._lineView ? `MTR|${m.data.route}|LINE|` : `MTR|${m.data.stop || m.data.route}|STATION|`)
           : (m.data.co === 'LRT'
               ? `LRT|${m.data.route}`
-              : `${m.data.co}|${m.data.route}|${m.data.service}`);
+              : `${m.data.co}|${m.data.route}`);
         const tally = seenRoutes.get(routeKey);
         out.dupCount = (tally && tally.count > 1) ? tally.count : 0;
       }
