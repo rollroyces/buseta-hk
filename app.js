@@ -2542,8 +2542,12 @@
         const right = el('div', { class: 'arrival-card-right' });
         r.arrivals.slice(0, 3).forEach((a, i) => {
           if (i === 0) {
-            const primary = el('div', { class: 'arrival-card-primary' });
-            if (a.minutes == null || a.minutes <= 0) {
+            const pcls = ['arrival-card-primary'];
+            if (a.minutes != null && a.minutes > 0 && a.minutes <= 2) pcls.push('is-soon');
+            const isNow = (a.minutes == null || a.minutes <= 0);
+            if (isNow) pcls.push('is-now');
+            const primary = el('div', { class: pcls.join(' ') });
+            if (isNow) {
               primary.appendChild(el('span', { class: 'arrival-card-now' }, t_str('arriving')));
             } else {
               primary.appendChild(el('span', { class: 'arrival-card-mins' }, String(a.minutes)));
