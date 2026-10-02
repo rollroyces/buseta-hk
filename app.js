@@ -1638,6 +1638,8 @@
     state.detailRoute = r;
     state.detailStop = null;
     stopEtaRefresh();
+    // Track every route visit in 最近查過 (not just saved ones).
+    pushRecent({ co: r.co, route: r.route, dir: r.dir, service: r.service });
 
     // --- MTR heavy rail line ---
     if (r.co === 'MTR' && r.dir === 'LINE') {
@@ -2424,6 +2426,8 @@
     state.detailStop = r;
     state.detailRoute = null;
     stopEtaRefresh();
+    // Track every stop visit in 最近查過 (not just saved ones).
+    pushRecent({ stop: r.stop, co: r.co });
 
     // Dispatch on co.
     if (r.co === 'MTR') return renderMtrStationView(r.stop);
