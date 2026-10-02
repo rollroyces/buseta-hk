@@ -96,6 +96,43 @@
 
 <template id="tpl-home">
   <div class="container">
+    <section class="operators-strip" aria-label="支援巴士公司">
+      <h2 class="section-title" data-i18n="operatorsTitle">支援巴士公司</h2>
+      <div class="op-chips">
+        <div class="op-chip op-kmb" role="img" aria-label="九巴 KMB">
+          <svg class="op-mark" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+            <rect x="4" y="5" width="16" height="11" rx="2" fill="currentColor" opacity="0.9"/>
+            <rect x="6" y="7" width="12" height="3" rx="1" fill="#fff" opacity="0.9"/>
+            <circle cx="8" cy="17.5" r="1.6" fill="currentColor"/>
+            <circle cx="16" cy="17.5" r="1.6" fill="currentColor"/>
+          </svg>
+          <span class="op-abbr">KMB</span>
+          <span class="op-name">九巴</span>
+        </div>
+        <div class="op-chip op-ctb" role="img" aria-label="城巴 Citybus">
+          <svg class="op-mark" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+            <rect x="4" y="5" width="16" height="11" rx="2" fill="currentColor" opacity="0.9"/>
+            <rect x="6" y="7" width="12" height="3" rx="1" fill="#fff" opacity="0.9"/>
+            <circle cx="8" cy="17.5" r="1.6" fill="currentColor"/>
+            <circle cx="16" cy="17.5" r="1.6" fill="currentColor"/>
+          </svg>
+          <span class="op-abbr">CTB</span>
+          <span class="op-name">城巴</span>
+        </div>
+        <div class="op-chip op-nwfb" role="img" aria-label="新巴 NWFB">
+          <svg class="op-mark" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+            <rect x="4" y="5" width="16" height="11" rx="2" fill="currentColor" opacity="0.9"/>
+            <rect x="6" y="7" width="12" height="3" rx="1" fill="#fff" opacity="0.9"/>
+            <circle cx="8" cy="17.5" r="1.6" fill="currentColor"/>
+            <circle cx="16" cy="17.5" r="1.6" fill="currentColor"/>
+          </svg>
+          <span class="op-abbr">NWFB</span>
+          <span class="op-name">新巴</span>
+        </div>
+      </div>
+      <p class="op-disclaimer" data-i18n="operatorsNote">獨立第三方應用。資料由各營辦商透過運輸署公開數據提供。</p>
+    </section>
+
     <h2 class="section-title" data-i18n="savedRoutes">收藏路線</h2>
     <div data-bind="savedRoutes"></div>
 
