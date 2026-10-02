@@ -904,8 +904,18 @@
     const h = location.hash.replace(/^#/, '') || '/';
     if (h === '/' || h === '') return { view: 'home' };
     if (h === '/search') return { view: 'search' };
-    let m = h.match(/^\/route\/([^/]+)\/([^/]+)\/([^/]+)\/(.*)$/);
-    if (m) return { view: 'route', co: decodeURIComponent(m[1]), route: decodeURIComponent(m[2]), dir: decodeURIComponent(m[3]), service: decodeURIComponent(m[4]) };
+    // /route/<co>/<route>/<dir>/<service>[/<stop_seq>]
+    let m = h.match(/^\/route\/([^/]+)\/([^/]+)\/([^/]+)\/([^/]+)(?:\/([^/]+))?$/);
+    if (m) {
+      return {
+        view: 'route',
+        co: decodeURIComponent(m[1]),
+        route: decodeURIComponent(m[2]),
+        dir: decodeURIComponent(m[3]),
+        service: decodeURIComponent(m[4]),
+        stopSeq: m[5] ? decodeURIComponent(m[5]) : null,
+      };
+    }
     m = h.match(/^\/stop\/(.+)$/);
     if (m) return { view: 'stop', stop: decodeURIComponent(m[1]) };
     return { view: 'error' };
@@ -1607,10 +1617,23 @@
       });
 
       const list = el('div', { class: 'eta-list' });
+      // Pick the row that should be highlighted (the user's current stop)
+      // and remember its DOM node so we can scroll it into view below.
+      let targetRow = null;
+      const targetSeq = (r.stopSeq && /^\d+$/.test(r.stopSeq)) ? parseInt(r.stopSeq, 10) : null;
       stops.forEach((s, idx) => {
+        const seq = idx + 1;
         const isOrigin = idx === 0;
-        const row = el('a', { class: `stop-row${isOrigin ? ' is-origin' : ''}`, href: `#/stop/${encodeURIComponent(s.stop)}` });
-        row.appendChild(el('span', { class: 'stop-idx' }, String(idx + 1)));
+        const isTarget = targetSeq && seq === targetSeq;
+        const classes = ['stop-row'];
+        if (isOrigin) classes.push('is-origin');
+        if (isTarget) classes.push('is-target');
+        const row = el('a', { class: classes.join(' '), href: `#/stop/${encodeURIComponent(s.stop)}` });
+        row.appendChild(el('span', { class: 'stop-idx' }, String(seq)));
+        if (isTarget) {
+          row.dataset.targetSeq = String(seq);
+          targetRow = row;
+        }
         const info = el('div', { class: 'stop-info' });
         info.appendChild(el('div', { class: 'stop-name-row' }, pickFirst(s.nameTc, s.nameEn) || s.stop));
         if (s.nameEn) info.appendChild(el('div', { class: 'stop-name-en' }, s.nameEn));
@@ -1635,6 +1658,14 @@
         list.appendChild(row);
       });
       body.replaceChildren(el('h2', { class: 'section-title' }, t_str('showingStop', stops.length)), list);
+      // Anchor the view at the user's current stop, justarrived-style.
+      if (targetRow) {
+        requestAnimationFrame(() => {
+          try {
+            targetRow.scrollIntoView({ behavior: 'auto', block: 'center' });
+          } catch {}
+        });
+      }
     }).catch(() => {
       body.replaceChildren(el('p', { class: 'empty' }, t_str('routeNotFound')));
     });
@@ -1964,10 +1995,22 @@
           }
         });
         const list = el('div', { class: 'eta-list' });
+        // Anchor at the user's current stop_seq if supplied.
+        let targetRow = null;
+        const targetSeq = (r.stopSeq && /^\d+$/.test(r.stopSeq)) ? parseInt(r.stopSeq, 10) : null;
         stops.forEach((s, idx) => {
+          const seq = idx + 1;
           const isOrigin = idx === 0;
-          const row = el('a', { class: `stop-row${isOrigin ? ' is-origin' : ''}`, href: `#/stop/${encodeURIComponent(s.stop)}` });
-          row.appendChild(el('span', { class: 'stop-idx' }, String(idx + 1)));
+          const isTarget = targetSeq && seq === targetSeq;
+          const classes = ['stop-row'];
+          if (isOrigin) classes.push('is-origin');
+          if (isTarget) classes.push('is-target');
+          const row = el('a', { class: classes.join(' '), href: `#/stop/${encodeURIComponent(s.stop)}` });
+          row.appendChild(el('span', { class: 'stop-idx' }, String(seq)));
+          if (isTarget) {
+            row.dataset.targetSeq = String(seq);
+            targetRow = row;
+          }
           const info = el('div', { class: 'stop-info' });
           info.appendChild(el('div', { class: 'stop-name-row' }, pickFirst(s.nameTc, s.nameEn) || s.stop));
           if (s.nameEn) info.appendChild(el('div', { class: 'stop-name-en' }, s.nameEn));
@@ -1992,6 +2035,11 @@
           list.appendChild(row);
         });
         body.replaceChildren(el('h2', { class: 'section-title' }, t_str('showingStop', stops.length)), list);
+        if (targetRow) {
+          requestAnimationFrame(() => {
+            try { targetRow.scrollIntoView({ behavior: 'auto', block: 'center' }); } catch {}
+          });
+        }
       })
       .catch(() => body.replaceChildren(el('p', { class: 'empty' }, t_str('routeNotFound'))));
 
@@ -2287,9 +2335,14 @@
           .sort((a, b) => (minutesUntil(a.etas[0].eta) ?? 999) - (minutesUntil(b.etas[0].eta) ?? 999))
           .forEach((g) => {
             const destStr = pickFirst(g.destTc, g.destEn);
+            // Use the matching ETA's stop_seq (the position of THIS stop in
+            // the route's stop sequence) so the route detail can anchor
+            // itself to where the user came from.
+            const seq = (g.etas[0] && g.etas[0].seq != null) ? String(g.etas[0].seq) : '';
+            const href = `#/route/${encodeURIComponent(g.co)}/${encodeURIComponent(g.route)}/${encodeURIComponent(g.dir)}/${encodeURIComponent(g.service)}${seq ? '/' + encodeURIComponent(seq) : ''}`;
             const row = el('a', {
               class: 'row',
-              href: `#/route/${encodeURIComponent(g.co)}/${encodeURIComponent(g.route)}/${encodeURIComponent(g.dir)}/${encodeURIComponent(g.service)}`,
+              href,
             });
             row.appendChild(makeBadge(g.co));
             const main = el('div', { class: 'row-main' });
@@ -2428,7 +2481,10 @@
       wrap.appendChild(el('h2', { class: 'section-title' }, t_str('showingStop', list.length)));
       const ul = el('div', { class: 'list' });
       rows.forEach((row) => {
-        const li = el('div', { class: 'row' });
+        // Anchor the route detail at THIS stop_seq so the user lands at
+        // their current stop, just like justarrived.grok.me.
+        const href = `#/route/GMB/${encodeURIComponent(row.routeId)}/${encodeURIComponent(row.routeSeq)}/${encodeURIComponent(row.stopSeq)}`;
+        const li = el('a', { class: 'row', href });
         li.appendChild(makeBadge('GMB'));
         const main = el('div', { class: 'row-main' });
         main.appendChild(el('div', { class: 'row-title' }, row.name || ''));
@@ -2438,6 +2494,7 @@
           row === head && etaInfo
             ? el('span', { class: 'row-eta' }, `${etaInfo.diff} ${t_str('minShort')}`)
             : el('div', { class: 'row-dim' }, t_str('scheduled'))));
+        li.appendChild(makeChev());
         ul.appendChild(li);
       });
       wrap.appendChild(ul);
