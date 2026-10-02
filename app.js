@@ -109,6 +109,10 @@
       gmapsKeySaved: '已儲存',
       gmapsKeyCleared: '已清除',
       clearKey: '清除',
+      fare: '車費',
+      updatedJust: '剛剛更新',
+      updatedMeta: '到站時間每分鐘更新',
+      refresh: '更新',
     },
     'en': {
       brandSub: 'Hong Kong Bus',
@@ -199,6 +203,10 @@
       gmapsKeySaved: 'Saved',
       gmapsKeyCleared: 'Cleared',
       clearKey: 'Clear',
+      fare: 'Fare',
+      updatedJust: 'Just updated',
+      updatedMeta: 'Live arrivals refresh every minute',
+      refresh: 'Refresh',
     },
   };
 
@@ -1507,9 +1515,16 @@
     const meta = state.index.routes.get(key) || state.index.ctbRoutes.get(key) || null;
     const dest = meta ? pickFirst(meta.destTc, meta.destEn) : r.route;
     const orig = meta ? pickFirst(meta.origTc, meta.origEn) : '';
+    const origEn = meta ? meta.origEn || '' : '';
     const dirLabel = r.dir === 'I' ? t_str('inbound') : t_str('outbound');
 
-    header.appendChild(buildRouteHeader(r.co, r.route, r.dir, r.service, dest, orig, dirLabel));
+    // Build direction pills: same route, other bound(s).
+    const directions = buildDirectionPills(r.co, r.route, r.service, dirLabel);
+    header.appendChild(buildRouteHeader({
+      co: r.co, route: r.route, dir: r.dir, service: r.service,
+      dest, orig, origEn, dirLabel, fare: meta && meta.fares && meta.fares[0],
+      directions, currentDirKey: key, currentDirKeyDir: r.dir,
+    }));
     body.appendChild(el('p', { class: 'muted' }, t_str('loading')));
 
     fetchKmbRouteStop(r.route, r.dir, r.service).then(async (resp) => {
@@ -1583,15 +1598,12 @@
     const lineMeta = state.index.mtr.get(`MTR|${lineCode}`);
     const lineLabel = lineMeta ? pickFirst(lineMeta.origTc, lineMeta.origEn) : lineCode;
 
-    // Header is not saveable for line view (saves use a station key); keep a plain header.
-    const head = el('div', { class: 'route-header' });
-    const top = el('div', { class: 'route-head-top' });
-    top.appendChild(el('div', { class: 'route-badge' }, lineCode));
-    top.appendChild(el('span', { class: 'route-op' }, t_str('mtr')));
-    head.appendChild(top);
-    head.appendChild(el('div', { class: 'route-dest' }, lineLabel));
-    head.appendChild(el('div', { class: 'route-dest-sub' }, t_str('allLines')));
-    header.appendChild(head);
+    header.appendChild(buildRouteHeader({
+      co: 'MTR', route: lineCode, dir: 'LINE', service: '',
+      dest: lineLabel, orig: t_str('allLines'), origEn: lineMeta ? lineMeta.origEn : '',
+      dirLabel: '', fare: null, directions: [],
+      currentDirKey: `MTR|${lineCode}|LINE|`,
+    }));
     body.appendChild(el('p', { class: 'muted' }, t_str('loading')));
 
     // Build the list of stations on this line (in sequence for a representative direction).
@@ -1668,7 +1680,12 @@
     const stationLines = (station && station.lines) || [];
     const dirLabel = ''; // station view shows both directions.
 
-    header.appendChild(buildRouteHeader('MTR', stationCode, 'STATION', '', stationName, '', dirLabel));
+    header.appendChild(buildRouteHeader({
+      co: 'MTR', route: stationCode, dir: 'STATION', service: '',
+      dest: stationName, orig: stationLines.join(' · '), origEn: station ? station.nameEn : '',
+      dirLabel: '', fare: null, directions: [],
+      currentDirKey: `MTR|${stationCode}|STATION|`,
+    }));
     body.innerHTML = '';
     body.appendChild(el('p', { class: 'muted' }, t_str('loading')));
 
@@ -1772,7 +1789,13 @@
     const stopsForDir = meta._stops || [];
     const dirLabel = meta.dir === '1' ? t_str('dirUp') : t_str('dirDown');
 
-    header.appendChild(buildRouteHeader('LRT', r.route, meta.dir || '1', '', pickFirst(meta.destTc, meta.destEn), pickFirst(meta.origTc, meta.origEn), dirLabel));
+    header.appendChild(buildRouteHeader({
+      co: 'LRT', route: r.route, dir: meta.dir || '1', service: '',
+      dest: pickFirst(meta.destTc, meta.destEn), orig: pickFirst(meta.origTc, meta.origEn),
+      origEn: meta.destEn || '', dirLabel, fare: null,
+      directions: buildDirectionPills('LRT', r.route, '', dirLabel),
+      currentDirKey: `LRT|${r.route}|${meta.dir || '1'}|`,
+    }));
     body.appendChild(el('p', { class: 'muted' }, t_str('loading')));
 
     // Fetch LRT schedules for first 3 stops concurrently.
@@ -1840,11 +1863,15 @@
     body.innerHTML = '';
 
     const meta = state.index.routes.get(makeRouteKey('GMB', r.route, r.dir, r.service));
+    const displayRoute = (meta && meta._region && meta._code) ? `${meta._code} (${meta._region})` : r.route;
     if (!meta || !meta._routeId) {
       body.replaceChildren(el('p', { class: 'muted' }, t_str('loadingRoutes')));
-      // Could be the route entry hasn't been enriched — show notice and retry.
-      header.appendChild(buildRouteHeader('GMB', r.route, r.dir || '1', r.service, r.route, '', ''));
-      // Try to fetch now.
+      header.appendChild(buildRouteHeader({
+        co: 'GMB', route: displayRoute, dir: r.dir || '1', service: r.service,
+        dest: r.route, orig: '', origEn: '', dirLabel: '',
+        directions: buildDirectionPills('GMB', r.route, r.service, ''),
+        currentDirKey: makeRouteKey('GMB', r.route, r.dir || '1', r.service),
+      }));
       if (r._region && r._code) {
         fetchGmbRoute(r._region, r._code).then((resp) => {
           const arr = (resp && Array.isArray(resp.data)) ? resp.data : [];
@@ -1854,7 +1881,13 @@
       }
       return;
     }
-    header.appendChild(buildRouteHeader('GMB', r.route, r.dir, r.service, pickFirst(meta.destTc, meta.destEn), pickFirst(meta.origTc, meta.origEn), ''));
+    header.appendChild(buildRouteHeader({
+      co: 'GMB', route: displayRoute, dir: r.dir, service: r.service,
+      dest: pickFirst(meta.destTc, meta.destEn), orig: pickFirst(meta.origTc, meta.origEn),
+      origEn: meta.origEn || '', dirLabel: '', fare: null,
+      directions: buildDirectionPills('GMB', r.route, r.service, ''),
+      currentDirKey: makeRouteKey('GMB', r.route, r.dir, r.service),
+    }));
     body.appendChild(el('p', { class: 'muted' }, t_str('loading')));
 
     // Fetch stops for the chosen direction.
@@ -1923,28 +1956,205 @@
     renderGmbRoute(updated);
   }
 
-  function buildRouteHeader(co, route, dir, service, dest, orig, dirLabel) {
+  // Render the route header in the justarrived.grok.me style: huge route badge,
+  // destination title, origin/operator sub-line, optional fare + English subtitle,
+  // and side-by-side direction pills (one filled red, one outlined) so the user
+  // can flip inbound/outbound inline.
+  function buildRouteHeader(opts) {
+    const { co, route, dir, service, dest, orig, origEn, dirLabel, fare, directions, currentKey, currentDirKey, isMapRoute = false } = opts;
     const head = el('div', { class: 'route-header' });
-    const top = el('div', { class: 'route-head-top' });
-    top.appendChild(el('div', { class: 'route-badge' }, route));
-    top.appendChild(el('span', { class: 'route-op' }, t_str(opCoKey(co))));
-    head.appendChild(top);
-    head.appendChild(el('div', { class: 'route-dest' }, dest || route));
-    if (orig && dirLabel) head.appendChild(el('div', { class: 'route-dest-sub' }, `${dirLabel} · ${orig}`));
-    else if (orig) head.appendChild(el('div', { class: 'route-dest-sub' }, orig));
 
-    const actions = el('div', { class: 'route-actions' });
+    // ---- top action bar ----
+    const topbar = el('div', { class: 'route-topbar' });
+    topbar.appendChild(el('a', {
+      class: 'route-back',
+        'aria-label': t_str('back'),
+        href: '#/',
+      }, (0, function () {
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('viewBox', '0 0 24 24');
+        svg.setAttribute('width', '22'); svg.setAttribute('height', '22');
+        svg.setAttribute('aria-hidden', 'true');
+        const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        p.setAttribute('fill', 'none'); p.setAttribute('stroke', 'currentColor');
+        p.setAttribute('stroke-width', '2'); p.setAttribute('stroke-linecap', 'round');
+        p.setAttribute('stroke-linejoin', 'round'); p.setAttribute('d', 'M15 6l-6 6 6 6');
+        svg.appendChild(p);
+        return svg;
+      })()
+    ));
+
+    const topRight = el('div', { class: 'route-topbar-right' });
+    const langPill = el('span', { class: 'route-lang-pill' }, state.lang === 'en' ? '繁體中文' : 'English');
+    topRight.appendChild(langPill);
+
     const favKey = { co, route, dir, service };
     const isFav = state.savedRoutes.some((x) => sameRoute(x, favKey));
-    actions.appendChild(el('button', {
-      class: 'btn-secondary', type: 'button',
+    const star = el('button', {
+      type: 'button',
+      class: `route-fav ${isFav ? 'is-fav' : ''}`,
+      'aria-label': isFav ? t_str('saved') : t_str('save'),
+      'aria-pressed': String(isFav),
       onclick: () => {
         toggleSaveRoute(favKey);
-        head.replaceChildren(...buildRouteHeader(co, route, dir, service, dest, orig, dirLabel).childNodes);
+        head.replaceChildren(...buildRouteHeader(opts).childNodes);
       },
-    }, isFav ? t_str('saved') : t_str('save')));
-    head.appendChild(actions);
+    });
+    star.appendChild(starIconSVG(isFav));
+    topRight.appendChild(star);
+    topbar.appendChild(topRight);
+    head.appendChild(topbar);
+
+    // ---- main route summary ----
+    const summary = el('div', { class: 'route-summary' });
+    const numWrap = el('div', { class: 'route-num-wrap' });
+    numWrap.appendChild(el('h1', { class: 'route-num' }, route));
+    summary.appendChild(numWrap);
+
+    if (co && co !== 'STOP') {
+      summary.appendChild(el('span', { class: 'route-op-pill' }, t_str(opCoKey(co))));
+    }
+    head.appendChild(summary);
+
+    // Destination (large title)
+    if (dest) head.appendChild(el('h2', { class: 'route-dest' }, dest));
+
+    // Origin · operator sub-line
+    if (orig) {
+      const sub = el('p', { class: 'route-sub' });
+      const opName = t_str(opCoKey(co));
+      sub.appendChild(document.createTextNode(`${orig}${opName ? ' · ' + opName : ''}`));
+      head.appendChild(sub);
+    }
+
+    // Fare (if available)
+    if (fare != null && fare !== '') {
+      head.appendChild(el('p', { class: 'route-fare' }, `${t_str('fare')} ${fare}`));
+    }
+
+    // English subtitle
+    if (origEn) head.appendChild(el('p', { class: 'route-sub-en' }, origEn));
+
+    // ---- direction pills (one filled red, others outlined) ----
+    if (Array.isArray(directions) && directions.length > 1) {
+      const pills = el('div', { class: 'route-dir-pills', role: 'tablist' });
+      for (const d of directions) {
+        const isCurrent = (d.key === currentDirKey) || (d.dir === dir && d.service === service);
+        const pill = el('a', {
+          class: `route-dir-pill ${isCurrent ? 'is-current' : ''}`,
+          href: `#/route/${encodeURIComponent(d.co)}/${encodeURIComponent(d.route)}/${encodeURIComponent(d.dir)}/${encodeURIComponent(d.service)}`,
+          role: 'tab',
+          'aria-selected': String(isCurrent),
+        }, d.label);
+        pills.appendChild(pill);
+      }
+      head.appendChild(pills);
+    }
+
+    // ---- update indicator + manual refresh ----
+    const updated = el('div', { class: 'route-updated' });
+    const updateLeft = el('div', { class: 'route-updated-left' });
+    updateLeft.appendChild(el('p', { class: 'route-updated-when', 'data-bind': 'route-updated-when' }, t_str('updatedJust')));
+    updateLeft.appendChild(el('p', { class: 'route-updated-meta' }, t_str('updatedMeta')));
+    updated.appendChild(updateLeft);
+
+    const refreshBtn = el('button', {
+      type: 'button',
+      class: 'route-refresh',
+      'aria-label': t_str('refresh'),
+      onclick: () => { if (typeof state._refreshRoute === 'function') state._refreshRoute(); else location.reload(); },
+    }, refreshIconSVG());
+    updated.appendChild(refreshBtn);
+    head.appendChild(updated);
+
     return head;
+  }
+
+  // Filled / outline star SVG for the favorite toggle.
+  function starIconSVG(filled) {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('width', '22'); svg.setAttribute('height', '22');
+    svg.setAttribute('aria-hidden', 'true');
+    const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    p.setAttribute('d', 'M12 2.5l2.95 5.98 6.6.96-4.78 4.66 1.13 6.57L12 17.96l-5.9 3.1 1.13-6.57L2.45 9.44l6.6-.96L12 2.5z');
+    if (filled) {
+      p.setAttribute('fill', 'currentColor');
+      p.setAttribute('stroke', 'currentColor');
+    } else {
+      p.setAttribute('fill', 'none');
+      p.setAttribute('stroke', 'currentColor');
+      p.setAttribute('stroke-width', '1.8');
+      p.setAttribute('stroke-linejoin', 'round');
+    }
+    svg.appendChild(p);
+    return svg;
+  }
+
+  function refreshIconSVG() {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('width', '18'); svg.setAttribute('height', '18');
+    svg.setAttribute('aria-hidden', 'true');
+    const a = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    a.setAttribute('d', 'M21 12a9 9 0 1 1-3.4-7.05');
+    a.setAttribute('fill', 'none'); a.setAttribute('stroke', 'currentColor');
+    a.setAttribute('stroke-width', '2'); a.setAttribute('stroke-linecap', 'round');
+    svg.appendChild(a);
+    const b = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    b.setAttribute('d', 'M21 4v5h-5');
+    b.setAttribute('fill', 'none'); b.setAttribute('stroke', 'currentColor');
+    b.setAttribute('stroke-width', '2'); b.setAttribute('stroke-linecap', 'round'); b.setAttribute('stroke-linejoin', 'round');
+    svg.appendChild(b);
+    return svg;
+  }
+
+  // Build the list of direction pills for a route header. Scans the index
+  // for every entry of the same operator + route (same bound/code/etc.) and
+  // returns a sorted, de-duped list of { co, route, dir, service, label }.
+  function buildDirectionPills(co, route, service, currentDirLabel) {
+    const seen = new Set();
+    const out = [];
+    const tryAdd = (entry, label) => {
+      if (!entry) return;
+      const dKey = String(entry.dir);
+      const sKey = String(entry.service);
+      const key = `${entry.co}|${entry.route}|${dKey}|${sKey}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      out.push({
+        co: entry.co, route: entry.route, dir: dKey, service: sKey,
+        label: label, key,
+      });
+    };
+
+    // Search the operator's routes map (KMB / LWB / CTB / NWFB / GMB / LRT).
+    if (state.index) {
+      const isMtr = co === 'MTR';
+      state.index.routes.forEach((entry) => {
+        if (entry.co !== co) return;
+        if (String(entry.route) !== String(route)) return;
+        const label = pickFirst(entry.destTc, entry.destEn) || entry.origTc || '';
+        tryAdd(entry, label);
+      });
+      if (state.index.ctbRoutes) {
+        state.index.ctbRoutes.forEach((entry) => {
+          if (entry.co !== co) return;
+          if (String(entry.route) !== String(route)) return;
+          const label = pickFirst(entry.destTc, entry.destEn) || entry.origTc || '';
+          tryAdd(entry, label);
+        });
+      }
+      if (state.index.lrt && state.index.lrt.routes) {
+        state.index.lrt.routes.forEach((entry) => {
+          if (entry.co !== co) return;
+          if (String(entry.route) !== String(route)) return;
+          const label = pickFirst(entry.destTc, entry.destEn) || '';
+          tryAdd(entry, label);
+        });
+      }
+    }
+    return out;
   }
 
   function toggleSaveRoute(r) {
@@ -2247,7 +2457,19 @@
   // ------------------------------------------------------------------
   function startEtaRefresh(fn) {
     clearInterval(state.refreshTimer);
-    state.refreshTimer = setInterval(() => fn(), REFRESH_INTERVAL_MS);
+    state.refreshTimer = setInterval(() => {
+      fn();
+      updateRouteTimestamp();
+    }, REFRESH_INTERVAL_MS);
+    updateRouteTimestamp();
+  }
+  function updateRouteTimestamp() {
+    const el2 = document.querySelector('[data-bind="route-updated-when"]');
+    if (!el2) return;
+    const d = new Date();
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    el2.textContent = `${t_str('updatedJust')} · ${hh}:${mm}`;
   }
   function stopEtaRefresh() {
     if (state.refreshTimer) { clearInterval(state.refreshTimer); state.refreshTimer = null; }
