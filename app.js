@@ -1597,6 +1597,31 @@
     return Math.max(0, Math.round(ms / 60000));
   }
 
+  // Run an async worker against each item in `items`, with at most `cap`
+  // in-flight at any time. Returns an array of settled results in the
+  // same order as `items`. Used to fan out per-stop ETA requests without
+  // hammering the upstream APIs on long routes.
+  async function fetchStopsWithCap(items, cap, worker) {
+    const results = new Array(items.length);
+    let next = 0;
+    async function runOne() {
+      const i = next++;
+      if (i >= items.length) return;
+      try {
+        const value = await worker(items[i], i);
+        results[i] = { status: 'fulfilled', value };
+      } catch (e) {
+        results[i] = { status: 'rejected', reason: e };
+      }
+      await runOne();
+    }
+    const runners = [];
+    const startCount = Math.min(cap, items.length);
+    for (let k = 0; k < startCount; k++) runners.push(runOne());
+    await Promise.all(runners);
+    return results;
+  }
+
   // ------------------------------------------------------------------
   // Route detail
   // ------------------------------------------------------------------
@@ -1678,17 +1703,18 @@
           };
         });
 
-      // Live arrivals for the first 4 stops. CTB/NWFB stops use the Citybus
-      // ETA endpoint; KMB-format stops use the KMB endpoint.
-      const firstStops = stops.slice(0, 4);
-      const etaResults = await Promise.allSettled(firstStops.map((s) => {
+      // Live arrivals for every stop on the route. CTB/NWFB stops use the
+      // Citybus ETA endpoint; KMB-format stops use the KMB endpoint. We
+      // run requests with a small concurrency cap so routes with 30+ stops
+      // don't fire dozens of simultaneous calls to the upstream APIs.
+      const etaResults = await fetchStopsWithCap(stops, 8, (s) => {
         if (isCitybus) return fetchCitybusStopEta(s.stop, r.route);
         return fetchKmbStopEta(s.stop);
-      }));
+      });
       const etaByStop = new Map();
-      firstStops.forEach((s, i) => {
+      stops.forEach((s, i) => {
         const rr = etaResults[i];
-        if (rr.status === 'fulfilled' && rr.value && Array.isArray(rr.value.data)) {
+        if (rr && rr.status === 'fulfilled' && rr.value && Array.isArray(rr.value.data)) {
           etaByStop.set(s.stop, rr.value.data
             .filter((e) => e.route === r.route
               && (isCitybus || (e.dir === r.dir && String(e.service_type) === String(r.service))))
