@@ -1031,8 +1031,26 @@
     } else {
       const ul = el('div', { class: 'list' });
       state.recent.slice(0, 8).forEach((r) => {
-        if (r.stop) ul.appendChild(stopRow({ stop: r.stop }));
-        else if (r.route) ul.appendChild(routeRow(r));
+        if (r.stop) {
+          ul.appendChild(stopRow({ stop: r.stop, co: r.co }));
+        } else if (r.route) {
+          // Hydrate the recent item with the current route meta (dest/orig
+          // are not stored in localStorage — look them up from the index so
+          // the row shows a useful destination instead of an empty string).
+          const meta = (state.index && (state.index.routes.get(makeRouteKey(r.co, r.route, r.dir, r.service))
+            || state.index.ctbRoutes.get(makeRouteKey(r.co, r.route, r.dir, r.service))))
+            || null;
+          ul.appendChild(routeRow({
+            co: r.co,
+            route: r.route,
+            dir: r.dir,
+            service: r.service,
+            destTc: meta ? meta.destTc : '',
+            destEn: meta ? meta.destEn : '',
+            origTc: meta ? meta.origTc : '',
+            origEn: meta ? meta.origEn : '',
+          }));
+        }
       });
       recentEl.appendChild(ul);
       recentEl.appendChild(el('button', {
