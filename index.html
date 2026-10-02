@@ -172,6 +172,18 @@
     <h2 class="section-title" data-i18n="recentSearches">最近查過</h2>
     <div data-bind="recent"></div>
 
+    <section class="settings" aria-label="設定">
+      <h2 class="section-title" data-i18n="settingsTitle">設定</h2>
+      <label class="settings-label" for="gmapsKeyInput" data-i18n="gmapsKeyLabel">Google Maps API key</label>
+      <p class="settings-hint" data-i18n="gmapsKeyHint">用 Google Maps Embed API 嘅 key（網站 HTTP referrer 已限制）。留空就會用連結到 Google Maps 而唔係內嵌地圖。</p>
+      <div class="settings-row">
+        <input id="gmapsKeyInput" type="text" autocomplete="off" spellcheck="false"
+               placeholder="AIza…" inputmode="text" />
+        <button class="btn-primary" type="button" id="gmapsKeySave" data-i18n="gmapsKeySave">儲存</button>
+        <button class="btn-secondary" type="button" id="gmapsKeyClear" data-i18n="clearKey">清除</button>
+      </div>
+    </section>
+
     <footer class="page-footer">
       <p data-i18n-html="footerAttribution">
         資料來源：運輸署資料一線通。到站時間來自九巴、龍運、城巴、專線小巴及港鐵（包括輕鐵）；車費來自公共交通路線及收費資料。預計時間約每分鐘更新，只供參考。

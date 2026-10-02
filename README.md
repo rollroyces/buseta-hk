@@ -29,6 +29,20 @@ A small, fast web app that shows live arrival times across Hong Kong's major pub
 
 All runtime API calls are unauthenticated and CORS-enabled. Stop coordinates for GMB, MTR stations and (where available) Light Rail stops are bundled in `assets/` so the app can offer accurate nearby stops out-of-the-box.
 
+## Google Maps per stop (optional)
+
+Every stop / station view shows a Google Maps preview at the top:
+
+- **No API key** — a tappable static preview tile plus a `Open in Google Maps` link out.
+- **With an API key** — a live interactive Google Maps iframe embedded inline.
+
+There are two ways to provide a Google Maps **Embed API** key:
+
+1. **Site-wide (recommended for self-hosting).** Copy `assets/config.example.json` to `assets/config.json` and set `gmapsKey`. Commit + push. The key ships with the static site; restrict it in the Google Cloud console to your origin's domain, e.g. `https://yourname.github.io/buseta-hk/*`.
+2. **Per-device.** Open the app, scroll to **設定 / Settings**, paste your key, and tap **儲存 / Save**. The key never leaves your device's `localStorage`.
+
+The key is used for the [Google Maps Embed](https://developers.google.com/maps/documentation/embed/get-started) iframe only — the app never makes paid requests.
+
 ## Tech
 
 Pure static site:
@@ -38,6 +52,8 @@ Pure static site:
 - `app.js` — vanilla JS (no framework, no build step)
 - `assets/hk-stops.json` — 5,160+ transit stop coordinates (GMB / MTR / NLB)
 - `assets/mtr-stops.json` — 97 MTR stations with coordinates
+- `assets/mtr-lines.json` / `assets/lrt-routes.json` — pre-parsed line + route catalogues (avoids CORS-restricted CSV fetches)
+- `assets/config.example.json` — optional site-wide config (Google Maps key, …)
 - `assets/icon.svg` — bus mark icon
 - `assets/favicon.svg` — favicon
 

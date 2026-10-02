@@ -1,0 +1,5 @@
+{
+  "_comment": "Optional site-wide config. Copy this file to assets/config.json and edit values. settings.json takes precedence over user-edited localStorage values; users can still override at runtime via the home-screen Settings block.",
+  "_gmapsKey": "Google Maps Embed API key. With this set, every stop view embeds a live Google Map; otherwise the view falls back to a tap-to-open static preview. Restrict the key's HTTP referrer to your deployed origin (e.g. https://rollroyces.github.io/buseta-hk/*).",
+  "gmapsKey": ""
+}
