@@ -1142,16 +1142,44 @@
     }
 
     // --- Bus stops (KMB / CTB / GMB) ---
+    // Track the highest-scoring stop per (nameTc, nameEn) so we surface one
+    // row per distinct stop name — KMB / CTB / GMB all have multiple
+    // physically distinct stops that share a name (different sides of a
+    // road, terminus variants, etc.). The first hit wins and any later
+    // same-name entries bump the "more" count so the user can still
+    // navigate to the exact one if needed.
+    const seenNames = new Map();
     state.index.stops.forEach((s) => {
       const text = `${norm(s.nameTc)} ${norm(s.nameEn)}`;
       let score = 0;
       if (text.includes(lower)) score += 10;
       if (s.stop.toLowerCase() === lower) score += 80;
-      if (score > 0) push('stop', s, score);
+      if (score <= 0) return;
+      const nameKey = `${s.nameTc || ''}||${s.nameEn || ''}`;
+      const prior = seenNames.get(nameKey);
+      if (prior) {
+        if (score > prior.score) {
+          // Replace the lower-scoring earlier entry with this one.
+          const idx = matches.findIndex((m) => m.kind === 'stop' && m.data === prior.data);
+          if (idx >= 0) matches[idx] = { kind: 'stop', data: s, score };
+          seenNames.set(nameKey, { data: s, score, count: prior.count + 1 });
+        } else {
+          prior.count += 1;
+        }
+        return;
+      }
+      seenNames.set(nameKey, { data: s, score, count: 1 });
+      push('stop', s, score);
     });
 
     matches.sort((a, b) => b.score - a.score);
-    return matches.slice(0, 80);
+    // Annotate the collapsed entries so the row can render a "+N" badge.
+    return matches.slice(0, 80).map((m) => {
+      if (m.kind !== 'stop') return m;
+      const nameKey = `${m.data.nameTc || ''}||${m.data.nameEn || ''}`;
+      const tally = seenNames.get(nameKey);
+      return { ...m, dupCount: (tally && tally.count > 1) ? tally.count : 0 };
+    });
   }
 
   function matchesFilter(co) {
@@ -1448,7 +1476,15 @@
     const a = el('a', { class: 'row', href: `#/stop/${encodeURIComponent(s.stop)}` });
     a.appendChild(makeBadge(s.co || 'STOP'));
     const main = el('div', { class: 'row-main' });
-    main.appendChild(el('div', { class: 'row-title' }, pickFirst(s.nameTc, s.nameEn) || s.stop));
+    const titleEl = el('div', { class: 'row-title' });
+    titleEl.appendChild(document.createTextNode(pickFirst(s.nameTc, s.nameEn) || s.stop));
+    // If the search collapsed duplicates by name, surface a "+N" chip so the
+    // user knows there are other physical stops sharing this name.
+    if (s.dupCount && s.dupCount > 1) {
+      const chip = el('span', { class: 'row-dup' }, `+${s.dupCount - 1}`);
+      titleEl.appendChild(chip);
+    }
+    main.appendChild(titleEl);
     const subInfo = s.lines ? s.lines.join(' · ') : (s.nameEn || (s.stop ? String(s.stop).slice(0, 12) : ''));
     main.appendChild(el('div', { class: 'row-sub' }, subInfo));
     a.appendChild(main);

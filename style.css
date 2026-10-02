@@ -256,6 +256,18 @@ h1, h2, h3 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.row-dup {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--bg-soft);
+  color: var(--muted);
+  border: 1px solid var(--line);
+  vertical-align: 1px;
+}
 .row-sub {
   font-size: 13px;
   color: var(--muted);
