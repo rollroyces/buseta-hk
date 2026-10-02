@@ -1064,8 +1064,8 @@
     }
     const ul = el('div', { class: 'list' });
     matches.forEach((m) => {
-      if (m.kind === 'route') ul.appendChild(routeRow(m.data));
-      else ul.appendChild(stopRow(m.data));
+      if (m.kind === 'route') ul.appendChild(routeRow({ ...m.data, dupCount: m.dupCount }));
+      else ul.appendChild(stopRow({ ...m.data, dupCount: m.dupCount }));
     });
     out.appendChild(ul);
   }
@@ -1084,7 +1084,12 @@
     };
 
     // --- Bus (KMB / LWB / CTB / NWFB / GMB) ---
-    const searchRoute = (r) => {
+    // Dedupe to one row per (co, route, service) so the user does not see
+    // inbound and outbound of the same physical route listed twice. The
+    // best-scoring direction (usually the one whose end-points match the
+    // query) wins; the survivor gets a "+N dir" badge.
+    const seenRoutes = new Map();
+    const tryRoute = (r, map) => {
       if (!matchesFilter(r.co)) return;
       const rlow = String(r.route).toLowerCase();
       const text = `${norm(r.origTc)} ${norm(r.origEn)} ${norm(r.destTc)} ${norm(r.destEn)}`;
@@ -1093,10 +1098,24 @@
       else if (rlow.startsWith(lower)) score += 50;
       else if (rlow.includes(lower)) score += 30;
       if (text.includes(lower)) score += 10;
-      if (score > 0) push('route', r, score);
+      if (score <= 0) return;
+      const routeKey = `${r.co}|${r.route}|${r.service}`;
+      const prior = seenRoutes.get(routeKey);
+      if (prior) {
+        if (score > prior.score) {
+          const idx = matches.findIndex((m) => m.kind === 'route' && m.data === prior.data);
+          if (idx >= 0) matches[idx] = { kind: 'route', data: r, score };
+          seenRoutes.set(routeKey, { data: r, score, count: prior.count + 1 });
+        } else {
+          prior.count += 1;
+        }
+        return;
+      }
+      seenRoutes.set(routeKey, { data: r, score, count: 1 });
+      push('route', r, score);
     };
-    state.index.routes.forEach(searchRoute);
-    state.index.ctbRoutes.forEach(searchRoute);
+    state.index.routes.forEach((r) => tryRoute(r, state.index.routes));
+    state.index.ctbRoutes.forEach((r) => tryRoute(r, state.index.ctbRoutes));
 
     // --- MTR ---
     if (state.filter === 'ALL' || state.filter === 'MTR') {
@@ -1130,7 +1149,21 @@
         else if (rlow.startsWith(lower)) score += 50;
         else if (rlow.includes(lower)) score += 30;
         if (text.includes(lower)) score += 10;
-        if (score > 0) push('route', r, score);
+        if (score <= 0) return;
+        const routeKey = `LRT|${r.route}`;
+        const prior = seenRoutes.get(routeKey);
+        if (prior) {
+          if (score > prior.score) {
+            const idx = matches.findIndex((m) => m.kind === 'route' && m.data === prior.data);
+            if (idx >= 0) matches[idx] = { kind: 'route', data: r, score };
+            seenRoutes.set(routeKey, { data: r, score, count: prior.count + 1 });
+          } else {
+            prior.count += 1;
+          }
+          return;
+        }
+        seenRoutes.set(routeKey, { data: r, score, count: 1 });
+        push('route', r, score);
       });
       state.index.lrt.stops.forEach((s) => {
         const text = `${norm(s.nameTc)} ${norm(s.nameEn)}`;
@@ -1175,10 +1208,21 @@
     matches.sort((a, b) => b.score - a.score);
     // Annotate the collapsed entries so the row can render a "+N" badge.
     return matches.slice(0, 80).map((m) => {
-      if (m.kind !== 'stop') return m;
-      const nameKey = `${m.data.nameTc || ''}||${m.data.nameEn || ''}`;
-      const tally = seenNames.get(nameKey);
-      return { ...m, dupCount: (tally && tally.count > 1) ? tally.count : 0 };
+      const out = { ...m };
+      if (m.kind === 'stop') {
+        const nameKey = `${m.data.nameTc || ''}||${m.data.nameEn || ''}`;
+        const tally = seenNames.get(nameKey);
+        out.dupCount = (tally && tally.count > 1) ? tally.count : 0;
+      } else {
+        const routeKey = m.data.co === 'MTR'
+          ? (m.data._lineView ? `MTR|${m.data.route}|LINE|` : `MTR|${m.data.stop || m.data.route}|STATION|`)
+          : (m.data.co === 'LRT'
+              ? `LRT|${m.data.route}`
+              : `${m.data.co}|${m.data.route}|${m.data.service}`);
+        const tally = seenRoutes.get(routeKey);
+        out.dupCount = (tally && tally.count > 1) ? tally.count : 0;
+      }
+      return out;
     });
   }
 
@@ -1462,9 +1506,15 @@
     });
     a.appendChild(makeBadge(r.co));
     const main = el('div', { class: 'row-main' });
-    main.appendChild(el('div', { class: 'row-title' }, displayRoute,
-      el('span', { style: 'color: var(--muted); margin: 0 6px; font-weight: 500;' }, '·'),
-      dest));
+    const titleEl = el('div', { class: 'row-title' });
+    titleEl.appendChild(document.createTextNode(displayRoute));
+    titleEl.appendChild(el('span', { style: 'color: var(--muted); margin: 0 6px; font-weight: 500;' }, '·'));
+    titleEl.appendChild(document.createTextNode(dest));
+    if (r.dupCount && r.dupCount > 1) {
+      const chip = el('span', { class: 'row-dup' }, `+${r.dupCount - 1} dir`);
+      titleEl.appendChild(chip);
+    }
+    main.appendChild(titleEl);
     main.appendChild(el('div', { class: 'row-sub' }, r.co === 'GMB' ? orig : `${dirLabel} · ${orig}`));
     a.appendChild(main);
     a.appendChild(el('div', { class: 'row-meta' }, el('div', { class: 'row-dim' }, t_str(opCoKey(r.co)))));
