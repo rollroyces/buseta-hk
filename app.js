@@ -1645,7 +1645,8 @@
 
     // Pick the right route-stop endpoint based on operator. KMB / LWB share
     // /route-stop; CTB / NWFB use the Citybus endpoint.
-    const fetchRouteStop = (r.co === 'CTB' || r.co === 'NWFB')
+    const isCitybus = (r.co === 'CTB' || r.co === 'NWFB');
+    const fetchRouteStop = isCitybus
       ? () => fetchCitybusRouteStop(r.route, r.dir)
       : () => fetchKmbRouteStop(r.route, r.dir, r.service);
     fetchRouteStop().then(async (resp) => {
@@ -1656,19 +1657,36 @@
       }
       const stops = items
         .sort((a, b) => parseInt(a.seq, 10) - parseInt(b.seq, 10))
-        .map((it) => state.index.stops.get(it.stop) || { stop: it.stop, nameTc: it.stop, nameEn: '', lat: null, lng: null });
+        .map((it) => {
+          // For CTB / NWFB the stop id is the operator's 6-digit code; our
+          // hk-stops.json has different codes (e.g. MA973). Build a richer
+          // entry that uses the operator stop id directly plus any name we
+          // know about from the index.
+          const known = state.index.stops.get(it.stop);
+          return {
+            stop: it.stop,
+            nameTc: known ? known.nameTc : it.stop,
+            nameEn: known ? known.nameEn : '',
+            lat: known && Number.isFinite(known.lat) ? known.lat : null,
+            lng: known && Number.isFinite(known.lng) ? known.lng : null,
+            _seq: parseInt(it.seq, 10),
+          };
+        });
 
-      // Live arrivals for the first 4 stops. The right API is picked per stop
-      // (KMB-format 16-hex → KMB; CTB-format 6-digit → Citybus).
+      // Live arrivals for the first 4 stops. CTB/NWFB stops use the Citybus
+      // ETA endpoint; KMB-format stops use the KMB endpoint.
       const firstStops = stops.slice(0, 4);
-      const etaResults = await Promise.allSettled(firstStops.map((s) => fetchEtaForStop(s.stop, r.route, r.dir)));
+      const etaResults = await Promise.allSettled(firstStops.map((s) => {
+        if (isCitybus) return fetchCitybusStopEta(s.stop, r.route);
+        return fetchKmbStopEta(s.stop);
+      }));
       const etaByStop = new Map();
       firstStops.forEach((s, i) => {
         const rr = etaResults[i];
         if (rr.status === 'fulfilled' && rr.value && Array.isArray(rr.value.data)) {
           etaByStop.set(s.stop, rr.value.data
             .filter((e) => e.route === r.route
-              && (r.co === 'CTB' || r.co === 'NWFB' || (e.dir === r.dir && String(e.service_type) === String(r.service))))
+              && (isCitybus || (e.dir === r.dir && String(e.service_type) === String(r.service))))
             .filter((e) => !!e.eta)
             .sort((a, b) => new Date(a.eta).getTime() - new Date(b.eta).getTime()));
         }
