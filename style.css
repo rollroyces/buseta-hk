@@ -242,6 +242,9 @@ h1, h2, h3 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 .row-badge.co-LWB { background: linear-gradient(135deg, #14B8A6, #0F766E); }
 .row-badge.co-CTB { background: linear-gradient(135deg, #0EA5E9, #0369A1); }
 .row-badge.co-NWFB { background: linear-gradient(135deg, #6366F1, #4338CA); }
+.row-badge.co-GMB { background: linear-gradient(135deg, #84CC16, #4D7C0F); }
+.row-badge.co-MTR { background: linear-gradient(135deg, #DC2626, #991B1B); }
+.row-badge.co-LRT { background: linear-gradient(135deg, #F97316, #C2410C); }
 .row-badge.co-STOP { background: linear-gradient(135deg, #475569, #1E293B); border-radius: 12px; }
 
 .row-main { flex: 1 1 auto; min-width: 0; }
@@ -528,11 +531,13 @@ h1, h2, h3 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 .operators-strip { margin-top: 8px; }
 .op-chips {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   margin-bottom: 4px;
 }
 .op-chip {
-  flex: 1 1 0;
+  flex: 1 1 calc(33.333% - 12px);
+  min-width: 90px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -575,6 +580,9 @@ h1, h2, h3 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 .op-kmb  { background: linear-gradient(135deg, #F58220 0%, #ED1C24 100%); }
 .op-ctb  { background: linear-gradient(135deg, #E2231A 0%, #B8121B 100%); }
 .op-nwfb { background: linear-gradient(135deg, #00B2A9 0%, #00838A 100%); }
+.op-gmb  { background: linear-gradient(135deg, #65A30D 0%, #365314 100%); }
+.op-mtr  { background: linear-gradient(135deg, #C81E1E 0%, #7F1D1D 100%); }
+.op-lrt  { background: linear-gradient(135deg, #EA580C 0%, #9A3412 100%); }
 
 .op-disclaimer {
   margin: 8px 2px 0;

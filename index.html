@@ -96,8 +96,8 @@
 
 <template id="tpl-home">
   <div class="container">
-    <section class="operators-strip" aria-label="支援巴士公司">
-      <h2 class="section-title" data-i18n="operatorsTitle">支援巴士公司</h2>
+    <section class="operators-strip" aria-label="支援交通工具">
+      <h2 class="section-title" data-i18n="operatorsTitle">支援交通工具</h2>
       <div class="op-chips">
         <div class="op-chip op-kmb" role="img" aria-label="九巴 KMB">
           <svg class="op-mark" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
@@ -129,6 +129,36 @@
           <span class="op-abbr">NWFB</span>
           <span class="op-name">新巴</span>
         </div>
+        <div class="op-chip op-gmb" role="img" aria-label="專線小巴 GMB">
+          <svg class="op-mark" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+            <rect x="4" y="6" width="16" height="10" rx="2" fill="currentColor" opacity="0.9"/>
+            <rect x="6" y="8" width="12" height="3" rx="1" fill="#fff" opacity="0.9"/>
+            <circle cx="8" cy="17.5" r="1.6" fill="currentColor"/>
+            <circle cx="16" cy="17.5" r="1.6" fill="currentColor"/>
+          </svg>
+          <span class="op-abbr">GMB</span>
+          <span class="op-name" data-i18n="gmb">專線小巴</span>
+        </div>
+        <div class="op-chip op-mtr" role="img" aria-label="港鐵 MTR">
+          <svg class="op-mark" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+            <rect x="4" y="5" width="16" height="13" rx="3" fill="currentColor" opacity="0.9"/>
+            <rect x="6" y="7" width="12" height="3" rx="1" fill="#fff" opacity="0.9"/>
+            <circle cx="8" cy="19.5" r="1.4" fill="currentColor"/>
+            <circle cx="16" cy="19.5" r="1.4" fill="currentColor"/>
+          </svg>
+          <span class="op-abbr">MTR</span>
+          <span class="op-name" data-i18n="mtr">港鐵</span>
+        </div>
+        <div class="op-chip op-lrt" role="img" aria-label="輕鐵 Light Rail">
+          <svg class="op-mark" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+            <rect x="3" y="9" width="18" height="7" rx="2" fill="currentColor" opacity="0.9"/>
+            <rect x="5" y="10.5" width="14" height="2.5" rx="1" fill="#fff" opacity="0.9"/>
+            <circle cx="7" cy="17.5" r="1.4" fill="currentColor"/>
+            <circle cx="17" cy="17.5" r="1.4" fill="currentColor"/>
+          </svg>
+          <span class="op-abbr">LRT</span>
+          <span class="op-name" data-i18n="lrt">輕鐵</span>
+        </div>
       </div>
       <p class="op-disclaimer" data-i18n="operatorsNote">獨立第三方應用。資料由各營辦商透過運輸署公開數據提供。</p>
     </section>
@@ -144,7 +174,7 @@
 
     <footer class="page-footer">
       <p data-i18n-html="footerAttribution">
-        資料來源：運輸署資料一線通。到站時間來自九巴、龍運及城巴；車費來自公共交通路線及收費資料。預計時間約每分鐘更新，只供參考。
+        資料來源：運輸署資料一線通。到站時間來自九巴、龍運、城巴、專線小巴及港鐵（包括輕鐵）；車費來自公共交通路線及收費資料。預計時間約每分鐘更新，只供參考。
       </p>
       <p class="footer-mark">BusETA HK · 巴士到站</p>
     </footer>
@@ -172,9 +202,16 @@
       <button class="filter-pill" data-co="KMB" type="button" aria-pressed="false" data-i18n="filterKMB">九巴</button>
       <button class="filter-pill" data-co="LWB" type="button" aria-pressed="false" data-i18n="filterLWB">龍運</button>
       <button class="filter-pill" data-co="CTB" type="button" aria-pressed="false" data-i18n="filterCTB">城巴</button>
+      <button class="filter-pill" data-co="GMB" type="button" aria-pressed="false" data-i18n="filterGMB">小巴</button>
+      <button class="filter-pill" data-co="MTR" type="button" aria-pressed="false" data-i18n="filterMTR">港鐵</button>
     </div>
 
     <div data-bind="searchResults"></div>
+
+    <div data-bind="nearbyStations">
+      <h2 class="section-title" data-i18n="nearbyStations">附近港鐵站</h2>
+      <p class="muted" data-bind="nearbyStatus3" data-i18n="locating">定位中…</p>
+    </div>
 
     <div data-bind="nearbyRoutes">
       <h2 class="section-title" data-i18n="nearbyRoutes">附近路線</h2>
