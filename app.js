@@ -67,6 +67,7 @@
       lastBus: '尾班車',
       lastTrain: '尾班車',
       noEta: '暫無到站時間',
+      nextArrivals: '下一班到站',
       etaCount: (n) => `仲有 ${n} 班`,
       errorTitle: '搵唔到嗰頁',
       errorBody: '你跟蹤嘅連結可能已經過期，或者資料未能成功載入。',
@@ -107,6 +108,8 @@
       gmapsKeyHint: '用 Google Maps Embed API 嘅 key（網站 HTTP referrer 已限制）。留空就會用連結到 Google Maps 而唔係內嵌地圖。',
       gmapsKeySave: '儲存',
       gmapsKeySaved: '已儲存',
+      schoolTag: 'school',
+      schoolTagTitle: '此路線另有上學日特別班次',
       gmapsKeyCleared: '已清除',
       clearKey: '清除',
       fare: '車費',
@@ -161,6 +164,7 @@
       lastBus: 'Last bus',
       lastTrain: 'Last train',
       noEta: 'No ETA',
+      nextArrivals: 'Next arrivals',
       etaCount: (n) => `${n} more`,
       errorTitle: 'Page not found',
       errorBody: 'The link may be out of date, or the data could not load.',
@@ -201,6 +205,8 @@
       gmapsKeyHint: 'Use a Google Maps Embed API key (with your site URL restricted as HTTP referrer). Leave blank to fall back to opening Google Maps in a new tab.',
       gmapsKeySave: 'Save',
       gmapsKeySaved: 'Saved',
+      schoolTag: 'school',
+      schoolTagTitle: 'This route also runs school-day special trips',
       gmapsKeyCleared: 'Cleared',
       clearKey: 'Clear',
       fare: 'Fare',
@@ -1094,11 +1100,14 @@
     };
 
     // --- Bus (KMB / LWB / CTB / NWFB / GMB) ---
-    // Dedupe to one row per (co, route, service) so the user does not see
-    // inbound and outbound of the same physical route listed twice. The
-    // best-scoring direction (usually the one whose end-points match the
-    // query) wins; the survivor gets a "+N dir" badge.
+    // Dedupe to one row per (co, route) so the user does not see the same
+    // physical route listed twice (once per direction / service variant).
+    // The "regular" service (service_type '1') always wins as the main row;
+    // if any sibling is a school special (typically service_type '3'), we
+    // stash a `_hasSchool` flag on the data so routeRow can render a small
+    // "school" pill next to the destination.
     const seenRoutes = new Map();
+    const isRegularService = (r) => !r.service || String(r.service) === '1';
     const tryRoute = (r, map) => {
       if (!matchesFilter(r.co)) return;
       const rlow = String(r.route).toLowerCase();
@@ -1111,18 +1120,40 @@
       if (score <= 0) return;
       const routeKey = `${r.co}|${r.route}`;
       const prior = seenRoutes.get(routeKey);
+      const reg = isRegularService(r);
       if (prior) {
-        if (score > prior.score) {
-          const idx = matches.findIndex((m) => m.kind === 'route' && m.data === prior.data);
-          if (idx >= 0) matches[idx] = { kind: 'route', data: r, score };
-          seenRoutes.set(routeKey, { data: r, score, count: prior.count + 1 });
-        } else {
-          prior.count += 1;
+          // Always prefer a regular-service variant as the main row, even if
+          // it scored lower on text matching; otherwise prefer the higher
+          // score. This guarantees the user-facing row points at the regular
+          // service rather than a school special.
+          const upgrade = (reg && !prior.regular)
+            || (reg === prior.regular && score > prior.score);
+          if (upgrade) {
+            const idx = matches.findIndex((m) => m.kind === 'route' && m.data === prior.data);
+            if (idx >= 0) {
+              const newHasSchool = prior.hasSchool || !reg;
+              matches[idx] = { kind: 'route', data: { ...r, _hasSchool: newHasSchool }, score };
+            }
+            seenRoutes.set(routeKey, {
+              score,
+              count: prior.count + 1,
+              regular: reg,
+              hasSchool: prior.hasSchool || !reg,
+            });
+          } else {
+            prior.count += 1;
+            if (!reg) {
+              prior.hasSchool = true;
+              const idx = matches.findIndex((m) => m.kind === 'route' && m.data === prior.data);
+              if (idx >= 0 && !matches[idx].data._hasSchool) {
+                matches[idx] = { ...matches[idx], data: { ...matches[idx].data, _hasSchool: true } };
+              }
+            }
+          }
+          return;
         }
-        return;
-      }
-      seenRoutes.set(routeKey, { data: r, score, count: 1 });
-      push('route', r, score);
+      seenRoutes.set(routeKey, { score, count: 1, regular: reg, hasSchool: !reg });
+      push('route', { ...r, _hasSchool: !reg }, score);
     };
     state.index.routes.forEach((r) => tryRoute(r, state.index.routes));
     state.index.ctbRoutes.forEach((r) => tryRoute(r, state.index.ctbRoutes));
@@ -1503,6 +1534,11 @@
     titleEl.appendChild(document.createTextNode(displayRoute));
     titleEl.appendChild(el('span', { style: 'color: var(--muted); margin: 0 6px; font-weight: 500;' }, '·'));
     titleEl.appendChild(document.createTextNode(dest));
+    if (r._hasSchool) {
+      const schoolPill = el('span', { class: 'row-tag row-tag-school', title: t_str('schoolTagTitle') }, t_str('schoolTag'));
+      titleEl.appendChild(document.createTextNode(' '));
+      titleEl.appendChild(schoolPill);
+    }
     main.appendChild(titleEl);
     main.appendChild(el('div', { class: 'row-sub' }, r.co === 'GMB' ? orig : `${dirLabel} · ${orig}`));
     a.appendChild(main);
@@ -2307,17 +2343,7 @@
 
         body.innerHTML = '';
 
-        const groups = new Map();
-        data.forEach((e) => {
-          if (!e.eta) return;
-          const co = classifyKmbOp(e.route, '', e.dest_tc || '');
-          const key = makeRouteKey(co, e.route, e.dir, e.service_type);
-          if (!groups.has(key)) groups.set(key, { co, route: e.route, dir: e.dir, service: e.service_type, destTc: e.dest_tc, destEn: e.dest_en, etas: [] });
-          groups.get(key).etas.push({ eta: e.eta, rmk: e.rmk_en });
-        });
-
-        // Compute map once so it survives both the empty-arrivals and the
-        // populated-arrivals branches below.
+        // Build the map element once so it can survive both branches below.
         const mapEl = (() => {
           const meta = state.index.stops.get(stopId);
           if (!meta || !Number.isFinite(meta.lat) || !Number.isFinite(meta.lng)) return null;
@@ -2325,45 +2351,71 @@
           return m.firstChild ? m : null;
         })();
 
-        if (groups.size === 0) {
+        // Flatten every upcoming arrival (regardless of route) into a single
+        // sorted list — justarrived.grok.me's stop view. Each row links to
+        // the route detail, anchored at this stop's position in the sequence.
+        const arrivals = data
+          .filter((e) => !!e.eta)
+          .map((e) => ({
+            co: classifyKmbOp(e.route, '', e.dest_tc || ''),
+            route: e.route,
+            dir: e.dir,
+            service: e.service_type,
+            destTc: e.dest_tc,
+            destEn: e.dest_en,
+            eta: e.eta,
+            minutes: minutesUntil(e.eta),
+            seq: e.seq,
+            rmk: e.rmk_en,
+          }))
+          .sort((a, b) => (a.minutes ?? 9999) - (b.minutes ?? 9999));
+
+        if (arrivals.length === 0) {
           body.appendChild(el('p', { class: 'empty' }, t_str('noEta')));
           if (mapEl) body.appendChild(mapEl);
           return;
         }
-        const list = el('div', { class: 'list' });
-        Array.from(groups.values())
-          .sort((a, b) => (minutesUntil(a.etas[0].eta) ?? 999) - (minutesUntil(b.etas[0].eta) ?? 999))
-          .forEach((g) => {
-            const destStr = pickFirst(g.destTc, g.destEn);
-            // Use the matching ETA's stop_seq (the position of THIS stop in
-            // the route's stop sequence) so the route detail can anchor
-            // itself to where the user came from.
-            const seq = (g.etas[0] && g.etas[0].seq != null) ? String(g.etas[0].seq) : '';
-            const href = `#/route/${encodeURIComponent(g.co)}/${encodeURIComponent(g.route)}/${encodeURIComponent(g.dir)}/${encodeURIComponent(g.service)}${seq ? '/' + encodeURIComponent(seq) : ''}`;
-            const row = el('a', {
-              class: 'row',
-              href,
-            });
-            row.appendChild(makeBadge(g.co));
-            const main = el('div', { class: 'row-main' });
-            main.appendChild(el('div', { class: 'row-title' }, g.route,
-              el('span', { style: 'color: var(--muted); margin: 0 6px; font-weight: 500;' }, '·'),
-              destStr));
-            main.appendChild(el('div', { class: 'row-sub' }, g.dir === 'I' ? t_str('inbound') : t_str('outbound')));
-            row.appendChild(main);
-            const meta = el('div', { class: 'row-meta' });
-            meta.appendChild(etaSpan(g.etas[0].eta));
-            if (g.etas.length > 1) meta.appendChild(el('div', { class: 'row-dim' }, t_str('etaCount', g.etas.length - 1)));
-            row.appendChild(meta);
-            row.appendChild(makeChev());
-            list.appendChild(row);
-          });
-        body.replaceChildren(list);
-        // Map at the bottom of the page, just like justarrived.grok.me.
+
+        body.appendChild(el('h2', { class: 'section-title' }, t_str('nextArrivals')));
+        const list = el('div', { class: 'arrival-list' });
+        arrivals.slice(0, 12).forEach((a) => {
+          const href = `#/route/${encodeURIComponent(a.co)}/${encodeURIComponent(a.route)}/${encodeURIComponent(a.dir)}/${encodeURIComponent(a.service)}${a.seq != null ? '/' + encodeURIComponent(String(a.seq)) : ''}`;
+          const row = el('a', { class: 'arrival-row', href });
+          const op = el('span', { class: 'arrival-op' }, t_str(opCoKey(a.co)));
+          const info = el('div', { class: 'arrival-info' });
+          // First line: "城巴 · 23:24" or "九巴 · 26 分鐘 · 23:51" pattern.
+          const top = el('div', { class: 'arrival-top' });
+          top.appendChild(op);
+          top.appendChild(document.createTextNode(' · '));
+          if (a.minutes != null && a.minutes > 0) {
+            top.appendChild(document.createTextNode(`${a.minutes} ${t_str('minShort')}`));
+            top.appendChild(document.createTextNode(' · '));
+          }
+          top.appendChild(formatHMTimestamp(a.eta));
+          info.appendChild(top);
+          // Sub line: route + destination + a hint chip for special/last.
+          const sub = el('div', { class: 'arrival-sub' });
+          const destStr = pickFirst(a.destTc, a.destEn);
+          sub.appendChild(document.createTextNode(`${a.route} · ${destStr}`));
+          if (a.rmk === 'Scheduled Bus') sub.appendChild(el('span', { class: 'arrival-tag' }, t_str('scheduled')));
+          else if (a.rmk === 'Last Bus') sub.appendChild(el('span', { class: 'arrival-tag' }, t_str('lastBus')));
+          info.appendChild(sub);
+          row.appendChild(info);
+          list.appendChild(row);
+        });
+        body.appendChild(list);
         if (mapEl) body.appendChild(mapEl);
       });
 
     startEtaRefresh(renderStopDetail);
+  }
+
+  // Format an ETA ISO timestamp as "HH:MM" (24h).
+  function formatHMTimestamp(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '';
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
   }
 
   // ---- MTR station stop view (same as renderMtrStationRoute, but reachable directly) ----

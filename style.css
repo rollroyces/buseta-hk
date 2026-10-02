@@ -277,6 +277,24 @@ h1, h2, h3 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 .row-eta.is-now { color: var(--danger); }
 .row-dim { font-size: 11px; color: var(--muted-2); }
 
+.row-tag {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: var(--r-pill);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: lowercase;
+  vertical-align: 2px;
+  margin-left: 6px;
+  line-height: 1.4;
+}
+.row-tag-school {
+  background: var(--accent-soft);
+  color: var(--accent-2);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
 .row-star {
   width: 36px; height: 36px;
   border-radius: 50%;
@@ -567,6 +585,67 @@ h1, h2, h3 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 .stop-actions {
   margin-top: 14px;
   display: flex; gap: 8px;
+}
+
+/* ------------------------------ arrivals list (stop view) ------------------------------ */
+.arrival-list {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 16px;
+}
+.arrival-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  text-decoration: none;
+  color: inherit;
+  margin-bottom: 6px;
+  transition: background 0.12s ease;
+}
+.arrival-row:hover, .arrival-row:focus-visible { background: var(--bg-soft); outline: none; }
+.arrival-row:last-child { margin-bottom: 0; }
+.arrival-info { flex: 1 1 auto; min-width: 0; }
+.arrival-top {
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.arrival-op {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent-2);
+  margin-right: 2px;
+}
+.arrival-sub {
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.arrival-tag {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--warn);
+  border: 1px solid rgba(217, 119, 6, 0.4);
+  border-radius: 999px;
+  padding: 1px 7px;
 }
 
 /* ------------------------------ stop map ------------------------------ */
