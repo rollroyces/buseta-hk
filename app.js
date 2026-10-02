@@ -664,9 +664,13 @@
   }
 
   // ------------------------------------------------------------------
-  // Google Maps Embed API key
-  //   Resolution precedence: `assets/config.json` (build-time) → localStorage (user override).
-  //   When neither is set we fall back to a tappable "Open in Google Maps" link.
+  // Google Maps per-stop section.
+  //   Mirrors the justarrived.grok.me design:
+  //     – Live Google Maps embed iframe using the no-key "output=embed"
+  //       URL pattern (works without any API key).
+  //     – Card-style frame with rounded corners and shadow.
+  //     – Red pin-icon "Open in Google Maps" link underneath.
+  //     – Section sits at the bottom of the stop / station view.
   // ------------------------------------------------------------------
   function loadGmapsConfig() {
     if (state.gmapsConfigLoaded) return Promise.resolve(state.gmapsKey);
@@ -682,119 +686,61 @@
     return (userKey && String(userKey).trim()) || state.gmapsKey || '';
   }
 
+  function mapsQuery(lat, lng) {
+    return `${lat.toFixed(6)},${lng.toFixed(6)}`;
+  }
+
   // Render the per-stop map section. Pass lat/lng (numbers) and the stop's
-  // human-readable name. Returns an empty Node if no coordinates available.
+  // human-readable name. Returns an empty Node if no coordinates are
+  // available so callers can safely append it.
   function renderStopMap(lat, lng, name) {
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) return el('div');
-    const key = getGmapsKey();
     const section = el('section', { class: 'stop-map', 'aria-label': t_str('mapHeader') });
-    const heading = el('h2', { class: 'section-title' }, t_str('mapHeader'));
-    section.appendChild(heading);
     const frame = el('div', { class: 'stop-map-frame' });
-    if (key) {
-      const iframe = el('iframe', {
-        title: `${t_str('mapHeader')} · ${name}`,
-        loading: 'lazy',
-        referrerpolicy: 'no-referrer-when-downgrade',
-        allowfullscreen: '',
-        src: `https://www.google.com/maps/embed/v1/view?key=${encodeURIComponent(key)}&center=${lat.toFixed(6)},${lng.toFixed(6)}&zoom=16&maptype=roadmap`,
-      });
-      frame.appendChild(iframe);
-    } else {
-      // Static preview fallback. Use a hand-built SVG with a pin rather than
-      // pulling from a third-party static-map endpoint that may need its
-      // own key. The image is tappable and opens maps.google.com.
-      const preview = el('a', {
-        class: 'stop-map-static',
-        href: `https://www.google.com/maps?q=${lat},${lng}`,
-        target: '_blank',
-        rel: 'noopener',
-        'aria-label': `${t_str('openInMaps')} · ${name}`,
-      });
-      preview.appendChild(buildMapPinSVG(name, lat, lng));
-      frame.appendChild(preview);
-    }
-    section.appendChild(frame);
+
+    // Embed Google Maps. The legacy "output=embed" URL renders the standard
+    // Maps iframe (controls, attribution, satellite thumbnail) without any
+    // API key. The optional ?key= enables a slightly nicer embed when the
+    // site owner has configured one.
+    const q = mapsQuery(lat, lng);
+    const params = new URLSearchParams({ q, z: '17', output: 'embed' });
+    const key = getGmapsKey();
+    if (key) params.set('key', key);
+    const iframe = el('iframe', {
+      title: `${t_str('mapHeader')} · ${name}`,
+      loading: 'lazy',
+      referrerpolicy: 'no-referrer-when-downgrade',
+      src: `https://maps.google.com/maps?${params.toString()}`,
+      style: 'border:0;',
+    });
+    frame.appendChild(iframe);
 
     const link = el('a', {
       class: 'stop-map-link',
-      href: `https://www.google.com/maps?q=${lat},${lng}`,
+      href: `https://www.google.com/maps?q=${q}`,
       target: '_blank',
       rel: 'noopener',
-    }, t_str('openInMaps'));
+    });
+    link.appendChild(mapPinIconSVG());
+    const linkText = el('span', {}, t_str('openInMaps'));
+    link.appendChild(linkText);
+    section.appendChild(frame);
     section.appendChild(link);
     return section;
   }
 
-  // Inline SVG preview shaped like a map tile with a single pin. No network
-  // requests — always renders even with no API key.
-  function buildMapPinSVG(label, lat, lng) {
+  // Small filled "pin" icon used next to the "Open in Google Maps" text.
+  function mapPinIconSVG() {
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    svg.setAttribute('viewBox', '0 0 320 180');
-    svg.setAttribute('preserveAspectRatio', 'xMidYMid slice');
-    svg.setAttribute('role', 'img');
-    svg.setAttribute('aria-label', `${label} ${lat.toFixed(5)}, ${lng.toFixed(5)}`);
-
-    // Soft grid background suggesting a city block.
-    const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-    const grad = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
-    grad.setAttribute('id', 'gmbg');
-    grad.setAttribute('x1', '0'); grad.setAttribute('y1', '0');
-    grad.setAttribute('x2', '0'); grad.setAttribute('y2', '1');
-    const s1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
-    s1.setAttribute('offset', '0%'); s1.setAttribute('stop-color', '#0F2A4A');
-    const s2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
-    s2.setAttribute('offset', '100%'); s2.setAttribute('stop-color', '#0A1628');
-    grad.appendChild(s1); grad.appendChild(s2); defs.appendChild(grad);
-    svg.appendChild(defs);
-    const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-    bg.setAttribute('x', '0'); bg.setAttribute('y', '0');
-    bg.setAttribute('width', '320'); bg.setAttribute('height', '180');
-    bg.setAttribute('fill', 'url(#gmbg)'); svg.appendChild(bg);
-
-    // Faint grid lines.
-    const grid = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-    grid.setAttribute('stroke', 'rgba(255,255,255,0.06)'); grid.setAttribute('stroke-width', '1');
-    for (let x = 0; x < 320; x += 32) {
-      const ln = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      ln.setAttribute('x1', x); ln.setAttribute('y1', '0');
-      ln.setAttribute('x2', x); ln.setAttribute('y2', '180');
-      grid.appendChild(ln);
-    }
-    for (let y = 0; y < 180; y += 32) {
-      const ln = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      ln.setAttribute('x1', '0'); ln.setAttribute('y1', y);
-      ln.setAttribute('x2', '320'); ln.setAttribute('y2', y);
-      grid.appendChild(ln);
-    }
-    svg.appendChild(grid);
-
-    // Pin shape.
-    const px = 160; const py = 90;
-    const pinShadow = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
-    pinShadow.setAttribute('cx', px); pinShadow.setAttribute('cy', py + 36);
-    pinShadow.setAttribute('rx', '14'); pinShadow.setAttribute('ry', '4');
-    pinShadow.setAttribute('fill', 'rgba(0,0,0,0.45)'); svg.appendChild(pinShadow);
-
-    const pinBody = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    pinBody.setAttribute('d', `M${px} ${py - 32} c -12 0 -20 10 -20 22 c 0 16 20 38 20 38 s 20 -22 20 -38 c 0 -12 -8 -22 -20 -22 z`);
-    pinBody.setAttribute('fill', '#0EA5E9');
-    pinBody.setAttribute('stroke', '#fff'); pinBody.setAttribute('stroke-width', '2');
-    svg.appendChild(pinBody);
-
-    const pinDot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-    pinDot.setAttribute('cx', px); pinDot.setAttribute('cy', py - 14);
-    pinDot.setAttribute('r', '6'); pinDot.setAttribute('fill', '#fff');
-    svg.appendChild(pinDot);
-
-    // Coordinate readout for accessibility.
-    const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    t.setAttribute('x', '12'); t.setAttribute('y', '168');
-    t.setAttribute('fill', 'rgba(255,255,255,0.7)');
-    t.setAttribute('font-size', '11'); t.setAttribute('font-family', 'ui-monospace,Menlo,monospace');
-    t.textContent = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
-    svg.appendChild(t);
-
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('width', '18');
+    svg.setAttribute('height', '18');
+    svg.setAttribute('aria-hidden', 'true');
+    svg.classList.add('stop-map-link-icon');
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', 'M12 2c-4.418 0-8 3.537-8 7.9 0 5.7 7.1 11.6 7.4 11.85a1 1 0 0 0 1.2 0c.3-.25 7.4-6.15 7.4-11.85 0-4.363-3.582-7.9-8-7.9zm0 10.9a3 3 0 1 1 0-6 3 3 0 0 1 0 6z');
+    path.setAttribute('fill', 'currentColor');
+    svg.appendChild(path);
     return svg;
   }
 
@@ -1052,8 +998,6 @@
         onclick: () => { state.recent = []; persist(); renderHome(); toast(t_str('cleared')); },
       }, t_str('clearRecent')));
     }
-
-    wireSettings();
   }
 
   // ------------------------------------------------------------------
@@ -1726,15 +1670,7 @@
 
     header.appendChild(buildRouteHeader('MTR', stationCode, 'STATION', '', stationName, '', dirLabel));
     body.innerHTML = '';
-
-    // Map preview for this MTR station, just above the live arrivals.
-    if (station && Number.isFinite(station.lat) && Number.isFinite(station.lng)) {
-      const mapEl = renderStopMap(station.lat, station.lng, stationName);
-      if (mapEl.firstChild) body.appendChild(mapEl);
-    }
-    // A loading hint that the map will replace, then the line sections.
-    const loadingEl = el('p', { class: 'muted' }, t_str('loading'));
-    body.appendChild(loadingEl);
+    body.appendChild(el('p', { class: 'muted' }, t_str('loading')));
 
     // Fetch ETA for each line passing through this station.
     Promise.allSettled(stationLines.map((line) => fetchMtrSchedule(line, stationCode))).then((results) => {
@@ -1749,17 +1685,21 @@
         const lineName = lineMeta ? pickFirst(lineMeta.origTc, lineMeta.origEn) : line;
         sections.push(renderMtrLineSection(line, lineName, d));
       });
+      // Drop the loading placeholder.
+      body.innerHTML = '';
       if (sections.length === 0) {
-        loadingEl.remove();
-        body.appendChild(el('p', { class: 'empty', style: 'margin-top: 12px;' }, t_str('noEta')));
+        body.appendChild(el('p', { class: 'empty' }, t_str('noEta')));
       } else {
-        // Drop the loading placeholder, append sections after the map.
-        loadingEl.remove();
         for (const sec of sections) body.appendChild(sec);
       }
+      // Map at the bottom, just like justarrived.grok.me.
+      if (station && Number.isFinite(station.lat) && Number.isFinite(station.lng)) {
+        const mapEl = renderStopMap(station.lat, station.lng, stationName);
+        if (mapEl.firstChild) body.appendChild(mapEl);
+      }
     }).catch(() => {
-      loadingEl.remove();
-      body.appendChild(el('p', { class: 'empty', style: 'margin-top: 12px;' }, t_str('noEta')));
+      body.innerHTML = '';
+      body.appendChild(el('p', { class: 'empty' }, t_str('noEta')));
     });
 
     startEtaRefresh(renderRouteDetail);
@@ -2050,16 +1990,7 @@
         const data = etaResp && Array.isArray(etaResp.data) ? etaResp.data : [];
         header.replaceChildren(...buildStopHeader(stopId, stop.name_tc, stop.name_en, '').childNodes);
 
-        // Replace the loading placeholder. Hold onto a map element so it
-        // survives the subsequent `replaceChildren(...)` calls.
-        const mapEl = (() => {
-          const meta = state.index.stops.get(stopId);
-          if (!meta || !Number.isFinite(meta.lat) || !Number.isFinite(meta.lng)) return null;
-          const m = renderStopMap(meta.lat, meta.lng, pickFirst(meta.nameTc, meta.nameEn) || stopId);
-          return m.firstChild ? m : null;
-        })();
         body.innerHTML = '';
-        if (mapEl) body.appendChild(mapEl);
 
         const groups = new Map();
         data.forEach((e) => {
@@ -2070,10 +2001,18 @@
           groups.get(key).etas.push({ eta: e.eta, rmk: e.rmk_en });
         });
 
+        // Compute map once so it survives both the empty-arrivals and the
+        // populated-arrivals branches below.
+        const mapEl = (() => {
+          const meta = state.index.stops.get(stopId);
+          if (!meta || !Number.isFinite(meta.lat) || !Number.isFinite(meta.lng)) return null;
+          const m = renderStopMap(meta.lat, meta.lng, pickFirst(meta.nameTc, meta.nameEn) || stopId);
+          return m.firstChild ? m : null;
+        })();
+
         if (groups.size === 0) {
-          // Append the empty-state notice but keep the map (if any) above.
-          if (mapEl) body.appendChild(el('p', { class: 'empty', style: 'margin-top: 12px;' }, t_str('noEta')));
-          else body.appendChild(el('p', { class: 'empty' }, t_str('noEta')));
+          body.appendChild(el('p', { class: 'empty' }, t_str('noEta')));
+          if (mapEl) body.appendChild(mapEl);
           return;
         }
         const list = el('div', { class: 'list' });
@@ -2100,6 +2039,8 @@
             list.appendChild(row);
           });
         body.replaceChildren(list);
+        // Map at the bottom of the page, just like justarrived.grok.me.
+        if (mapEl) body.appendChild(mapEl);
       });
 
     startEtaRefresh(renderStopDetail);
@@ -2188,11 +2129,8 @@
     // Try to enrich the stop with a real name + coordinates.
     primeGmbStopCoord(stopId).then((meta) => {
       if (meta) header.replaceChildren(...buildStopHeader(stopId, meta.nameTc || stopId, meta.nameEn || '', 'GMB').childNodes);
-      // Once we know the coords, drop a map at the top of the body.
-      if (meta && Number.isFinite(meta.lat) && Number.isFinite(meta.lng)) {
-        const mapEl = renderStopMap(meta.lat, meta.lng, pickFirst(meta.nameTc, meta.nameEn) || stopId);
-        if (mapEl.firstChild) body.appendChild(mapEl);
-      }
+      // Stash for the map append after the routes list renders.
+      state._lastGmbStopMeta = meta || null;
     });
 
     fetchGmbStopRoutes(stopId).then(async (resp) => {
@@ -2237,6 +2175,13 @@
       });
       wrap.appendChild(ul);
       body.replaceChildren(wrap);
+      // Append the map at the bottom (justarrived.grok.me pattern).
+      const meta = state._lastGmbStopMeta;
+      state._lastGmbStopMeta = null;
+      if (meta && Number.isFinite(meta.lat) && Number.isFinite(meta.lng)) {
+        const mapEl = renderStopMap(meta.lat, meta.lng, pickFirst(meta.nameTc, meta.nameEn) || stopId);
+        if (mapEl.firstChild) body.appendChild(mapEl);
+      }
     }).catch(() => body.replaceChildren(el('p', { class: 'empty' }, t_str('noEta'))));
 
     startEtaRefresh(renderStopDetail);
@@ -2374,28 +2319,6 @@
 
     if (!location.hash) location.hash = '#/';
     onHashChange();
-  }
-
-  // ------------------------------------------------------------------
-  // Settings (Google Maps API key)
-  // ------------------------------------------------------------------
-  function wireSettings() {
-    const input = document.getElementById('gmapsKeyInput');
-    const save = document.getElementById('gmapsKeySave');
-    const clear = document.getElementById('gmapsKeyClear');
-    if (!input || !save) return;
-    input.value = getGmapsKey();
-    save.addEventListener('click', () => {
-      const v = String(input.value || '').trim();
-      if (v) storage.set(STORAGE_KEYS.GMAPS_KEY, v);
-      else storage.set(STORAGE_KEYS.GMAPS_KEY, '');
-      toast(t_str('gmapsKeySaved'));
-    });
-    clear.addEventListener('click', () => {
-      storage.set(STORAGE_KEYS.GMAPS_KEY, '');
-      input.value = '';
-      toast(t_str('gmapsKeyCleared'));
-    });
   }
 
   if (document.readyState === 'loading') {

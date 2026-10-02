@@ -29,19 +29,15 @@ A small, fast web app that shows live arrival times across Hong Kong's major pub
 
 All runtime API calls are unauthenticated and CORS-enabled. Stop coordinates for GMB, MTR stations and (where available) Light Rail stops are bundled in `assets/` so the app can offer accurate nearby stops out-of-the-box.
 
-## Google Maps per stop (optional)
+## Google Maps per stop
 
-Every stop / station view shows a Google Maps preview at the top:
+Every stop / station view that has lat/lng coordinates gets a live embedded
+Google Map at the **bottom** of the page (under the live arrivals list):
 
-- **No API key** — a tappable static preview tile plus a `Open in Google Maps` link out.
-- **With an API key** — a live interactive Google Maps iframe embedded inline.
+- A 250 px tall card with a fully interactive `maps.google.com/maps?q=…&output=embed` iframe — full pan/zoom/satellite-thumb UI, no API key required.
+- A red pin-icon "Open in Google Maps" link underneath that opens `maps.google.com` in a new tab.
 
-There are two ways to provide a Google Maps **Embed API** key:
-
-1. **Site-wide (recommended for self-hosting).** Copy `assets/config.example.json` to `assets/config.json` and set `gmapsKey`. Commit + push. The key ships with the static site; restrict it in the Google Cloud console to your origin's domain, e.g. `https://yourname.github.io/buseta-hk/*`.
-2. **Per-device.** Open the app, scroll to **設定 / Settings**, paste your key, and tap **儲存 / Save**. The key never leaves your device's `localStorage`.
-
-The key is used for the [Google Maps Embed](https://developers.google.com/maps/documentation/embed/get-started) iframe only — the app never makes paid requests.
+This uses Google's [legacy iframe URL pattern](https://developers.google.com/maps/documentation/embed/get-started), so it works on day one with zero setup. Sites that want a slightly nicer embed can still add a `gmapsKey` to `assets/config.json`; the iframe gets a `&key=` parameter but still works without one.
 
 ## Tech
 
