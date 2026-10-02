@@ -2392,7 +2392,7 @@
           } else {
             top.appendChild(document.createTextNode(`${a.minutes} ${t_str('minShort')}`));
             top.appendChild(document.createTextNode(' · '));
-            top.appendChild(formatHMTimestamp(a.eta));
+            top.appendChild(document.createTextNode(formatHMTimestamp(a.eta)));
           }
           info.appendChild(top);
           // Sub line: route + destination + a hint chip for special/last.
