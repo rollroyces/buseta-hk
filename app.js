@@ -3081,6 +3081,20 @@
   function applyLang() {
     document.documentElement.lang = state.lang === 'en' ? 'en'
       : state.lang === 'zh-Hans' ? 'zh-Hans' : 'zh-Hant';
+    // Show the CURRENT language on the toggle pill (not the next one).
+    // The button label cycles 繁體中文 → 简体中文 → English on each click.
+    const btn = document.getElementById('langToggle');
+    if (btn) {
+      const cur = btn.querySelector('.lang-current');
+      if (cur) {
+        cur.textContent = state.lang === 'zh-Hant' ? '繁體中文'
+          : state.lang === 'zh-Hans' ? '简体中文'
+          : 'English';
+      }
+      btn.setAttribute('aria-label', state.lang === 'zh-Hant' ? '切換語言'
+        : state.lang === 'zh-Hans' ? '切换语言'
+        : 'Switch language');
+    }
     applyI18n(document.body);
   }
   function toggleLang() {
