@@ -1064,8 +1064,8 @@
     }
     const ul = el('div', { class: 'list' });
     matches.forEach((m) => {
-      if (m.kind === 'route') ul.appendChild(routeRow({ ...m.data, dupCount: m.dupCount }));
-      else ul.appendChild(stopRow({ ...m.data, dupCount: m.dupCount }));
+      if (m.kind === 'route') ul.appendChild(routeRow(m.data));
+      else ul.appendChild(stopRow(m.data));
     });
     out.appendChild(ul);
   }
@@ -1206,24 +1206,7 @@
     });
 
     matches.sort((a, b) => b.score - a.score);
-    // Annotate the collapsed entries so the row can render a "+N" badge.
-    return matches.slice(0, 80).map((m) => {
-      const out = { ...m };
-      if (m.kind === 'stop') {
-        const nameKey = `${m.data.nameTc || ''}||${m.data.nameEn || ''}`;
-        const tally = seenNames.get(nameKey);
-        out.dupCount = (tally && tally.count > 1) ? tally.count : 0;
-      } else {
-        const routeKey = m.data.co === 'MTR'
-          ? (m.data._lineView ? `MTR|${m.data.route}|LINE|` : `MTR|${m.data.stop || m.data.route}|STATION|`)
-          : (m.data.co === 'LRT'
-              ? `LRT|${m.data.route}`
-              : `${m.data.co}|${m.data.route}`);
-        const tally = seenRoutes.get(routeKey);
-        out.dupCount = (tally && tally.count > 1) ? tally.count : 0;
-      }
-      return out;
-    });
+    return matches.slice(0, 80);
   }
 
   function matchesFilter(co) {
@@ -1510,10 +1493,6 @@
     titleEl.appendChild(document.createTextNode(displayRoute));
     titleEl.appendChild(el('span', { style: 'color: var(--muted); margin: 0 6px; font-weight: 500;' }, '·'));
     titleEl.appendChild(document.createTextNode(dest));
-    if (r.dupCount && r.dupCount > 1) {
-      const chip = el('span', { class: 'row-dup' }, `+${r.dupCount - 1} dir`);
-      titleEl.appendChild(chip);
-    }
     main.appendChild(titleEl);
     main.appendChild(el('div', { class: 'row-sub' }, r.co === 'GMB' ? orig : `${dirLabel} · ${orig}`));
     a.appendChild(main);
@@ -1526,15 +1505,7 @@
     const a = el('a', { class: 'row', href: `#/stop/${encodeURIComponent(s.stop)}` });
     a.appendChild(makeBadge(s.co || 'STOP'));
     const main = el('div', { class: 'row-main' });
-    const titleEl = el('div', { class: 'row-title' });
-    titleEl.appendChild(document.createTextNode(pickFirst(s.nameTc, s.nameEn) || s.stop));
-    // If the search collapsed duplicates by name, surface a "+N" chip so the
-    // user knows there are other physical stops sharing this name.
-    if (s.dupCount && s.dupCount > 1) {
-      const chip = el('span', { class: 'row-dup' }, `+${s.dupCount - 1}`);
-      titleEl.appendChild(chip);
-    }
-    main.appendChild(titleEl);
+    main.appendChild(el('div', { class: 'row-title' }, pickFirst(s.nameTc, s.nameEn) || s.stop));
     const subInfo = s.lines ? s.lines.join(' · ') : (s.nameEn || (s.stop ? String(s.stop).slice(0, 12) : ''));
     main.appendChild(el('div', { class: 'row-sub' }, subInfo));
     a.appendChild(main);
