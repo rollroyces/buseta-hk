@@ -2381,17 +2381,19 @@
         arrivals.slice(0, 12).forEach((a) => {
           const href = `#/route/${encodeURIComponent(a.co)}/${encodeURIComponent(a.route)}/${encodeURIComponent(a.dir)}/${encodeURIComponent(a.service)}${a.seq != null ? '/' + encodeURIComponent(String(a.seq)) : ''}`;
           const row = el('a', { class: 'arrival-row', href });
-          const op = el('span', { class: 'arrival-op' }, t_str(opCoKey(a.co)));
           const info = el('div', { class: 'arrival-info' });
-          // First line: "城巴 · 23:24" or "九巴 · 26 分鐘 · 23:51" pattern.
+          // Top line: "城巴 · 23:24" or "九巴 · 26 分鐘 · 23:51" pattern (justarrived-style).
           const top = el('div', { class: 'arrival-top' });
+          const op = el('span', { class: 'arrival-op' }, t_str(opCoKey(a.co)));
           top.appendChild(op);
           top.appendChild(document.createTextNode(' · '));
-          if (a.minutes != null && a.minutes > 0) {
+          if (a.minutes == null || a.minutes <= 0) {
+            top.appendChild(el('span', { class: 'arrival-now' }, t_str('arriving')));
+          } else {
             top.appendChild(document.createTextNode(`${a.minutes} ${t_str('minShort')}`));
             top.appendChild(document.createTextNode(' · '));
+            top.appendChild(formatHMTimestamp(a.eta));
           }
-          top.appendChild(formatHMTimestamp(a.eta));
           info.appendChild(top);
           // Sub line: route + destination + a hint chip for special/last.
           const sub = el('div', { class: 'arrival-sub' });
