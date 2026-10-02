@@ -650,7 +650,7 @@
     fetchJSON(`${API.CITYBUS}/eta/ctb/${encodeURIComponent(stopId)}/${encodeURIComponent(route)}`);
   // CTB stop metadata (name includes "Stop, Location" for many stops).
   const fetchCitybusStop = (stopId) =>
-    fetchJSON(`${API.CITYBUS}/stop/ctb/${encodeURIComponent(stopId)}`);
+    fetchJSON(`${API.CITYBUS}/stop/${encodeURIComponent(stopId)}`);
   // Returns the right ETA fetcher for a stop_id + route + dir.
   function fetchEtaForStop(stopId, route, dir) {
     if (typeof stopId === 'string' && /^[0-9a-fA-F]{16}$/.test(stopId)) return fetchKmbStopEta(stopId);
@@ -1732,6 +1732,27 @@
         }
       });
 
+      // Operator stop names ("書局街, 英皇道", "Shu Kuk Street, King's Road")
+      // — the hk-stops.json index uses different ID formats, so the
+      // operator endpoint is the source of truth for human-readable names.
+      // Run in parallel with the ETA loop, capped concurrency, and fold the
+      // result back into each stop row before rendering.
+      const nameResults = await fetchStopsWithCap(stops, 8, (s) => {
+        if (isCitybus) return fetchCitybusStop(s.stop);
+        return fetchKmbStop(s.stop);
+      });
+      const nameByStop = new Map();
+      stops.forEach((s, i) => {
+        const rr = nameResults[i];
+        if (rr && rr.status === 'fulfilled' && rr.value && rr.value.data) {
+          let st = rr.value.data;
+          if (Array.isArray(st)) st = st[0];
+          if (st && st.name_tc) {
+            nameByStop.set(s.stop, { nameTc: st.name_tc, nameEn: st.name_en || '' });
+          }
+        }
+      });
+
       const list = el('div', { class: 'eta-list' });
       // Pick the row that should be highlighted (the user's current stop)
       // and remember its DOM node so we can scroll it into view below.
@@ -1751,8 +1772,15 @@
           targetRow = row;
         }
         const info = el('div', { class: 'stop-info' });
-        info.appendChild(el('div', { class: 'stop-name-row' }, pickFirst(s.nameTc, s.nameEn) || s.stop));
-        if (s.nameEn) info.appendChild(el('div', { class: 'stop-name-en' }, s.nameEn));
+        // Prefer the operator's stop name (loaded from nameByStop above);
+        // fall back to the hk-stops.json entry, then to the raw operator id.
+        const fetchedName = nameByStop.get(s.stop);
+        const nameDisplay = fetchedName
+          ? pickFirst(fetchedName.nameTc, fetchedName.nameEn)
+          : pickFirst(s.nameTc, s.nameEn);
+        const enDisplay = fetchedName ? fetchedName.nameEn : (s.nameEn || '');
+        info.appendChild(el('div', { class: 'stop-name-row' }, nameDisplay || s.stop));
+        if (enDisplay) info.appendChild(el('div', { class: 'stop-name-en' }, enDisplay));
         row.appendChild(info);
         const etaBox = el('div', { class: 'stop-eta' });
         const etas = etaByStop.get(s.stop) || [];
@@ -2002,13 +2030,12 @@
     }));
     body.appendChild(el('p', { class: 'muted' }, t_str('loading')));
 
-    // Fetch LRT schedules for first 3 stops concurrently.
-    const firstStops = stopsForDir.slice(0, 3);
-    Promise.allSettled(firstStops.map((s) => fetchLrtSchedule(s.id || s.stop))).then((results) => {
+    // Fetch LRT schedules for every stop on this route (capped concurrency).
+    fetchStopsWithCap(stopsForDir, 8, (s) => fetchLrtSchedule(s.id || s.stop)).then((results) => {
       const etaByStop = new Map();
-      firstStops.forEach((s, i) => {
+      stopsForDir.forEach((s, i) => {
         const rr = results[i];
-        if (rr.status === 'fulfilled' && rr.value && Array.isArray(rr.value.platform_list)) {
+        if (rr && rr.status === 'fulfilled' && rr.value && Array.isArray(rr.value.platform_list)) {
           const trains = [];
           for (const p of rr.value.platform_list) {
             for (const tr of (p.route_list || [])) {
@@ -2101,12 +2128,12 @@
         const stops = stopsRaw
           .sort((a, b) => a.stop_seq - b.stop_seq)
           .map((it) => state.index.stops.get(String(it.stop_id)) || { stop: String(it.stop_id), nameTc: it.name_tc, nameEn: it.name_en });
-        const firstStops = stops.slice(0, 3);
-        const etaResults = await Promise.allSettled(firstStops.map((s) => fetchGmbStopEta(meta._routeId, parseInt(r.dir, 10) || 1, parseInt(s.stop, 10) || 0)));
+        // ETA for every stop on the route, capped concurrency.
+        const etaResults = await fetchStopsWithCap(stops, 8, (s) => fetchGmbStopEta(meta._routeId, parseInt(r.dir, 10) || 1, parseInt(s.stop, 10) || 0));
         const etaByStop = new Map();
-        firstStops.forEach((s, i) => {
+        stops.forEach((s, i) => {
           const rr = etaResults[i];
-          if (rr.status === 'fulfilled' && rr.value && rr.value.data && rr.value.data.eta) {
+          if (rr && rr.status === 'fulfilled' && rr.value && rr.value.data && rr.value.data.eta) {
             etaByStop.set(s.stop, rr.value.data.eta);
           }
         });
