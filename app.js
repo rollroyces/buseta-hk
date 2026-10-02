@@ -216,6 +216,91 @@
       refresh: 'Refresh',
       ctbNoEtaHint: 'Open a route to see live arrivals for this stop.',
     },
+    'zh-Hans': {
+      brandSub: '香港巴士',
+      tagline: '实时到站',
+      loading: '载入紧资料…',
+      navHome: '主页',
+      navSearch: '搜寻',
+      langOther: 'English',
+      savedRoutes: '收藏路线',
+      savedStops: '收藏车站',
+      recentSearches: '最近查过',
+      operatorsTitle: '支援交通工具',
+      operatorsNote: '独立第三方应用。资料由各营办商透过运输署公开数据提供。',
+      emptyRoutes: '未有收藏路线。',
+      emptyStops: '未有收藏车站。',
+      emptyRecent: '未有最近查过嘅路线。',
+      footerAttribution: '资料来源：运输署资料一线通。到站时间嚟自九巴、龙运、城巴、专线小巴及港铁（包括轻铁）；车费嚟自公共交通路线及收费资料。预计时间约每分钟更新，只供参考。',
+      searchPlaceholder: '路线、地点、车站或港铁站',
+      filterAll: '全部',
+      filterKMB: '九巴',
+      filterLWB: '龙运',
+      filterCTB: '城巴',
+      filterGMB: '小巴',
+      filterMTR: '港铁',
+      dirUp: '上行',
+      dirDown: '下行',
+      inbound: '去程',
+      outbound: '回程',
+      line: '路线',
+      platform: '月台',
+      noFavHint: '搜寻后可以加入收藏，方便日後对咭查阅。',
+      save: '收藏',
+      saved: '已收藏',
+      unsave: '取消收藏',
+      minShort: '分',
+      arriving: '即将到站',
+      scheduled: '原定班次',
+      lastBus: '尾班车',
+      lastTrain: '尾班车',
+      noEta: '暂无到站时间',
+      nextArrivals: '下一班到站',
+      etaCount: (n) => `仲有 ${n} 班`,
+      errorTitle: '揫唔到呢页',
+      errorBody: '你跟蹤嘅连结可能已经过期，或者资料未能成功载入。',
+      retry: '再试一次',
+      showingStop: (n) => `全线 ${n} 站`,
+      enName: '英文名',
+      kmb: '九巴',
+      lwb: '龙运',
+      ctb: '城巴',
+      nwfb: '新巴',
+      gmb: '专线小巴',
+      mtr: '港铁',
+      lrt: '轻铁',
+      routeNotFound: '揫唔到呢条路线。',
+      stopNotFound: '揫唔到呢个车站。',
+      noNearbyRoutes: '附近范围未有常见路线。',
+      noNearbyStops: '附近范围未有常见车站。',
+      noNearbyStations: '附近范围未有港铁站。',
+      searchHint: '输入路线编号、车站名或港铁站',
+      clearRecent: '清除记录',
+      cleared: '已清除',
+      toStop: '去呢个车站',
+      toRoute: '睇路线详情',
+      allLines: '全部路线',
+      selectStation: '揾该站',
+      loadingRoutes: '揾紧小巴路线…',
+      gmbProgress: (done, total) => `已载入 ${done}/${total} 条小巴路线`,
+      fetchFailed: '载入唔到，揫一下。',
+      openInMaps: '喺 Google Maps 开启',
+      mapHeader: '地图',
+      settingsTitle: '设定',
+      gmapsKeyLabel: 'Google Maps API key',
+      gmapsKeyHint: '用 Google Maps Embed API 嘅 key（网站 HTTP referrer 已限制）。留空就会用连结去 Google Maps 而唔系内嵌地图。',
+      gmapsKeySave: '储存',
+      gmapsKeySaved: '已储存',
+      schoolTag: 'school',
+      schoolTagTitle: '此路线另有上学日特别班次',
+      gmapsKeyCleared: '已清除',
+      clearKey: '清除',
+      fare: '车费',
+      updatedJust: '啁啁更新',
+      updatedMeta: '到站时间每分钟更新',
+      refresh: '更新',
+      ctbNoEtaHint: '请打开个别路线嘅详情睇实时到站。',
+    },
   };
 
   // ------------------------------------------------------------------
@@ -316,6 +401,24 @@
   };
 
   const pickFirst = (a, b) => (a && String(a).trim()) || (b && String(b).trim()) || '';
+
+  // Pick a stop / route name in the current UI language. Falls back to the
+  // other Chinese variant (tc ↔ sc) if the requested variant is empty, then
+  // to English. Operator APIs return `name_tc` / `name_sc` / `name_en`.
+  function pickName(obj, lang) {
+    if (!obj) return '';
+    const wantTc = lang !== 'zh-Hans';
+    const tc = obj.name_tc || obj.nameTc || '';
+    const sc = obj.name_sc || obj.nameSc || '';
+    const en = obj.name_en || obj.nameEn || '';
+    if (lang === 'en') return en || tc || sc;
+    if (wantTc) return tc || sc || en;
+    return sc || tc || en;
+  }
+
+  // Convenience: pick a stop / route name in the *current* UI language.
+  // Wraps `pickName(obj, state.lang)` for the common case.
+  function nameFor(obj) { return pickName(obj, state.lang); }
 
   const makeRouteKey = (co, route, dir, service) => `${co}|${route}|${dir}|${service}`;
   const sameRoute = (a, b) =>
@@ -449,7 +552,8 @@
     if (kmbStops && Array.isArray(kmbStops.data)) {
       for (const s of kmbStops.data) {
         stops.set(s.stop, {
-          stop: s.stop, nameTc: s.name_tc, nameEn: s.name_en,
+          stop: s.stop,
+          nameTc: s.name_tc, nameSc: s.name_sc || '', nameEn: s.name_en,
           lat: parseFloat(s.lat), lng: parseFloat(s.long),
         });
       }
@@ -889,9 +993,10 @@
       const lat = Number(data.coordinates.wgs84.latitude);
       const lng = Number(data.coordinates.wgs84.longitude);
       if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
-      const out = state.index.stops.get(stopId) || { stop: stopId, nameTc: '', nameEn: '' };
+      const out = state.index.stops.get(stopId) || { stop: stopId, nameTc: '', nameSc: '', nameEn: '' };
       out.lat = lat; out.lng = lng;
       if (data.name_tc && !out.nameTc) out.nameTc = data.name_tc;
+      if (data.name_sc && !out.nameSc) out.nameSc = data.name_sc;
       if (data.name_en && !out.nameEn) out.nameEn = data.name_en;
       state.index.stops.set(stopId, out);
       return out;
@@ -1410,7 +1515,7 @@
     }
     const list = el('div', { class: 'list' });
     items.forEach(({ stop, dist, etas }) => {
-      const name = pickFirst(stop.nameTc, stop.nameEn);
+      const name = nameFor(stop);
       const row = el('a', { class: 'row', href: `#/stop/${encodeURIComponent(stop.stop)}` });
       row.appendChild(makeBadge(stop.co || 'STOP'));
       const main = el('div', { class: 'row-main' });
@@ -1434,7 +1539,7 @@
     const list = el('div', { class: 'list' });
     items.forEach((item, i) => {
       const st = item.st;
-      const name = pickFirst(st.nameTc, st.nameEn);
+      const name = nameFor(st);
       const line = (st.lines && st.lines[0]) || '';
       const href = `#/route/MTR/${encodeURIComponent(st.stop)}/STATION/`;
       const row = el('a', { class: 'row', href });
@@ -1587,7 +1692,7 @@
     const a = el('a', { class: 'row', href: `#/stop/${encodeURIComponent(s.stop)}` });
     a.appendChild(makeBadge(s.co || 'STOP'));
     const main = el('div', { class: 'row-main' });
-    main.appendChild(el('div', { class: 'row-title' }, pickFirst(s.nameTc, s.nameEn) || s.stop));
+    main.appendChild(el('div', { class: 'row-title' }, nameFor(s) || s.stop));
     const subInfo = s.lines ? s.lines.join(' · ') : (s.nameEn || (s.stop ? String(s.stop).slice(0, 12) : ''));
     main.appendChild(el('div', { class: 'row-sub' }, subInfo));
     a.appendChild(main);
@@ -1767,8 +1872,12 @@
         if (rr && rr.status === 'fulfilled' && rr.value && rr.value.data) {
           let st = rr.value.data;
           if (Array.isArray(st)) st = st[0];
-          if (st && st.name_tc) {
-            nameByStop.set(s.stop, { nameTc: st.name_tc, nameEn: st.name_en || '' });
+          if (st && (st.name_tc || st.name_sc || st.name_en)) {
+            nameByStop.set(s.stop, {
+              nameTc: st.name_tc || '',
+              nameSc: st.name_sc || '',
+              nameEn: st.name_en || '',
+            });
           }
         }
       });
@@ -1795,9 +1904,7 @@
         // Prefer the operator's stop name (loaded from nameByStop above);
         // fall back to the hk-stops.json entry, then to the raw operator id.
         const fetchedName = nameByStop.get(s.stop);
-        const nameDisplay = fetchedName
-          ? pickFirst(fetchedName.nameTc, fetchedName.nameEn)
-          : pickFirst(s.nameTc, s.nameEn);
+        const nameDisplay = fetchedName ? nameFor(fetchedName) : nameFor(s);
         const enDisplay = fetchedName ? fetchedName.nameEn : (s.nameEn || '');
         info.appendChild(el('div', { class: 'stop-name-row' }, nameDisplay || s.stop));
         if (enDisplay) info.appendChild(el('div', { class: 'stop-name-en' }, enDisplay));
@@ -1894,7 +2001,7 @@
         });
         row.appendChild(el('span', { class: 'stop-idx' }, String(idx + 1)));
         const info = el('div', { class: 'stop-info' });
-        info.appendChild(el('div', { class: 'stop-name-row' }, pickFirst(s.nameTc, s.nameEn) || s.code));
+        info.appendChild(el('div', { class: 'stop-name-row' }, nameFor(s) || s.code));
         if (s.nameEn) info.appendChild(el('div', { class: 'stop-name-en' }, s.nameEn));
         row.appendChild(info);
         const etaBox = el('div', { class: 'stop-eta' });
@@ -1928,7 +2035,7 @@
 
     const stationCode = r.route; // when dir === 'STATION', route holds station code
     const station = state.index.mtr.get(stationCode);
-    const stationName = station ? pickFirst(station.nameTc, station.nameEn) : stationCode;
+    const stationName = station ? nameFor(station) : stationCode;
     const stationLines = (station && station.lines) || [];
     const dirLabel = ''; // station view shows both directions.
 
@@ -2075,7 +2182,7 @@
         row.appendChild(el('span', { class: 'stop-idx' }, String(idx + 1)));
         const stopMeta = state.index.lrt.stops.get(s.stop);
         const info = el('div', { class: 'stop-info' });
-        info.appendChild(el('div', { class: 'stop-name-row' }, stopMeta ? pickFirst(stopMeta.nameTc, stopMeta.nameEn) : s.stop));
+        info.appendChild(el('div', { class: 'stop-name-row' }, stopMeta ? nameFor(stopMeta) : s.stop));
         if (stopMeta && stopMeta.nameEn) info.appendChild(el('div', { class: 'stop-name-en' }, stopMeta.nameEn));
         row.appendChild(info);
         const etaBox = el('div', { class: 'stop-eta' });
@@ -2175,7 +2282,7 @@
             targetRow = row;
           }
           const info = el('div', { class: 'stop-info' });
-          info.appendChild(el('div', { class: 'stop-name-row' }, pickFirst(s.nameTc, s.nameEn) || s.stop));
+          info.appendChild(el('div', { class: 'stop-name-row' }, nameFor(s) || s.stop));
           if (s.nameEn) info.appendChild(el('div', { class: 'stop-name-en' }, s.nameEn));
           row.appendChild(info);
           const etaBox = el('div', { class: 'stop-eta' });
@@ -2253,7 +2360,10 @@
     ));
 
     const topRight = el('div', { class: 'route-topbar-right' });
-    const langPill = el('span', { class: 'route-lang-pill' }, state.lang === 'en' ? '繁體中文' : 'English');
+    const langPill = el('span', { class: 'route-lang-pill' },
+      state.lang === 'zh-Hant' ? '繁體中文'
+        : state.lang === 'zh-Hans' ? '简体中文'
+        : 'English');
     topRight.appendChild(langPill);
 
     const favKey = { co, route, dir, service };
@@ -2479,21 +2589,26 @@
     state._refreshStop = () => refreshBusStopView(stateRef);
 
     stopPromise.then((stopResp) => {
-      let nameTc = stopId, nameEn = '';
+      let nameTc = stopId, nameSc = '', nameEn = '';
       let stop = null;
       if (stopResp && stopResp.data) {
         stop = stopResp.data;
         if (Array.isArray(stop)) stop = stop[0];
-        if (stop) { nameTc = stop.name_tc || nameTc; nameEn = stop.name_en || ''; }
+        if (stop) {
+          nameTc = stop.name_tc || nameTc;
+          nameSc = stop.name_sc || '';
+          nameEn = stop.name_en || '';
+        }
       }
       // Fall back to the local index (hk-stops.json) for both names and lat/lng.
       const idxMeta = state.index.stops.get(stopId);
       if (idxMeta) {
         nameTc = pickFirst(idxMeta.nameTc, nameTc) || nameTc;
+        nameSc = pickFirst(idxMeta.nameSc, nameSc) || nameSc;
         nameEn = pickFirst(idxMeta.nameEn, nameEn) || nameEn;
       }
-      header.replaceChildren(...buildStopHeader(stopId, nameTc, nameEn, opGuess).childNodes);
-      state._lastStopName = nameTc;
+      header.replaceChildren(...buildStopHeader(stopId, nameTc, nameEn, opGuess, nameSc).childNodes);
+      state._lastStopName = nameFor({ nameTc, nameSc, nameEn });
       state._lastStopNameEn = nameEn;
     });
 
@@ -2520,7 +2635,7 @@
       const mapEl = (() => {
         const meta = state.index.stops.get(stopId);
         if (!meta || !Number.isFinite(meta.lat) || !Number.isFinite(meta.lng)) return null;
-        const m = renderStopMap(meta.lat, meta.lng, pickFirst(meta.nameTc, meta.nameEn) || stopId);
+        const m = renderStopMap(meta.lat, meta.lng, nameFor(meta) || stopId);
         return m.firstChild ? m : null;
       })();
 
@@ -2653,7 +2768,7 @@
     const stop = state.index.lrt.stops.get(stopCode);
     const nameTc = stop ? stop.nameTc : stopCode;
     const nameEn = stop ? stop.nameEn : '';
-    header.appendChild(buildStopHeader(stopCode, nameTc, nameEn, 'LRT'));
+    header.appendChild(buildStopHeader(stopCode, nameFor(stop || { nameTc, nameEn }) || nameTc, nameEn, 'LRT'));
     body.appendChild(el('p', { class: 'muted' }, t_str('loading')));
 
     const stationId = stop && stop.id ? stop.id : null;
@@ -2774,7 +2889,7 @@
       const meta = state._lastGmbStopMeta;
       state._lastGmbStopMeta = null;
       if (meta && Number.isFinite(meta.lat) && Number.isFinite(meta.lng)) {
-        const mapEl = renderStopMap(meta.lat, meta.lng, pickFirst(meta.nameTc, meta.nameEn) || stopId);
+        const mapEl = renderStopMap(meta.lat, meta.lng, nameFor(meta) || stopId);
         if (mapEl.firstChild) body.appendChild(mapEl);
       }
     }).catch(() => body.replaceChildren(el('p', { class: 'empty' }, t_str('noEta'))));
@@ -2785,7 +2900,7 @@
   // Stop view header — modeled on justarrived.grok.me:
   // back chevron + language toggle (top bar), small operator pill, big stop name,
   // red accent rule, "剛剛更新 · HH:MM" sub-line.
-  function buildStopHeader(stopId, nameTc, nameEn, co) {
+  function buildStopHeader(stopId, nameTc, nameEn, co, nameSc) {
     const head = el('div', { class: 'stop-header' });
 
     // ---- top action bar ----
@@ -2808,7 +2923,11 @@
     })()));
 
     const topRight = el('div', { class: 'stop-topbar-right' });
-    const langPill = el('span', { class: 'stop-lang-pill' }, state.lang === 'en' ? '繁體中文' : 'English');
+    // The pill shows the *current* language; clicking cycles to the next one.
+    const langPill = el('span', { class: 'stop-lang-pill' },
+      state.lang === 'zh-Hant' ? '繁體中文'
+        : state.lang === 'zh-Hans' ? '简体中文'
+        : 'English');
     topRight.appendChild(langPill);
 
     const isFav = state.savedStops.some((s) => sameStop(s, { stop: stopId }));
@@ -2833,7 +2952,7 @@
     }
 
     // ---- main stop name ----
-    head.appendChild(el('h1', { class: 'stop-name' }, pickFirst(nameTc, nameEn) || stopId));
+    head.appendChild(el('h1', { class: 'stop-name' }, nameFor({ nameTc, nameSc: nameSc || '', nameEn }) || stopId));
     if (nameEn) head.appendChild(el('p', { class: 'stop-name-en' }, nameEn));
 
     // ---- red accent rule ----
@@ -2960,11 +3079,14 @@
   // Language
   // ------------------------------------------------------------------
   function applyLang() {
-    document.documentElement.lang = state.lang === 'en' ? 'en' : 'zh-Hant';
+    document.documentElement.lang = state.lang === 'en' ? 'en'
+      : state.lang === 'zh-Hans' ? 'zh-Hans' : 'zh-Hant';
     applyI18n(document.body);
   }
   function toggleLang() {
-    state.lang = state.lang === 'zh-Hant' ? 'en' : 'zh-Hant';
+    // Cycle: zh-Hant → zh-Hans → en → zh-Hant
+    state.lang = state.lang === 'zh-Hant' ? 'zh-Hans'
+      : state.lang === 'zh-Hans' ? 'en' : 'zh-Hant';
     persist();
     applyLang();
     onHashChange();
