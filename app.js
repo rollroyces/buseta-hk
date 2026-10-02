@@ -641,6 +641,19 @@
   const fetchKmbStopEta = (stopId) =>
     fetchJSON(`${API.KMB}/stop-eta/${encodeURIComponent(stopId)}`);
 
+  // Citybus + NWFB (CTB uses 6-digit numeric stop IDs)
+  const fetchCitybusRouteStop = (route, dir) =>
+    fetchJSON(`${API.CITYBUS}/route-stop/ctb/${encodeURIComponent(route)}/${dir === 'I' ? 'inbound' : 'outbound'}`);
+  const fetchCitybusStopEta = (stopId, route) =>
+    fetchJSON(`${API.CITYBUS}/eta/ctb/${encodeURIComponent(stopId)}/${encodeURIComponent(route)}`);
+  // Returns the right ETA fetcher for a stop_id + route + dir.
+  function fetchEtaForStop(stopId, route, dir) {
+    if (typeof stopId === 'string' && /^[0-9a-fA-F]{16}$/.test(stopId)) return fetchKmbStopEta(stopId);
+    if (typeof stopId === 'string' && /^[0-9]{6}$/.test(stopId)) return fetchCitybusStopEta(stopId, route);
+    // Generic KMB route-stop lookup works for any operator's KMB-format stop.
+    return fetchKmbStopEta(stopId);
+  }
+
   // GMB (Green Minibus / 專線小巴)
   const fetchGmbRoute = (region, code) =>
     fetchJSON(`${API.GMB}/route/${encodeURIComponent(region)}/${encodeURIComponent(code)}`);
@@ -1630,7 +1643,12 @@
     }));
     body.appendChild(el('p', { class: 'muted' }, t_str('loading')));
 
-    fetchKmbRouteStop(r.route, r.dir, r.service).then(async (resp) => {
+    // Pick the right route-stop endpoint based on operator. KMB / LWB share
+    // /route-stop; CTB / NWFB use the Citybus endpoint.
+    const fetchRouteStop = (r.co === 'CTB' || r.co === 'NWFB')
+      ? () => fetchCitybusRouteStop(r.route, r.dir)
+      : () => fetchKmbRouteStop(r.route, r.dir, r.service);
+    fetchRouteStop().then(async (resp) => {
       const items = (resp && Array.isArray(resp.data)) ? resp.data : [];
       if (items.length === 0) {
         body.replaceChildren(el('p', { class: 'empty' }, t_str('routeNotFound')));
@@ -1640,14 +1658,18 @@
         .sort((a, b) => parseInt(a.seq, 10) - parseInt(b.seq, 10))
         .map((it) => state.index.stops.get(it.stop) || { stop: it.stop, nameTc: it.stop, nameEn: '', lat: null, lng: null });
 
+      // Live arrivals for the first 4 stops. The right API is picked per stop
+      // (KMB-format 16-hex → KMB; CTB-format 6-digit → Citybus).
       const firstStops = stops.slice(0, 4);
-      const etaResults = await Promise.allSettled(firstStops.map((s) => fetchKmbStopEta(s.stop)));
+      const etaResults = await Promise.allSettled(firstStops.map((s) => fetchEtaForStop(s.stop, r.route, r.dir)));
       const etaByStop = new Map();
       firstStops.forEach((s, i) => {
         const rr = etaResults[i];
         if (rr.status === 'fulfilled' && rr.value && Array.isArray(rr.value.data)) {
           etaByStop.set(s.stop, rr.value.data
-            .filter((e) => e.route === r.route && e.dir === r.dir && String(e.service_type) === String(r.service))
+            .filter((e) => e.route === r.route
+              && (r.co === 'CTB' || r.co === 'NWFB' || (e.dir === r.dir && String(e.service_type) === String(r.service))))
+            .filter((e) => !!e.eta)
             .sort((a, b) => new Date(a.eta).getTime() - new Date(b.eta).getTime()));
         }
       });
