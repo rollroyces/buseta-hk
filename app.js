@@ -1603,22 +1603,31 @@
   // hammering the upstream APIs on long routes.
   async function fetchStopsWithCap(items, cap, worker) {
     const results = new Array(items.length);
-    let next = 0;
-    async function runOne() {
-      const i = next++;
-      if (i >= items.length) return;
-      try {
-        const value = await worker(items[i], i);
-        results[i] = { status: 'fulfilled', value };
-      } catch (e) {
-        results[i] = { status: 'rejected', reason: e };
+    if (items.length === 0) return results;
+    const limit = Math.max(1, Math.min(cap, items.length));
+    let cursor = 0;
+    const inFlight = new Set();
+    const pump = () => {
+      while (inFlight.size < limit && cursor < items.length) {
+        const i = cursor++;
+        const p = (async () => {
+          try {
+            const value = await worker(items[i], i);
+            results[i] = { status: 'fulfilled', value };
+          } catch (e) {
+            results[i] = { status: 'rejected', reason: e };
+          }
+        })();
+        inFlight.add(p);
+        p.finally(() => inFlight.delete(p));
       }
-      await runOne();
+    };
+    pump();
+    while (inFlight.size > 0 || cursor < items.length) {
+      if (inFlight.size === 0) pump();
+      await Promise.race([...inFlight]);
+      pump();
     }
-    const runners = [];
-    const startCount = Math.min(cap, items.length);
-    for (let k = 0; k < startCount; k++) runners.push(runOne());
-    await Promise.all(runners);
     return results;
   }
 
