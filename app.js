@@ -116,6 +116,7 @@
       updatedJust: '剛剛更新',
       updatedMeta: '到站時間每分鐘更新',
       refresh: '更新',
+      ctbNoEtaHint: '請打開個別路線嘅詳情睇實時到站。',
     },
     'en': {
       brandSub: 'Hong Kong Bus',
@@ -213,6 +214,7 @@
       updatedJust: 'Just updated',
       updatedMeta: 'Live arrivals refresh every minute',
       refresh: 'Refresh',
+      ctbNoEtaHint: 'Open a route to see live arrivals for this stop.',
     },
   };
 
@@ -646,6 +648,9 @@
     fetchJSON(`${API.CITYBUS}/route-stop/ctb/${encodeURIComponent(route)}/${dir === 'I' ? 'inbound' : 'outbound'}`);
   const fetchCitybusStopEta = (stopId, route) =>
     fetchJSON(`${API.CITYBUS}/eta/ctb/${encodeURIComponent(stopId)}/${encodeURIComponent(route)}`);
+  // CTB stop metadata (name includes "Stop, Location" for many stops).
+  const fetchCitybusStop = (stopId) =>
+    fetchJSON(`${API.CITYBUS}/stop/ctb/${encodeURIComponent(stopId)}`);
   // Returns the right ETA fetcher for a stop_id + route + dir.
   function fetchEtaForStop(stopId, route, dir) {
     if (typeof stopId === 'string' && /^[0-9a-fA-F]{16}$/.test(stopId)) return fetchKmbStopEta(stopId);
@@ -2372,84 +2377,168 @@
     const body = $('[data-bind="stopBody"]', view);
     header.innerHTML = '';
     body.innerHTML = '';
-    header.appendChild(buildStopHeader(stopId, stopId, '', ''));
+
+    // Decide which operator owns this stop by stop-ID format. KMB uses
+    // 16-hex IDs, Citybus uses 6-digit numeric. Anything else falls back
+    // to KMB; the live index entry will tell us if it was a misroute.
+    const isCtb = typeof stopId === 'string' && /^[0-9]{6}$/.test(stopId);
+    const opGuess = isCtb ? 'CTB' : 'KMB';
+
+    header.appendChild(buildStopHeader(stopId, stopId, '', opGuess));
     body.appendChild(el('p', { class: 'muted' }, t_str('loading')));
 
-    Promise.all([fetchKmbStop(stopId).catch(() => null), fetchKmbStopEta(stopId).catch(() => null)])
-      .then(([stopResp, etaResp]) => {
-        const stop = stopResp && stopResp.data ? stopResp.data : { stop: stopId, name_tc: stopId, name_en: '' };
-        const data = etaResp && Array.isArray(etaResp.data) ? etaResp.data : [];
-        header.replaceChildren(...buildStopHeader(stopId, stop.name_tc, stop.name_en, '').childNodes);
+    const stopPromise = isCtb
+      ? fetchCitybusStop(stopId).catch(() => null)
+      : fetchKmbStop(stopId).catch(() => null);
 
-        body.innerHTML = '';
+    const stateRef = { panel: body, header, stopId, view };
+    state._refreshStop = () => refreshBusStopView(stateRef);
 
-        // Build the map element once so it can survive both branches below.
-        const mapEl = (() => {
-          const meta = state.index.stops.get(stopId);
-          if (!meta || !Number.isFinite(meta.lat) || !Number.isFinite(meta.lng)) return null;
-          const m = renderStopMap(meta.lat, meta.lng, pickFirst(meta.nameTc, meta.nameEn) || stopId);
-          return m.firstChild ? m : null;
-        })();
+    stopPromise.then((stopResp) => {
+      let nameTc = stopId, nameEn = '';
+      let stop = null;
+      if (stopResp && stopResp.data) {
+        stop = stopResp.data;
+        if (Array.isArray(stop)) stop = stop[0];
+        if (stop) { nameTc = stop.name_tc || nameTc; nameEn = stop.name_en || ''; }
+      }
+      // Fall back to the local index (hk-stops.json) for both names and lat/lng.
+      const idxMeta = state.index.stops.get(stopId);
+      if (idxMeta) {
+        nameTc = pickFirst(idxMeta.nameTc, nameTc) || nameTc;
+        nameEn = pickFirst(idxMeta.nameEn, nameEn) || nameEn;
+      }
+      header.replaceChildren(...buildStopHeader(stopId, nameTc, nameEn, opGuess).childNodes);
+      state._lastStopName = nameTc;
+      state._lastStopNameEn = nameEn;
+    });
 
-        // Flatten every upcoming arrival (regardless of route) into a single
-        // sorted list — justarrived.grok.me's stop view. Each row links to
-        // the route detail, anchored at this stop's position in the sequence.
-        const arrivals = data
-          .filter((e) => !!e.eta)
-          .map((e) => ({
-            co: classifyKmbOp(e.route, '', e.dest_tc || ''),
-            route: e.route,
-            dir: e.dir,
-            service: e.service_type,
-            destTc: e.dest_tc,
-            destEn: e.dest_en,
+    refreshBusStopView(stateRef);
+    startEtaRefresh(renderStopDetail);
+  }
+
+  // Fetch the latest ETAs for the current bus stop and re-render the body.
+  function refreshBusStopView(stateRef) {
+    if (!stateRef || !stateRef.panel) return;
+    const { stopId, panel: body } = stateRef;
+
+    // Body only — never wipe the header.
+    body.innerHTML = '';
+    body.appendChild(el('p', { class: 'muted' }, t_str('loading')));
+
+    const isCtb = typeof stopId === 'string' && /^[0-9]{6}$/.test(stopId);
+    const etaPromise = isCtb ? null : fetchKmbStopEta(stopId).catch(() => null);
+
+    Promise.resolve(etaPromise).then((etaResp) => {
+      const data = etaResp && Array.isArray(etaResp.data) ? etaResp.data : [];
+
+      // Map element (bottom): only when we have lat/lng.
+      const mapEl = (() => {
+        const meta = state.index.stops.get(stopId);
+        if (!meta || !Number.isFinite(meta.lat) || !Number.isFinite(meta.lng)) return null;
+        const m = renderStopMap(meta.lat, meta.lng, pickFirst(meta.nameTc, meta.nameEn) || stopId);
+        return m.firstChild ? m : null;
+      })();
+
+      body.innerHTML = '';
+
+      if (data.length === 0) {
+        if (isCtb) {
+          // CTB endpoints are per-(stop, route); we don't have an "all routes at this stop" feed.
+          body.appendChild(el('p', { class: 'empty' }, t_str('noEta')));
+          const hint = el('p', { class: 'muted', style: 'margin-top: 4px;' });
+          hint.appendChild(document.createTextNode(t_str('ctbNoEtaHint') || ''));
+          body.appendChild(hint);
+        } else {
+          body.appendChild(el('p', { class: 'empty' }, t_str('noEta')));
+        }
+        if (mapEl) body.appendChild(mapEl);
+        return;
+      }
+
+      // Group arrivals by (co, route, dir, service, dest). Keep up to 3 ETAs
+      // per group sorted by time. Just like justarrived.grok.me: one card
+      // per route, primary arrival big + 2 more as secondary text.
+      const routeMap = new Map();
+      data
+        .filter((e) => !!e.eta)
+        .forEach((e) => {
+          const co = classifyKmbOp(e.route, '', e.dest_tc || '');
+          const key = `${co}|${e.route}|${e.dir}|${e.service_type}|${e.dest_tc || ''}`;
+          if (!routeMap.has(key)) {
+            routeMap.set(key, {
+              co, route: e.route, dir: e.dir, service: e.service_type,
+              destTc: e.dest_tc, destEn: e.dest_en,
+              seq: e.seq,
+              arrivals: [],
+            });
+          }
+          routeMap.get(key).arrivals.push({
             eta: e.eta,
             minutes: minutesUntil(e.eta),
-            seq: e.seq,
             rmk: e.rmk_en,
-          }))
-          .sort((a, b) => (a.minutes ?? 9999) - (b.minutes ?? 9999));
-
-        if (arrivals.length === 0) {
-          body.appendChild(el('p', { class: 'empty' }, t_str('noEta')));
-          if (mapEl) body.appendChild(mapEl);
-          return;
-        }
-
-        body.appendChild(el('h2', { class: 'section-title' }, t_str('nextArrivals')));
-        const list = el('div', { class: 'arrival-list' });
-        arrivals.slice(0, 12).forEach((a) => {
-          const href = `#/route/${encodeURIComponent(a.co)}/${encodeURIComponent(a.route)}/${encodeURIComponent(a.dir)}/${encodeURIComponent(a.service)}${a.seq != null ? '/' + encodeURIComponent(String(a.seq)) : ''}`;
-          const row = el('a', { class: 'arrival-row', href });
-          const info = el('div', { class: 'arrival-info' });
-          // Top line: "城巴 · 23:24" or "九巴 · 26 分鐘 · 23:51" pattern (justarrived-style).
-          const top = el('div', { class: 'arrival-top' });
-          const op = el('span', { class: 'arrival-op' }, t_str(opCoKey(a.co)));
-          top.appendChild(op);
-          top.appendChild(document.createTextNode(' · '));
-          if (a.minutes == null || a.minutes <= 0) {
-            top.appendChild(el('span', { class: 'arrival-now' }, t_str('arriving')));
-          } else {
-            top.appendChild(document.createTextNode(`${a.minutes} ${t_str('minShort')}`));
-            top.appendChild(document.createTextNode(' · '));
-            top.appendChild(document.createTextNode(formatHMTimestamp(a.eta)));
-          }
-          info.appendChild(top);
-          // Sub line: route + destination + a hint chip for special/last.
-          const sub = el('div', { class: 'arrival-sub' });
-          const destStr = pickFirst(a.destTc, a.destEn);
-          sub.appendChild(document.createTextNode(`${a.route} · ${destStr}`));
-          if (a.rmk === 'Scheduled Bus') sub.appendChild(el('span', { class: 'arrival-tag' }, t_str('scheduled')));
-          else if (a.rmk === 'Last Bus') sub.appendChild(el('span', { class: 'arrival-tag' }, t_str('lastBus')));
-          info.appendChild(sub);
-          row.appendChild(info);
-          list.appendChild(row);
+          });
         });
-        body.appendChild(list);
-        if (mapEl) body.appendChild(mapEl);
+
+      routeMap.forEach((r) => {
+        r.arrivals.sort((a, b) => (a.minutes ?? 9999) - (b.minutes ?? 9999));
+        // Trim the primary arrival's stop seq for the route-detail anchor.
+        if (r.seq == null && r.arrivals.length > 0) {
+          // KMB /stop-eta carries an explicit seq; nothing to backfill here.
+        }
       });
 
-    startEtaRefresh(renderStopDetail);
+      const routes = Array.from(routeMap.values()).sort((a, b) => {
+        const aMin = a.arrivals[0]?.minutes ?? 9999;
+        const bMin = b.arrivals[0]?.minutes ?? 9999;
+        return aMin - bMin;
+      });
+
+      body.appendChild(el('h2', { class: 'section-title' }, t_str('nextArrivals')));
+      const list = el('div', { class: 'arrival-list' });
+
+      routes.forEach((r) => {
+        const anchor = r.seq != null ? `/${encodeURIComponent(String(r.seq))}` : '';
+        const href = `#/route/${encodeURIComponent(r.co)}/${encodeURIComponent(r.route)}/${encodeURIComponent(r.dir)}/${encodeURIComponent(r.service)}${anchor}`;
+        const card = el('a', { class: 'arrival-card', href });
+
+        // ---- left: route number + operator pill + destination + fare ----
+        const left = el('div', { class: 'arrival-card-left' });
+        left.appendChild(el('div', { class: 'arrival-card-route' }, r.route));
+        const meta = el('div', { class: 'arrival-card-meta' });
+        meta.appendChild(el('span', { class: 'arrival-card-op' }, t_str(opCoKey(r.co))));
+        const destStr = pickFirst(r.destTc, r.destEn);
+        if (destStr) meta.appendChild(el('span', { class: 'arrival-card-dest' }, `往 ${destStr}`));
+        left.appendChild(meta);
+        card.appendChild(left);
+
+        // ---- right: primary time + up to 2 more ----
+        const right = el('div', { class: 'arrival-card-right' });
+        r.arrivals.slice(0, 3).forEach((a, i) => {
+          if (i === 0) {
+            const primary = el('div', { class: 'arrival-card-primary' });
+            if (a.minutes == null || a.minutes <= 0) {
+              primary.appendChild(el('span', { class: 'arrival-card-now' }, t_str('arriving')));
+            } else {
+              primary.appendChild(el('span', { class: 'arrival-card-mins' }, String(a.minutes)));
+              primary.appendChild(document.createTextNode(' ' + t_str('minShort')));
+            }
+            primary.appendChild(el('span', { class: 'arrival-card-clock' }, formatHMTimestamp(a.eta)));
+            right.appendChild(primary);
+          } else {
+            const sec = el('div', { class: 'arrival-card-secondary' });
+            sec.appendChild(document.createTextNode(`${a.minutes} ${t_str('minShort')} · ${formatHMTimestamp(a.eta)}`));
+            if (a.rmk === 'Last Bus') sec.appendChild(el('span', { class: 'arrival-card-tag' }, t_str('lastBus') || 'Last'));
+            right.appendChild(sec);
+          }
+        });
+        card.appendChild(right);
+        list.appendChild(card);
+      });
+
+      body.appendChild(list);
+      if (mapEl) body.appendChild(mapEl);
+    });
   }
 
   // Format an ETA ISO timestamp as "HH:MM" (24h).
@@ -2605,20 +2694,77 @@
     startEtaRefresh(renderStopDetail);
   }
 
+  // Stop view header — modeled on justarrived.grok.me:
+  // back chevron + language toggle (top bar), small operator pill, big stop name,
+  // red accent rule, "剛剛更新 · HH:MM" sub-line.
   function buildStopHeader(stopId, nameTc, nameEn, co) {
     const head = el('div', { class: 'stop-header' });
-    head.appendChild(el('div', { class: 'stop-name' }, pickFirst(nameTc, nameEn) || stopId));
-    if (nameEn) head.appendChild(el('div', { class: 'stop-name-en' }, nameEn));
-    const actions = el('div', { class: 'stop-actions' });
+
+    // ---- top action bar ----
+    const topbar = el('div', { class: 'stop-topbar' });
+    topbar.appendChild(el('a', {
+      class: 'stop-back',
+      'aria-label': t_str('back'),
+      href: '#/',
+    }, (function () {
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('viewBox', '0 0 24 24');
+      svg.setAttribute('width', '22'); svg.setAttribute('height', '22');
+      svg.setAttribute('aria-hidden', 'true');
+      const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      p.setAttribute('fill', 'none'); p.setAttribute('stroke', 'currentColor');
+      p.setAttribute('stroke-width', '2'); p.setAttribute('stroke-linecap', 'round');
+      p.setAttribute('stroke-linejoin', 'round'); p.setAttribute('d', 'M15 6l-6 6 6 6');
+      svg.appendChild(p);
+      return svg;
+    })()));
+
+    const topRight = el('div', { class: 'stop-topbar-right' });
+    const langPill = el('span', { class: 'stop-lang-pill' }, state.lang === 'en' ? '繁體中文' : 'English');
+    topRight.appendChild(langPill);
+
     const isFav = state.savedStops.some((s) => sameStop(s, { stop: stopId }));
-    actions.appendChild(el('button', {
-      class: 'btn-secondary', type: 'button',
+    const star = el('button', {
+      type: 'button',
+      class: `stop-fav ${isFav ? 'is-fav' : ''}`,
+      'aria-label': isFav ? t_str('saved') : t_str('save'),
+      'aria-pressed': String(isFav),
       onclick: () => {
         toggleSaveStop({ stop: stopId });
         head.replaceChildren(...buildStopHeader(stopId, nameTc, nameEn, co).childNodes);
       },
-    }, isFav ? t_str('saved') : t_str('save')));
-    head.appendChild(actions);
+    });
+    star.appendChild(starIconSVG(isFav));
+    topRight.appendChild(star);
+    topbar.appendChild(topRight);
+    head.appendChild(topbar);
+
+    // ---- operator pill (small, above title) ----
+    if (co && co !== 'STOP') {
+      head.appendChild(el('span', { class: 'stop-op-pill' }, t_str(opCoKey(co))));
+    }
+
+    // ---- main stop name ----
+    head.appendChild(el('h1', { class: 'stop-name' }, pickFirst(nameTc, nameEn) || stopId));
+    if (nameEn) head.appendChild(el('p', { class: 'stop-name-en' }, nameEn));
+
+    // ---- red accent rule ----
+    head.appendChild(el('div', { class: 'stop-accent' }));
+
+    // ---- "updated HH:MM" + refresh button ----
+    const meta = el('div', { class: 'stop-meta' });
+    const updateLeft = el('div', { class: 'stop-meta-left' });
+    updateLeft.appendChild(el('p', { class: 'stop-updated-when', 'data-bind': 'stop-updated-when' }, t_str('updatedJust')));
+    meta.appendChild(updateLeft);
+    const refreshBtn = el('button', {
+      type: 'button',
+      class: 'stop-refresh',
+      'aria-label': t_str('refresh'),
+      onclick: () => { if (typeof state._refreshStop === 'function') state._refreshStop(); else location.reload(); },
+    }, refreshIconSVG());
+    meta.appendChild(refreshBtn);
+    head.appendChild(meta);
+
     return head;
   }
 
@@ -2672,12 +2818,23 @@
     updateRouteTimestamp();
   }
   function updateRouteTimestamp() {
-    const el2 = document.querySelector('[data-bind="route-updated-when"]');
-    if (!el2) return;
+    // Both route and stop views have an "updated HH:MM" element — find the
+    // one in the currently visible view so refresh never bleeds across views.
+    const candidates = document.querySelectorAll('[data-bind="route-updated-when"], [data-bind="stop-updated-when"]');
+    if (!candidates.length) return;
     const d = new Date();
     const hh = String(d.getHours()).padStart(2, '0');
     const mm = String(d.getMinutes()).padStart(2, '0');
-    el2.textContent = `${t_str('updatedJust')} · ${hh}:${mm}`;
+    const label = `${t_str('updatedJust')} · ${hh}:${mm}`;
+    candidates.forEach((node) => {
+      // Only touch the visible one (parents hidden via the `hidden` attr).
+      let p = node;
+      while (p && p !== document.body) {
+        if (p.hasAttribute && p.hasAttribute('hidden')) return;
+        p = p.parentElement;
+      }
+      node.textContent = label;
+    });
   }
   function stopEtaRefresh() {
     if (state.refreshTimer) { clearInterval(state.refreshTimer); state.refreshTimer = null; }

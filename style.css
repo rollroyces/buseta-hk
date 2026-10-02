@@ -563,87 +563,216 @@ h1, h2, h3 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 }
 .btn-primary:hover { background: var(--accent-2); }
 
-/* ------------------------------ stop header ------------------------------ */
+/* ------------------------------ stop header (justarrived-style) ------------------------------ */
 .stop-header {
-  background: linear-gradient(135deg, var(--dark), var(--dark-2));
-  color: var(--on-dark);
-  border-radius: var(--r-lg);
-  padding: 18px 18px 16px;
-  margin-bottom: 16px;
-  box-shadow: var(--shadow-md);
-}
-.stop-name {
-  font-size: 20px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-}
-.stop-name-en {
-  margin-top: 4px;
-  font-size: 13px;
-  color: var(--on-dark-muted);
-}
-.stop-actions {
-  margin-top: 14px;
-  display: flex; gap: 8px;
-}
-
-/* ------------------------------ arrivals list (stop view) ------------------------------ */
-.arrival-list {
-  display: flex;
-  flex-direction: column;
+  padding: 6px 0 16px;
   margin-bottom: 16px;
 }
-.arrival-row {
+.stop-topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  margin-bottom: 8px;
+}
+.stop-back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px; height: 38px;
+  border-radius: 999px;
+  color: var(--ink);
+  text-decoration: none;
+}
+.stop-back:active { background: rgba(0,0,0,0.06); }
+.stop-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.stop-lang-pill {
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 700;
+}
+.stop-fav {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px; height: 38px;
+  border-radius: 999px;
+  background: transparent;
+  border: 0;
+  color: var(--danger);
+  cursor: pointer;
+}
+.stop-fav.is-fav { color: var(--danger); }
+.stop-op-pill {
+  display: inline-flex;
+  align-items: center;
+  height: 26px;
+  padding: 0 12px;
+  margin-top: 4px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 700;
+}
+.stop-name {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+  margin: 8px 0 0;
+  line-height: 1.15;
+}
+.stop-name-en {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+.stop-accent {
+  height: 3px;
+  margin-top: 12px;
+  background: linear-gradient(90deg, var(--danger), transparent);
+  border-radius: 999px;
+}
+.stop-meta {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
   gap: 12px;
-  padding: 12px 14px;
+  margin-top: 10px;
+}
+.stop-meta-left { min-width: 0; flex: 1 1 auto; }
+.stop-updated-when {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 0;
+}
+.stop-refresh {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px; height: 36px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--danger);
+  cursor: pointer;
+}
+.stop-refresh:active { background: rgba(220,38,38,0.10); }
+
+/* ------------------------------ arrivals list (stop view, per-route cards) ------------------------------ */
+.arrival-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.arrival-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: var(--r-md);
   text-decoration: none;
   color: inherit;
-  margin-bottom: 6px;
   transition: background 0.12s ease;
 }
-.arrival-row:hover, .arrival-row:focus-visible { background: var(--bg-soft); outline: none; }
-.arrival-row:last-child { margin-bottom: 0; }
-.arrival-info { flex: 1 1 auto; min-width: 0; }
-.arrival-top {
+.arrival-card:hover, .arrival-card:focus-visible { background: var(--bg-soft); outline: none; }
+.arrival-card-left {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.arrival-card-route {
+  font-size: 30px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  line-height: 1.05;
+  margin: 0 0 6px;
+}
+.arrival-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.arrival-card-op {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
   font-weight: 700;
-  font-size: 15px;
+}
+.arrival-card-dest {
+  font-size: 13px;
+  font-weight: 600;
   color: var(--ink);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  max-width: 100%;
 }
-.arrival-op {
-  display: inline-block;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--accent-2);
-  margin-right: 2px;
-}
-.arrival-now {
-  display: inline-block;
-  font-weight: 700;
-  color: var(--danger);
+.arrival-card-right {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+  min-width: 84px;
+  gap: 2px;
   font-variant-numeric: tabular-nums;
 }
-.arrival-sub {
+.arrival-card-primary {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.arrival-card-mins {
+  font-weight: 900;
+  color: var(--danger);
+}
+.arrival-card-now {
+  font-weight: 800;
+  color: var(--danger);
+}
+.arrival-card-clock {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
   margin-top: 2px;
+}
+.arrival-card-secondary {
   font-size: 12px;
   color: var(--muted);
+  font-weight: 600;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: flex;
-  align-items: center;
-  gap: 6px;
 }
-.arrival-tag {
+.arrival-card-tag {
   display: inline-block;
+  margin-left: 6px;
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -651,7 +780,7 @@ h1, h2, h3 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
   color: var(--warn);
   border: 1px solid rgba(217, 119, 6, 0.4);
   border-radius: 999px;
-  padding: 1px 7px;
+  padding: 1px 6px;
 }
 
 /* ------------------------------ stop map ------------------------------ */
