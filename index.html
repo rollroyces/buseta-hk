@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#0A1628" />
+<meta name="description" content="BusETA HK — 香港巴士實時到站 (Real-time Hong Kong bus arrivals, powered by open data)." />
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+<title>BusETA HK · 巴士到站</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="topbar" role="banner">
+  <a class="brand" href="#/" aria-label="BusETA HK · 巴士到站">
+    <span class="brand-mark" aria-hidden="true">
+      <svg viewBox="0 0 64 64" width="36" height="36" aria-hidden="true">
+        <rect x="2" y="2" width="60" height="60" rx="14" fill="#0EA5E9"/>
+        <rect x="14" y="16" width="36" height="28" rx="5" fill="#fff"/>
+        <rect x="17" y="20" width="30" height="9" rx="2" fill="#0EA5E9"/>
+        <circle cx="22" cy="46" r="3.4" fill="#0A1628"/>
+        <circle cx="42" cy="46" r="3.4" fill="#0A1628"/>
+        <circle cx="46.5" cy="38" r="1.8" fill="#FACC15"/>
+        <rect x="29" y="33" width="6" height="9" rx="1" fill="#0EA5E9"/>
+      </svg>
+    </span>
+    <span class="brand-text">
+      <span class="brand-sub" data-i18n="brandSub">香港巴士</span>
+      <span class="brand-title">BusETA</span>
+    </span>
+  </a>
+
+  <div class="topbar-right">
+    <span class="clock" id="clock" aria-live="off">--:--</span>
+    <button class="lang-toggle" id="langToggle" type="button" aria-label="Switch language">
+      <span class="lang-current" data-i18n="langOther">English</span>
+    </button>
+  </div>
+</header>
+
+<main id="main" class="main" role="main">
+  <!-- Loading splash shown on first paint -->
+  <section id="splash" class="splash" aria-hidden="false">
+    <div class="splash-icon" aria-hidden="true">
+      <svg viewBox="0 0 64 64" width="64" height="64">
+        <rect x="2" y="2" width="60" height="60" rx="14" fill="#0EA5E9"/>
+        <rect x="14" y="16" width="36" height="28" rx="5" fill="#fff"/>
+        <rect x="17" y="20" width="30" height="9" rx="2" fill="#0EA5E9"/>
+        <circle cx="22" cy="46" r="3.4" fill="#0A1628"/>
+        <circle cx="42" cy="46" r="3.4" fill="#0A1628"/>
+        <circle cx="46.5" cy="38" r="1.8" fill="#FACC15"/>
+        <rect x="29" y="33" width="6" height="9" rx="1" fill="#0EA5E9"/>
+      </svg>
+    </div>
+    <h1 class="splash-title">BusETA</h1>
+    <span class="splash-rule" aria-hidden="true"></span>
+    <p class="splash-tagline" data-i18n="tagline">即時到站</p>
+    <div class="splash-spinner" aria-hidden="true"></div>
+    <p class="splash-loading" data-i18n="loading">載入緊資料…</p>
+  </section>
+
+  <!-- Home view -->
+  <section id="view-home" class="view" hidden aria-hidden="true"></section>
+
+  <!-- Search view -->
+  <section id="view-search" class="view" hidden aria-hidden="true"></section>
+
+  <!-- Route detail view -->
+  <section id="view-route" class="view" hidden aria-hidden="true"></section>
+
+  <!-- Stop detail view -->
+  <section id="view-stop" class="view" hidden aria-hidden="true"></section>
+
+  <!-- Not found / error view -->
+  <section id="view-error" class="view" hidden aria-hidden="true"></section>
+</main>
+
+<nav class="bottom-nav" role="navigation" aria-label="主要選單">
+  <a class="nav-item" data-route="home" href="#/" aria-label="主頁">
+    <svg class="nav-icon" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+      <path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M4 11l8-7 8 7v8a2 2 0 0 1-2 2h-3v-6h-6v6H6a2 2 0 0 1-2-2z"/>
+    </svg>
+    <span class="nav-label" data-i18n="navHome">主頁</span>
+    <span class="nav-rule" aria-hidden="true"></span>
+  </a>
+  <a class="nav-item" data-route="search" href="#/search" aria-label="搜尋">
+    <svg class="nav-icon" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+      <circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="1.8"/>
+      <path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M20 20l-3.5-3.5"/>
+    </svg>
+    <span class="nav-label" data-i18n="navSearch">搜尋</span>
+    <span class="nav-rule" aria-hidden="true"></span>
+  </a>
+</nav>
+
+<template id="tpl-home">
+  <div class="container">
+    <h2 class="section-title" data-i18n="savedRoutes">收藏路線</h2>
+    <div data-bind="savedRoutes"></div>
+
+    <h2 class="section-title" data-i18n="savedStops">收藏車站</h2>
+    <div data-bind="savedStops"></div>
+
+    <h2 class="section-title" data-i18n="recentSearches">最近查過</h2>
+    <div data-bind="recent"></div>
+
+    <footer class="page-footer">
+      <p data-i18n-html="footerAttribution">
+        資料來源：運輸署資料一線通。到站時間來自九巴、龍運及城巴；車費來自公共交通路線及收費資料。預計時間約每分鐘更新，只供參考。
+      </p>
+      <p class="footer-mark">BusETA HK · 巴士到站</p>
+    </footer>
+  </div>
+</template>
+
+<template id="tpl-search">
+  <div class="container">
+    <label class="search-field">
+      <svg class="search-icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+        <circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="1.8"/>
+        <path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M20 20l-3.5-3.5"/>
+      </svg>
+      <input id="searchInput" type="search" autocomplete="off" autocorrect="off" spellcheck="false"
+             data-i18n-attr='{"placeholder":"searchPlaceholder","aria-label":"searchPlaceholder"}' />
+      <button type="button" class="search-clear" id="searchClear" aria-label="Clear" hidden>
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+          <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M6 6l12 12M18 6L6 18"/>
+        </svg>
+      </button>
+    </label>
+
+    <div class="filter-row" role="tablist" aria-label="Operator filter">
+      <button class="filter-pill is-on" data-co="ALL" type="button" aria-pressed="true" data-i18n="filterAll">全部</button>
+      <button class="filter-pill" data-co="KMB" type="button" aria-pressed="false" data-i18n="filterKMB">九巴</button>
+      <button class="filter-pill" data-co="LWB" type="button" aria-pressed="false" data-i18n="filterLWB">龍運</button>
+      <button class="filter-pill" data-co="CTB" type="button" aria-pressed="false" data-i18n="filterCTB">城巴</button>
+    </div>
+
+    <div data-bind="searchResults"></div>
+
+    <div data-bind="nearbyRoutes">
+      <h2 class="section-title" data-i18n="nearbyRoutes">附近路線</h2>
+      <p class="muted" data-bind="nearbyStatus" data-i18n="locating">定位中…</p>
+    </div>
+
+    <div data-bind="nearbyStops">
+      <h2 class="section-title" data-i18n="nearbyStops">附近車站</h2>
+      <p class="muted" data-bind="nearbyStatus2" data-i18n="locating">定位中…</p>
+    </div>
+  </div>
+</template>
+
+<template id="tpl-route">
+  <div class="container">
+    <a class="back-link" href="#" id="back-link">
+      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+        <path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M15 6l-6 6 6 6"/>
+      </svg>
+      <span data-i18n="back">返回</span>
+    </a>
+    <div data-bind="routeHeader"></div>
+    <div data-bind="routeBody"></div>
+  </div>
+</template>
+
+<template id="tpl-stop">
+  <div class="container">
+    <a class="back-link" href="#" id="back-link">
+      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+        <path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M15 6l-6 6 6 6"/>
+      </svg>
+      <span data-i18n="back">返回</span>
+    </a>
+    <div data-bind="stopHeader"></div>
+    <div data-bind="stopBody"></div>
+  </div>
+</template>
+
+<template id="tpl-error">
+  <div class="container error-view">
+    <h2 class="section-title" data-i18n="errorTitle">搵唔到嗰頁</h2>
+    <p class="muted" data-i18n="errorBody">你跟蹤嘅連結可能已經過期，或者資料未能成功載入。</p>
+    <button class="btn-primary" type="button" id="errorRetry" data-i18n="retry">再試一次</button>
+  </div>
+</template>
+
+<script src="app.js"></script>
+</body>
+</html>
