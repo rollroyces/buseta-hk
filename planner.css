@@ -123,16 +123,25 @@
 /* ---- autocomplete dropdown ---- */
 .planner-suggest {
   position: absolute;
-  z-index: 40;
+  /* Above the topbar (z-50) and bottom-nav (z-50); below toast (z-80) so
+     user feedback still wins. */
+  z-index: 60;
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: var(--r-md);
   box-shadow: var(--shadow-lg);
   max-height: 280px;
   overflow-y: auto;
-  margin-top: 4px;
+  /* Sit a hair below the input field, no horizontal overflow. */
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
   width: 100%;
   display: none;
+  /* Slight overscroll containment so iOS rubber-banding inside the list
+     doesn't move the whole page. */
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 .planner-suggest.is-open { display: block; }
 .planner-suggest-row {
@@ -140,15 +149,87 @@
   align-items: center;
   gap: 10px;
   padding: 10px 14px;
+  min-height: 44px;        /* touch-friendly */
   cursor: pointer;
   color: var(--ink);
   border-bottom: 1px solid var(--line-2);
+  /* Prevent the row's text from being clipped on long zh-Hant strings. */
+  overflow: hidden;
 }
 .planner-suggest-row:last-child { border-bottom: 0; }
 .planner-suggest-row:hover,
-.planner-suggest-row.is-active { background: var(--bg-soft); }
-.planner-suggest-row .row-title { font-size: 14px; font-weight: 600; }
-.planner-suggest-row .row-sub { font-size: 12px; color: var(--muted); margin-top: 1px; }
+.planner-suggest-row.is-active {
+  background: var(--bg-soft);
+}
+.planner-suggest-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  /* Truncate long names rather than push the operator badge out. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.planner-suggest-sub {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+  flex: 0 0 auto;
+  /* Always keep this on one line so the row height stays at 44px. */
+  white-space: nowrap;
+}
+.planner-suggest-op {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: 999px;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  line-height: 1;
+}
+.planner-suggest-op.co-KMB  { background: linear-gradient(135deg, #F59E0B, #EA580C); }
+.planner-suggest-op.co-LWB  { background: linear-gradient(135deg, #14B8A6, #0F766E); }
+.planner-suggest-op.co-CTB  { background: linear-gradient(135deg, #0EA5E9, #0369A1); }
+.planner-suggest-op.co-NWFB { background: linear-gradient(135deg, #6366F1, #4338CA); }
+.planner-suggest-op.co-GMB  { background: linear-gradient(135deg, #84CC16, #4D7C0F); }
+.planner-suggest-op.co-MTR  { background: linear-gradient(135deg, #DC2626, #991B1B); }
+.planner-suggest-op.co-LRT  { background: linear-gradient(135deg, #F97316, #C2410C); }
+.planner-suggest-id {
+  font-variant-numeric: tabular-nums;
+  color: var(--muted-2);
+}
+.planner-suggest-dist {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.planner-suggest-section {
+  padding: 6px 14px 4px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--muted-2);
+  background: var(--bg-soft);
+  border-bottom: 1px solid var(--line);
+  /* Sticky so the section label stays put while the user scrolls. */
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+.planner-suggest-empty {
+  padding: 16px 14px;
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
+}
 .planner-suggest-wrap { position: relative; }
 
 /* ---- summary banner ---- */

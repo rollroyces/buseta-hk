@@ -648,6 +648,33 @@
     return s == null ? key : s;
   }
 
+  // Extend the shared i18n dict with planner-only keys so we don't have to
+  // touch app.js. Idempotent on re-entry; missing locales get the same
+  // default so the dropdown is never blank.
+  function patchPlannerStrings() {
+    const S = window.STRINGS = window.STRINGS || {};
+    const ensure = (lang, k, v) => {
+      S[lang] = S[lang] || {};
+      if (S[lang][k] == null) S[lang][k] = v;
+    };
+    ensure('zh-Hant', 'plannerSuggestEmpty', '搵唔到匹配嘅車站，試下其他字。');
+    ensure('en',      'plannerSuggestEmpty', 'No matching stops. Try other characters.');
+    ensure('zh-Hans', 'plannerSuggestEmpty', '未找到匹配嘅车站，试下其他字。');
+    ensure('zh-Hant', 'plannerSuggestSectionMtr', '港鐵站');
+    ensure('en',      'plannerSuggestSectionMtr', 'MTR / Light Rail');
+    ensure('zh-Hans', 'plannerSuggestSectionMtr', '港铁站');
+    ensure('zh-Hant', 'plannerSuggestSectionBus', '巴士站');
+    ensure('en',      'plannerSuggestSectionBus', 'Bus & minibus stops');
+    ensure('zh-Hans', 'plannerSuggestSectionBus', '巴士站');
+    ensure('zh-Hant', 'plannerSuggestDistance', (km) => `約 ${km.toFixed(1)} 公里`);
+    ensure('en',      'plannerSuggestDistance', (km) => `~${km.toFixed(1)} km`);
+    ensure('zh-Hans', 'plannerSuggestDistance', (km) => `约 ${km.toFixed(1)} 公里`);
+    ensure('zh-Hant', 'plannerSuggestAria', (q) => `車站建議，輸入緊「${q}」`);
+    ensure('en',      'plannerSuggestAria', (q) => `Stop suggestions for "${q}"`);
+    ensure('zh-Hans', 'plannerSuggestAria', (q) => `车站建议，输入紧「${q}」`);
+  }
+  patchPlannerStrings();
+
   function nameFor(obj) {
     if (!obj) return '';
     if (window.nameFor) return window.nameFor(obj);
@@ -700,7 +727,17 @@
       let score = 0;
       if (String(code).toLowerCase() === lower) score += 100;
       else if (text.toLowerCase().includes(lower)) score += 10;
-      if (score > 0) push({ co: 'MTR', stop: code, nameTc: s.nameTc, nameEn: s.nameEn, nameSc: '', _score: score });
+      if (score > 0) {
+        // Carry lat/lng so the suggestion row can show distance from
+        // the user's location when available.
+        push({
+          co: 'MTR', stop: code,
+          nameTc: s.nameTc, nameEn: s.nameEn, nameSc: '',
+          lat: Number.isFinite(s.lat) ? s.lat : null,
+          lng: Number.isFinite(s.lng) ? s.lng : null,
+          _score: score,
+        });
+      }
     });
     return out.sort((a, b) => b._score - a._score).slice(0, 8);
   }
@@ -883,11 +920,23 @@
       class: 'planner-swap',
       'aria-label': t_str('plannerSwap'),
       onclick: () => {
-        const a = originField.value, b = destField.value;
-        originField.value = b; destField.value = a;
+        // Swap the three pieces of state per field together: visible
+        // label, the hidden stop id, and the `_selected` slot.
+        const swapField = (src, dst) => {
+          const label = src.value;
+          const id    = src.dataset.stopId || null;
+          src.value = dst.value;
+          if (dst.dataset.stopId) src.setAttribute('data-stop-id', dst.dataset.stopId);
+          else { delete src.dataset.stopId; src.removeAttribute('data-stop-id'); }
+          dst.value = label;
+          if (id) dst.setAttribute('data-stop-id', id);
+          else { delete dst.dataset.stopId; dst.removeAttribute('data-stop-id'); }
+        };
+        swapField(originField, destField);
         const tmp = _selected.origin; _selected.origin = _selected.dest; _selected.dest = tmp;
-        renderSuggests(originField, originSuggest, _selected.origin);
-        renderSuggests(destField, destSuggest, _selected.dest);
+        // Close any open dropdown — both fields are now "selected".
+        originSuggestCtl.close();
+        destSuggestCtl.close();
       },
     }, '↕');
     form.appendChild(swapBtn);
@@ -951,61 +1000,227 @@
     // ---- selection state ----
     const _selected = { origin: null, dest: null };
 
-    // ---- autocomplete ----
+    // ---- autocomplete (rebuilt for visibility + UX) --------------------
+    // The previous wiring only *defined* attachAutocomplete but never
+    // called it, so no input/focus/blur/keydown handlers were attached to
+    // the fields. We attach once per field here, and the function below
+    // also adds operator badges, distance (when geolocation is available),
+    // debounced typing, and full keyboard nav.
+    function operatorFor(match) {
+      const code = match && match.co;
+      if (code && code !== 'STOP') {
+        const key = ({
+          KMB: 'kmb', LWB: 'lwb', CTB: 'ctb', NWFB: 'nwfb',
+          GMB: 'gmb', MTR: 'mtr', LRT: 'lrt',
+        })[code] || null;
+        return key ? { code, key } : null;
+      }
+      const id = String(match && match.stop || '');
+      if (/^[A-Z]{2,4}$/.test(id)) return { code: 'MTR', key: 'mtr' };
+      if (/^\d{1,3}$/.test(id))     return { code: 'LRT', key: 'lrt' };
+      if (/^\d{8}$/.test(id))       return { code: 'KMB', key: 'kmb' };
+      if (/^\d{6}$/.test(id))       return { code: 'CTB', key: 'ctb' };
+      return null;
+    }
+
     function attachAutocomplete(field, suggest, side) {
       let active = -1;
-      function close() { suggest.classList.remove('is-open'); suggest.innerHTML = ''; active = -1; }
+      let lastMatches = [];
+      let debounceTimer = null;
+      let blurTimer = null;
+
+      function close() {
+        suggest.classList.remove('is-open');
+        suggest.innerHTML = '';
+        active = -1;
+        lastMatches = [];
+        if (debounceTimer) { clearTimeout(debounceTimer); debounceTimer = null; }
+      }
+
+      function selectMatch(match) {
+        if (!match) return;
+        _selected[side] = String(match.stop);
+        const label = nameFor(match) || String(match.stop);
+        field.value = label;
+        field.dataset.stopId = String(match.stop);
+        field.setAttribute('data-stop-id', String(match.stop));
+        close();
+      }
+
+      function paintRow(match, idx) {
+        const row = el('div', {
+          class: 'planner-suggest-row' + (idx === active ? ' is-active' : ''),
+          dataset: { idx: String(idx), stopId: String(match.stop) },
+          role: 'option',
+          tabindex: '-1',
+        });
+        const op = operatorFor(match);
+        const ll = (match && Number.isFinite(match.lat) && Number.isFinite(match.lng))
+          ? { lat: match.lat, lng: match.lng } : null;
+        const userLoc = (window.state && window.state.userLoc) || null;
+
+        const title = el('div', { class: 'planner-suggest-title' }, nameFor(match) || String(match.stop));
+
+        const sub = el('div', { class: 'planner-suggest-sub' });
+        if (op) {
+          sub.appendChild(el('span', {
+            class: 'planner-suggest-op co-' + op.code,
+            title: op.code,
+          }, t_str(op.key)));
+        }
+        sub.appendChild(el('span', { class: 'planner-suggest-id' }, String(match.stop)));
+        if (userLoc && ll) {
+          const km = haversine(userLoc.lat, userLoc.lng, ll.lat, ll.lng);
+          sub.appendChild(el('span', { class: 'planner-suggest-dist' },
+            t_str('plannerSuggestDistance', km)));
+        }
+        row.appendChild(title);
+        row.appendChild(sub);
+
+        // Use mousedown (with preventDefault) so the input doesn't blur
+        // first and close the panel before our click logic runs.
+        row.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          selectMatch(match);
+        });
+        // Also accept touch / pointer up so taps on phones work even if
+        // the browser fires `click` instead of `mousedown`.
+        row.addEventListener('click', (e) => {
+          e.preventDefault();
+          selectMatch(match);
+        });
+        return row;
+      }
+
+      function paintSection(label) {
+        return el('div', { class: 'planner-suggest-section' }, label);
+      }
+
+      function paintEmpty() {
+        return el('div', { class: 'planner-suggest-empty' }, t_str('plannerSuggestEmpty'));
+      }
+
       function render(matches) {
         suggest.innerHTML = '';
-        if (!matches || matches.length === 0) { close(); return; }
-        matches.forEach((m, idx) => {
-          const row = el('div', {
-            class: 'planner-suggest-row' + (idx === active ? ' is-active' : ''),
-            dataset: { idx: String(idx) },
-          });
-          row.appendChild(el('div', {},
-            el('div', { class: 'row-title' }, nameFor(m) || m.stop),
-            el('div', { class: 'row-sub' }, m.stop + (m.co && m.co !== 'STOP' ? ` · ${m.co}` : '')),
-          ));
-          row.addEventListener('mousedown', (e) => {
-            e.preventDefault();
-            _selected[side] = m.stop;
-            field.value = nameFor(m) || m.stop;
-            close();
-          });
-          suggest.appendChild(row);
+        active = -1;
+        lastMatches = Array.isArray(matches) ? matches.slice() : [];
+        if (lastMatches.length === 0) {
+          suggest.appendChild(paintEmpty());
+          suggest.classList.add('is-open');
+          suggest.setAttribute('aria-label', t_str('plannerSuggestAria', field.value.trim()));
+          return;
+        }
+        const mtr = lastMatches.filter((m) => (operatorFor(m) || {}).code === 'MTR'
+          || (operatorFor(m) || {}).code === 'LRT');
+        const bus = lastMatches.filter((m) => {
+          const c = (operatorFor(m) || {}).code;
+          return c !== 'MTR' && c !== 'LRT';
         });
+
+        let runningIdx = 0;
+        const paintOne = (m) => {
+          suggest.appendChild(paintRow(m, runningIdx));
+          lastMatches[runningIdx] = m; // keep in lock-step
+          runningIdx++;
+        };
+        if (mtr.length > 0) {
+          suggest.appendChild(paintSection(t_str('plannerSuggestSectionMtr')));
+          mtr.forEach(paintOne);
+        }
+        if (bus.length > 0) {
+          suggest.appendChild(paintSection(t_str('plannerSuggestSectionBus')));
+          bus.forEach(paintOne);
+        }
+        // Reset runningIdx to the size of lastMatches (paintOne increments it).
+        active = -1;
         suggest.classList.add('is-open');
+        suggest.setAttribute('aria-label', t_str('plannerSuggestAria', field.value.trim()));
       }
+
+      function schedule(query) {
+        if (debounceTimer) clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          debounceTimer = null;
+          const q = (query != null ? query : field.value).trim();
+          if (!q) { close(); return; }
+          render(searchStopsLite(q));
+        }, 150);
+      }
+
+      field.setAttribute('autocomplete', 'off');
+      field.setAttribute('autocorrect', 'off');
+      field.setAttribute('autocapitalize', 'none');
+      field.setAttribute('spellcheck', 'false');
+      field.setAttribute('aria-autocomplete', 'list');
+      field.setAttribute('aria-expanded', 'false');
+
       field.addEventListener('input', () => {
         _selected[side] = null;
-        const q = field.value.trim();
-        if (!q) { close(); return; }
-        render(searchStopsLite(q));
-        active = -1;
+        delete field.dataset.stopId;
+        field.removeAttribute('data-stop-id');
+        schedule();
       });
+
       field.addEventListener('focus', () => {
+        if (blurTimer) { clearTimeout(blurTimer); blurTimer = null; }
+        if (_selected[side]) return;
         const q = field.value.trim();
-        if (q && !_selected[side]) render(searchStopsLite(q));
+        if (q) schedule(q);
       });
-      field.addEventListener('blur', () => setTimeout(close, 150));
+
+      field.addEventListener('blur', () => {
+        if (blurTimer) clearTimeout(blurTimer);
+        blurTimer = setTimeout(() => {
+          blurTimer = null;
+          close();
+        }, 150);
+      });
+
       field.addEventListener('keydown', (e) => {
-        const rows = Array.from(suggest.children);
-        if (e.key === 'ArrowDown') { active = Math.min(active + 1, rows.length - 1); render(searchStopsLite(field.value.trim())); e.preventDefault(); }
-        else if (e.key === 'ArrowUp') { active = Math.max(active - 1, 0); render(searchStopsLite(field.value.trim())); e.preventDefault(); }
-        else if (e.key === 'Enter' && rows.length > 0 && active >= 0) {
-          const idx = active; _selected[side] = null; // reset; row click will set it
-          rows[idx].dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+        const rows = Array.from(suggest.querySelectorAll('.planner-suggest-row'));
+        const isOpen = suggest.classList.contains('is-open');
+        if (e.key === 'ArrowDown') {
+          if (!isOpen) { schedule(); return; }
+          if (rows.length === 0) return;
+          active = Math.min(active + 1, rows.length - 1);
+          rows.forEach((r, i) => r.classList.toggle('is-active', i === active));
+          rows[active].scrollIntoView({ block: 'nearest' });
           e.preventDefault();
+        } else if (e.key === 'ArrowUp') {
+          if (!isOpen || rows.length === 0) return;
+          active = Math.max(active - 1, 0);
+          rows.forEach((r, i) => r.classList.toggle('is-active', i === active));
+          rows[active].scrollIntoView({ block: 'nearest' });
+          e.preventDefault();
+        } else if (e.key === 'Enter') {
+          if (isOpen && rows.length > 0 && active >= 0 && lastMatches[active]) {
+            selectMatch(lastMatches[active]);
+            e.preventDefault();
+          }
+          // If dropdown isn't open, let the form submit (default Enter).
+        } else if (e.key === 'Escape') {
+          if (isOpen) { close(); e.preventDefault(); }
         }
       });
-      function renderSuggests() {
-        const q = field.value.trim();
-        if (q && !_selected[side]) render(searchStopsLite(q));
-      }
-      return renderSuggests;
+
+      suggest.addEventListener('mousedown', (e) => {
+        // Prevent the input from blurring (which would close the panel
+        // before the row's own mousedown/click handler runs).
+        e.preventDefault();
+      });
+
+      // Initial render: if there's a pre-filled value but nothing's
+      // selected, show the matching suggestions right away.
+      if (!_selected[side] && field.value.trim()) schedule(field.value.trim());
+
+      return {
+        refresh: () => schedule(field.value.trim()),
+        close,
+      };
     }
-    const renderSuggests = (field, suggest, side) => attachAutocomplete(field, suggest, side);
+
+    const originSuggestCtl = attachAutocomplete(originField, originSuggest, 'origin');
+    const destSuggestCtl   = attachAutocomplete(destField,   destSuggest,   'dest');
 
     // Pre-fill from the recent planner entry (if any) when the view first
     // opens. The user can still type a new query.
@@ -1013,16 +1228,22 @@
     if (lastPlanner) {
       const idx = window.state && window.state.index;
       originField.value = idx ? stopName(idx, lastPlanner.from) : lastPlanner.from;
+      originField.dataset.stopId = String(lastPlanner.from);
+      originField.setAttribute('data-stop-id', String(lastPlanner.from));
       destField.value = idx ? stopName(idx, lastPlanner.to) : lastPlanner.to;
+      destField.dataset.stopId = String(lastPlanner.to);
+      destField.setAttribute('data-stop-id', String(lastPlanner.to));
       _selected.origin = lastPlanner.from;
       _selected.dest = lastPlanner.to;
     }
 
     // ---- search ----
     async function runSearch() {
-      // Resolve origin / dest. Either pick from autocomplete or do a fresh search.
-      let originId = _selected.origin;
-      let destId   = _selected.dest;
+      // Resolve origin / dest. Prefer the operator stop id stashed on the
+      // input, then the `_selected` slot from the dropdown, then fall back
+      // to a fresh `searchStopsLite` lookup against the typed text.
+      let originId = originField.dataset.stopId || _selected.origin;
+      let destId   = destField.dataset.stopId   || _selected.dest;
       if (!originId) {
         const matches = searchStopsLite(originField.value.trim());
         if (matches.length > 0) { originId = matches[0].stop; _selected.origin = originId; }
