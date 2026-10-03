@@ -1152,13 +1152,49 @@ h1, h2, h3 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 .stop-fare.is-loading { color: var(--muted-2); opacity: 0.5; }
 .stop-fare.is-na { color: var(--muted-2); opacity: 0.4; }
 .route-fare-range { font-size: 14px; color: var(--ink); margin-top: 4px; }
+/* justarrived-style stop-row details:
+   - .stop-code: small gray operator stop ID (e.g. ST905, PA100) under
+     the English stop name. Hidden when the ID duplicates the displayed
+     name (e.g. for hk-stops.json entries whose `stop` field is the ID).
+   - .stop-fare-row: horizontal flex wrapper so the fare pill + optional
+     "起點" marker sit on the same line, matching justarrived's layout.
+   - .stop-origin-marker: accent-tinted pill that flags the origin stop
+     so users can spot the start of the route quickly. */
+.stop-code {
+  font-size: 12px;
+  color: var(--muted-2);
+  font-variant-numeric: tabular-nums;
+  margin-top: 1px;
+}
+.stop-fare-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 3px;
+}
+.stop-origin-marker {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
 .stop-eta {
   flex: 0 0 auto;
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
+.stop-eta .big-line {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 6px;
+}
 .stop-eta .big {
-  display: block;
+  display: inline-block;
   font-weight: 800;
   font-size: 18px;
   color: var(--ink);
@@ -1166,12 +1202,32 @@ h1, h2, h3 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 }
 .stop-eta .big.is-soon { color: var(--warn); }
 .stop-eta .big.is-now { color: var(--danger); }
+/* Absolute-time tick next to the big relative time — justarrived-style.
+   Sits inline on the same baseline, muted gray so the relative "X 分"
+   remains the primary visual. */
+.stop-eta .abs-time {
+  font-size: 12px;
+  color: var(--muted-2);
+  font-variant-numeric: tabular-nums;
+}
+/* Stacked list of the next 1-2 upcoming arrivals as "X 分鐘 · HH:MM"
+   (justarrived-style). Each on its own line, muted gray, right-aligned. */
+.stop-eta .eta-next-list {
+  margin-top: 3px;
+}
+.stop-eta .eta-next {
+  font-size: 12px;
+  color: var(--muted-2);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.4;
+}
 .stop-eta .small {
   display: block;
   font-size: 11px;
   color: var(--muted-2);
   margin-top: 2px;
 }
+.stop-eta .small.more { margin-top: 3px; }
 
 /* ------------------------------ route stop list (with eta inline) ------------------------------ */
 .eta-list { display: flex; flex-direction: column; gap: 8px; }

@@ -202,6 +202,7 @@
       fareOctopus: '八達通',
       fareLoading: '讀取車費中…',
       fareUnavailable: '車費暫時未能提供',
+      fareOrigin: '起點',
     },
     'en': {
       brandSub: 'Hong Kong Bus',
@@ -385,6 +386,7 @@
       fareOctopus: 'Octopus',
       fareLoading: 'Loading fares…',
       fareUnavailable: 'Fares temporarily unavailable',
+      fareOrigin: 'Origin',
     },
     'zh-Hans': {
       brandSub: '香港巴士',
@@ -557,6 +559,7 @@
       fareOctopus: '八达通',
       fareLoading: '读取车费中…',
       fareUnavailable: '车费暂时未能提供',
+      fareOrigin: '起点',
     },
   };
 
@@ -3061,35 +3064,65 @@
         const enDisplay = fetchedName ? fetchedName.nameEn : (s.nameEn || '');
         info.appendChild(el('div', { class: 'stop-name-row' }, nameDisplay || s.stop));
         if (enDisplay) info.appendChild(el('div', { class: 'stop-name-en' }, enDisplay));
-        // Per-stop fare pill (justarrived style — small `$X.X` under the
-        // stop name). Three states:
+        // Operator stop code (e.g. "ST905", "PA100") — justarrived-style
+        // small gray text under the English stop name. Hidden when it
+        // duplicates the displayed name (e.g. for hk-stops.json entries
+        // whose `stop` field is already a human-readable ID).
+        if (s.stop && s.stop !== nameDisplay) {
+          info.appendChild(el('div', { class: 'stop-code' }, s.stop));
+        }
+        // Fare row: pill (or `—` chip) + optional "起點" marker on origin.
         //   - fare known  → `$X.X` (KMB per-stop, or flat-fare CTB/GMB/LRT)
-        //   - fare attempted but null → `—` chip in muted style (so the
-        //     user sees "no fare data" rather than silent absence)
+        //   - fare attempted but null → `—` chip in muted style
         //   - fare not yet attempted → nothing (still loading)
+        const fareRow = el('div', { class: 'stop-fare-row' });
         const stopFare = fareBySeq && fareBySeq.get(seq);
         if (stopFare != null && Number.isFinite(Number(stopFare))) {
-          info.appendChild(el('div', { class: 'stop-fare' }, `$${fmtFare(Number(stopFare))}`));
+          fareRow.appendChild(el('span', { class: 'stop-fare' }, `$${fmtFare(Number(stopFare))}`));
+          if (isOrigin) fareRow.appendChild(el('span', { class: 'stop-origin-marker' }, t_str('fareOrigin')));
         } else if (fareAttempted) {
-          const chip = el('div', { class: 'stop-fare is-na' }, '—');
+          const chip = el('span', { class: 'stop-fare is-na' }, '—');
           chip.title = t_str('fareUnavailable');
-          info.appendChild(chip);
+          fareRow.appendChild(chip);
         }
+        if (fareRow.children.length > 0) info.appendChild(fareRow);
         row.appendChild(info);
+        // ETA column (justarrived-style): big relative + absolute time,
+        // then up to two more upcoming arrivals as "X 分鐘 · HH:MM".
         const etaBox = el('div', { class: 'stop-eta' });
         const etas = etaByStop.get(s.stop) || [];
         if (etas.length > 0) {
+          const bigLine = el('div', { class: 'big-line' });
           const big = el('span', { class: 'big' });
           const m = minutesUntil(etas[0].eta);
           if (m == null) big.textContent = '–';
           else if (m <= 0) { big.textContent = t_str('arriving'); big.classList.add('is-now'); }
           else { big.textContent = `${m} ${t_str('minShort')}`; if (m <= 2) big.classList.add('is-soon'); }
-          etaBox.appendChild(big);
-          etaBox.appendChild(el('span', { class: 'small' },
-            etas.length > 1 ? t_str('etaCount', etas.length - 1) : (etas[0].rmk_en === 'Scheduled Bus' ? t_str('scheduled') : '')));
+          bigLine.appendChild(big);
+          const abs0 = formatHMTimestamp(etas[0].eta);
+          if (abs0) bigLine.appendChild(el('span', { class: 'abs-time' }, abs0));
+          etaBox.appendChild(bigLine);
+          // Up to 2 more upcoming arrivals (skip etas[0] which we just shown).
+          const nextList = el('div', { class: 'eta-next-list' });
+          for (let i = 1; i < Math.min(etas.length, 3); i++) {
+            const nm = minutesUntil(etas[i].eta);
+            const nextAbs = formatHMTimestamp(etas[i].eta);
+            if (nm != null && nextAbs) {
+              nextList.appendChild(el('div', { class: 'eta-next' },
+                `${nm} ${t_str('minShort')} · ${nextAbs}`));
+            }
+          }
+          if (nextList.children.length > 0) etaBox.appendChild(nextList);
+          // If there are even more arrivals (4+), show a small "仲有 N 班"
+          // hint so users on busy lines know more buses are coming.
+          if (etas.length > 3) {
+            etaBox.appendChild(el('div', { class: 'small more' }, t_str('etaCount', etas.length - 3)));
+          } else if (etas[0].rmk_en === 'Scheduled Bus' && etas.length === 1) {
+            etaBox.appendChild(el('div', { class: 'small more' }, t_str('scheduled')));
+          }
           // Leading-arrival remark drives the route-level cancelled/delayed
-          // banner. We only check etas[0] per the spec — earlier arrivals have
-          // already passed, so flagging them would mislead the user.
+          // banner. We only check etas[0] per the spec — earlier arrivals
+          // have already passed, so flagging them would mislead the user.
           if (CRITICAL_RMK.has(etas[0].rmk_en)) affectedStops++;
         } else if (idx === 0) {
           etaBox.appendChild(el('span', { class: 'small' }, t_str('loading')));
@@ -3412,29 +3445,56 @@
         row.appendChild(el('span', { class: 'stop-idx' }, String(idx + 1)));
         const stopMeta = state.index.lrt.stops.get(s.stop);
         const info = el('div', { class: 'stop-info' });
-        info.appendChild(el('div', { class: 'stop-name-row' }, stopMeta ? nameFor(stopMeta) : s.stop));
+        const nameText = stopMeta ? nameFor(stopMeta) : s.stop;
+        info.appendChild(el('div', { class: 'stop-name-row' }, nameText));
         if (stopMeta && stopMeta.nameEn) info.appendChild(el('div', { class: 'stop-name-en' }, stopMeta.nameEn));
+        // LRT stop code (e.g. "TR01") — small gray text under English name.
+        if (s.stop && s.stop !== nameText) {
+          info.appendChild(el('div', { class: 'stop-code' }, s.stop));
+        }
         // Per-stop fare pill (LRT: same flat fare on every row, or `—`
         // when the LRT route isn't in our hardcoded fares table).
+        const fareRow = el('div', { class: 'stop-fare-row' });
         const stopFare = lrtFareBySeq && lrtFareBySeq.get(idx + 1);
         if (stopFare != null && Number.isFinite(Number(stopFare))) {
-          info.appendChild(el('div', { class: 'stop-fare' }, `$${fmtFare(Number(stopFare))}`));
+          fareRow.appendChild(el('span', { class: 'stop-fare' }, `$${fmtFare(Number(stopFare))}`));
+          if (isOrigin) fareRow.appendChild(el('span', { class: 'stop-origin-marker' }, t_str('fareOrigin')));
         } else {
-          const chip = el('div', { class: 'stop-fare is-na' }, '—');
+          const chip = el('span', { class: 'stop-fare is-na' }, '—');
           chip.title = t_str('fareUnavailable');
-          info.appendChild(chip);
+          fareRow.appendChild(chip);
         }
+        info.appendChild(fareRow);
         row.appendChild(info);
         const etaBox = el('div', { class: 'stop-eta' });
         const trains = etaByStop.get(s.stop) || [];
         if (trains.length > 0) {
+          const bigLine = el('div', { class: 'big-line' });
+          const big = el('span', { class: 'big' });
           const minutes = parseInt(trains[0].time_en, 10);
           if (Number.isFinite(minutes)) {
-            etaBox.appendChild(el('span', { class: 'big' + (minutes <= 2 ? ' is-soon' : '') }, `${minutes} ${t_str('minShort')}`));
+            big.textContent = `${minutes} ${t_str('minShort')}`;
+            if (minutes <= 2) big.classList.add('is-soon');
           } else {
-            etaBox.appendChild(el('span', { class: 'big' }, trains[0].time_ch || trains[0].time_en || '–'));
+            big.textContent = trains[0].time_ch || trains[0].time_en || '–';
           }
-          etaBox.appendChild(el('span', { class: 'small' }, trains.length > 1 ? t_str('etaCount', trains.length - 1) : (trains[0].special ? t_str('scheduled') : '')));
+          bigLine.appendChild(big);
+          etaBox.appendChild(bigLine);
+          // Up to 2 more upcoming LRT trains (LRT upstream gives only
+          // minutes, no absolute timestamps, so we omit the · HH:MM).
+          const nextList = el('div', { class: 'eta-next-list' });
+          for (let i = 1; i < Math.min(trains.length, 3); i++) {
+            const nm = parseInt(trains[i].time_en, 10);
+            if (Number.isFinite(nm)) {
+              nextList.appendChild(el('div', { class: 'eta-next' }, `${nm} ${t_str('minShort')}`));
+            }
+          }
+          if (nextList.children.length > 0) etaBox.appendChild(nextList);
+          if (trains.length > 3) {
+            etaBox.appendChild(el('div', { class: 'small more' }, t_str('etaCount', trains.length - 3)));
+          } else if (trains[0].special && trains.length === 1) {
+            etaBox.appendChild(el('div', { class: 'small more' }, t_str('scheduled')));
+          }
         } else if (idx === 0) {
           etaBox.appendChild(el('span', { class: 'small' }, t_str('loading')));
         } else {
@@ -3556,30 +3616,56 @@
             targetRow = row;
           }
           const info = el('div', { class: 'stop-info' });
-          info.appendChild(el('div', { class: 'stop-name-row' }, nameFor(s) || s.stop));
+          const nameText = nameFor(s) || s.stop;
+          info.appendChild(el('div', { class: 'stop-name-row' }, nameText));
           if (s.nameEn) info.appendChild(el('div', { class: 'stop-name-en' }, s.nameEn));
+          // GMB stop code (numeric operator stop ID) — small gray under name.
+          if (s.stop && s.stop !== nameText) {
+            info.appendChild(el('div', { class: 'stop-code' }, s.stop));
+          }
           // Per-stop fare pill (GMB: same flat fare on every row, or `—`
           // when the GMB route isn't in our hardcoded fares table).
+          const fareRow = el('div', { class: 'stop-fare-row' });
           const stopFare = gmbFareBySeq && gmbFareBySeq.get(seq);
           if (stopFare != null && Number.isFinite(Number(stopFare))) {
-            info.appendChild(el('div', { class: 'stop-fare' }, `$${fmtFare(Number(stopFare))}`));
+            fareRow.appendChild(el('span', { class: 'stop-fare' }, `$${fmtFare(Number(stopFare))}`));
+            if (isOrigin) fareRow.appendChild(el('span', { class: 'stop-origin-marker' }, t_str('fareOrigin')));
           } else {
-            const chip = el('div', { class: 'stop-fare is-na' }, '—');
+            const chip = el('span', { class: 'stop-fare is-na' }, '—');
             chip.title = t_str('fareUnavailable');
-            info.appendChild(chip);
+            fareRow.appendChild(chip);
           }
+          info.appendChild(fareRow);
           row.appendChild(info);
           const etaBox = el('div', { class: 'stop-eta' });
           const etas = etaByStop.get(s.stop) || [];
           if (etas.length > 0) {
+            const bigLine = el('div', { class: 'big-line' });
+            const big = el('span', { class: 'big' });
             const m = parseInt(etas[0].diff, 10);
             if (Number.isFinite(m)) {
-              etaBox.appendChild(el('span', { class: 'big' + (m <= 2 ? ' is-soon' : '') }, `${m} ${t_str('minShort')}`));
+              big.textContent = `${m} ${t_str('minShort')}`;
+              if (m <= 2) big.classList.add('is-soon');
             } else {
-              etaBox.appendChild(el('span', { class: 'big' }, '–'));
+              big.textContent = '–';
             }
-            etaBox.appendChild(el('span', { class: 'small' },
-              etas.length > 1 ? t_str('etaCount', etas.length - 1) : (etas[0].remarks_en === 'Scheduled' ? t_str('scheduled') : '')));
+            bigLine.appendChild(big);
+            etaBox.appendChild(bigLine);
+            // Up to 2 more upcoming GMB arrivals (GMB upstream gives
+            // only minutes — no absolute timestamps — so we omit · HH:MM).
+            const nextList = el('div', { class: 'eta-next-list' });
+            for (let i = 1; i < Math.min(etas.length, 3); i++) {
+              const nm = parseInt(etas[i].diff, 10);
+              if (Number.isFinite(nm)) {
+                nextList.appendChild(el('div', { class: 'eta-next' }, `${nm} ${t_str('minShort')}`));
+              }
+            }
+            if (nextList.children.length > 0) etaBox.appendChild(nextList);
+            if (etas.length > 3) {
+              etaBox.appendChild(el('div', { class: 'small more' }, t_str('etaCount', etas.length - 3)));
+            } else if (etas[0].remarks_en === 'Scheduled' && etas.length === 1) {
+              etaBox.appendChild(el('div', { class: 'small more' }, t_str('scheduled')));
+            }
           } else if (idx === 0) {
             etaBox.appendChild(el('span', { class: 'small' }, t_str('loading')));
           } else {

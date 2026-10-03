@@ -4,15 +4,16 @@
  * upstream API calls. Static JSON in /assets/ is cached lazily on first
  * fetch via the same code path.
  *
- * CACHE bumped to v8: hotfix. v7 shipped the per-stop fare pills and
- * the `車費 $X.X – $Y.Y` header range, but a missing `//` on one
- * comment line in buildRouteHeader made app.js a syntax error — the
- * page froze on the splash screen and never resolved. v8 restores the
- * comment marker; everything else from v7 is unchanged. Existing v7
- * clients get a working shell, just without the fare range rendering
- * until they pick up v8.
+ * CACHE bumped to v9: v8 shipped the fare worker's per-stop fare pills
+ * + the `車費 $X.X – $Y.Y` header range + the `—` chip on routes without
+ * fare data, plus KMB / LWB hardcoded fallback JSON. v9 adds the
+ * justarrived-style stop-row enhancement — operator stop code (e.g. ST905),
+ * `起點` marker on the origin stop, and a stacked multi-arrival ETA
+ * column (`X 分鐘 · HH:MM`) — across the KMB / CTB / NWFB / GMB / LRT
+ * stop-row render blocks. Existing v8 clients get the working fare UI;
+ * the v9 bump forces them to refetch and pick up the new stop-row layout.
  */
-const CACHE = 'buseta-v8';
+const CACHE = 'buseta-v9';
 const SHELL = [
   '/',
   '/index.html',
