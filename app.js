@@ -685,6 +685,15 @@
 
   const pickFirst = (a, b) => (a && String(a).trim()) || (b && String(b).trim()) || '';
 
+  // KMB embeds the operator-facing stop code in each stop's name as a
+  // trailing "(ST905)" / "(PA100)" / "(LS001)" suffix in both Chinese and
+  // English. Strip that suffix for display; keep the operator code itself
+  // for the `kmbOperatorId` reverse-lookup table built in buildIndex().
+  function stripKmbOpSuffix(name) {
+    if (!name) return '';
+    return String(name).replace(/\s*\([A-Z][A-Z0-9]{1,5}\)\s*$/, '').trim();
+  }
+
   // Pick a stop / route name in the current UI language. Falls back to the
   // other Chinese variant (tc ↔ sc) if the requested variant is empty, then
   // to English. Operator APIs return `name_tc` / `name_sc` / `name_en`.
@@ -773,6 +782,14 @@
         stops: new Map((raw.lrt && raw.lrt.stops) || []),
         platforms: new Map((raw.lrt && raw.lrt.platforms) || []),
       },
+      // operator_id → { internalId, nameTc, nameEn, nameSc, lat, lng }
+      // KMB's open-data feeds use internal 16-hex IDs (`9F542D4B6CF41651`)
+      // for `/stop/{id}` but the operator-facing ID (`ST905`) is what users
+      // see on bus stop signs. The only place the operator code is exposed
+      // publicly is in each stop's name_tc as a trailing `(ST905)` suffix,
+      // so we parse it once at index-build time and keep the reverse map
+      // for direct `/stop/<operator-id>` navigation.
+      kmbOperatorId: new Map(raw.kmbOperatorId || []),
     };
   }
   function dehydrateIndex(idx) {
@@ -786,6 +803,7 @@
         stops: Array.from(idx.lrt.stops.entries()),
         platforms: Array.from(idx.lrt.platforms.entries()),
       },
+      kmbOperatorId: idx.kmbOperatorId ? Array.from(idx.kmbOperatorId.entries()) : [],
     };
   }
 
@@ -819,6 +837,11 @@
     const ctb = new Map();
     const mtr = new Map();
     const lrt = { routes: new Map(), stops: new Map(), platforms: new Map() };
+    // KMB operator-facing stop code → internal-ID reverse map. Built from
+    // the `(ST905)` / `(PA100)` suffix on each KMB stop's name_tc — the
+    // only public signal KMB exposes that links operator IDs to internal
+    // IDs and stop names.
+    const kmbOperatorId = new Map();
 
     // ---- KMB / LWB ----
     if (kmbRoutes && Array.isArray(kmbRoutes.data)) {
@@ -843,6 +866,22 @@
           nameTc: s.name_tc, nameSc: s.name_sc || '', nameEn: s.name_en,
           lat: parseFloat(s.lat), lng: parseFloat(s.long),
         });
+        // KMB stop names carry the operator-facing stop code as a trailing
+        // `(ST905)` suffix (cn) / `(ST905)` suffix (en) — parse it once so
+        // we can resolve `#/stop/ST905` direct-nav without round-tripping
+        // to upstream (which only accepts the internal 16-hex ID anyway).
+        const opMatch = (s.name_tc || '').match(/\(([A-Z][A-Z0-9]{1,5})\)\s*$/);
+        const opId = opMatch ? opMatch[1] : null;
+        if (opId && !kmbOperatorId.has(opId)) {
+          kmbOperatorId.set(opId, {
+            internalId: s.stop,
+            nameTc: stripKmbOpSuffix(s.name_tc),
+            nameEn: stripKmbOpSuffix(s.name_en),
+            nameSc: stripKmbOpSuffix(s.name_sc || ''),
+            lat: parseFloat(s.lat),
+            lng: parseFloat(s.long),
+          });
+        }
       }
     }
 
@@ -990,7 +1029,7 @@
       }
     }
 
-    state.index = { routes, stops, ctbRoutes: ctb, mtr, lrt };
+    state.index = { routes, stops, ctbRoutes: ctb, mtr, lrt, kmbOperatorId };
     storage.set(STORAGE_KEYS.INDEX, dehydrateIndex(state.index));
     storage.set(STORAGE_KEYS.INDEX_TS, Date.now());
     storage.set(STORAGE_KEYS.INDEX_VER, INDEX_SCHEMA_VERSION);
@@ -1860,15 +1899,25 @@
           //   1) cached on the recent entry (set by enrichRecentStop when the
           //      stop view resolved its real name from the operator endpoint)
           //   2) hk-stops.json index lookup (MTR / GMB / LRT / some CTB)
-          //   3) raw operator id (last-resort fallback — better than a 16-char
+          //   3) KMB operator-ID reverse map (e.g. "ST905" → "大學站")
+          //   4) raw operator id (last-resort fallback — better than a 16-char
           //      hash sub-line)
           const idxMeta = state.index && state.index.stops.get(r.stop);
-          const hasName = r.nameTc || (idxMeta && (idxMeta.nameTc || idxMeta.nameEn));
+          const opMeta = (!idxMeta && state.index && state.index.kmbOperatorId)
+            ? state.index.kmbOperatorId.get(r.stop)
+            : null;
+          // Self-heal poisoned entries from the previous (buggy) version:
+          // if nameTc was cached as the raw operator ID before the reverse
+          // map was wired up, replace it with the resolved name now.
+          let cachedTc = r.nameTc || '';
+          if (cachedTc === r.stop) cachedTc = '';
+          const hasName = cachedTc || (idxMeta && (idxMeta.nameTc || idxMeta.nameEn))
+            || (opMeta && (opMeta.nameTc || opMeta.nameEn));
           const row = hasName
-            ? { stop: r.stop, co: r.co || (idxMeta && idxMeta.co) || 'STOP',
-                nameTc: r.nameTc || (idxMeta && idxMeta.nameTc) || '',
-                nameSc: r.nameSc || (idxMeta && idxMeta.nameSc) || '',
-                nameEn: r.nameEn || (idxMeta && idxMeta.nameEn) || '' }
+            ? { stop: r.stop, co: r.co || (idxMeta && idxMeta.co) || (opMeta ? 'KMB' : 'STOP'),
+                nameTc: cachedTc || (opMeta && opMeta.nameTc) || (idxMeta && idxMeta.nameTc) || '',
+                nameSc: r.nameSc || (opMeta && opMeta.nameSc) || (idxMeta && idxMeta.nameSc) || '',
+                nameEn: r.nameEn || (opMeta && opMeta.nameEn) || (idxMeta && idxMeta.nameEn) || '' }
             : { stop: r.stop, co: r.co || (idxMeta && idxMeta.co) || 'STOP' };
           ul.appendChild(stopRow(row));
         } else if (r.route) {
@@ -4272,6 +4321,18 @@
         nameTc = pickFirst(idxMeta.nameTc, nameTc) || nameTc;
         nameSc = pickFirst(idxMeta.nameSc, nameSc) || nameSc;
         nameEn = pickFirst(idxMeta.nameEn, nameEn) || nameEn;
+      } else if (!isCtb && state.index.kmbOperatorId) {
+        // KMB's open-data feeds use 16-hex internal IDs; the operator-facing
+        // code on the bus stop sign (e.g. "ST905") only appears as a
+        // "(ST905)" suffix on each stop's name. Direct navigation to
+        // `#/stop/ST905` reaches us with an ID the upstream can't resolve —
+        // fall back to the reverse map built at index time.
+        const opMeta = state.index.kmbOperatorId.get(stopId);
+        if (opMeta) {
+          nameTc = opMeta.nameTc || nameTc;
+          nameSc = opMeta.nameSc || nameSc;
+          nameEn = opMeta.nameEn || nameEn;
+        }
       }
       header.replaceChildren(...buildStopHeader(stopId, nameTc, nameEn, opGuess, nameSc).childNodes);
       state._lastStopName = nameFor({ nameTc, nameSc, nameEn });
@@ -4745,13 +4806,25 @@
   // raw id + a sliced hash sub-line.
   function enrichRecentStop(stopId, nameTc, nameSc, nameEn) {
     if (!stopId || !nameTc) return;
+    // Guard: never cache the operator ID itself as the "resolved name".
+    // This happens for KMB operator codes (ST905) — the upstream /stop/{id}
+    // endpoint returns empty because it expects the internal 16-hex ID, not
+    // the operator-facing code. The reverse map (kmbOperatorId) handles the
+    // direct-nav case; this guard just keeps a poison-write from making
+    // things worse if the reverse map is somehow missing.
+    if (nameTc === stopId) return;
+    // Strip the trailing "(ST905)" suffix from upstream / direct-fetch names
+    // so the recent row title reads "大學站" instead of "大學站 (ST905)".
+    const cleanTc = stripKmbOpSuffix(nameTc) || nameTc;
+    const cleanSc = stripKmbOpSuffix(nameSc) || nameSc;
+    const cleanEn = stripKmbOpSuffix(nameEn) || nameEn;
     let changed = false;
     state.recent.forEach((x) => {
       if (x.stop !== stopId) return;
-      if (x.nameTc === nameTc && x.nameSc === nameSc && x.nameEn === nameEn) return;
-      x.nameTc = nameTc;
-      x.nameSc = nameSc;
-      x.nameEn = nameEn;
+      if (x.nameTc === cleanTc && x.nameSc === cleanSc && x.nameEn === cleanEn) return;
+      x.nameTc = cleanTc;
+      x.nameSc = cleanSc;
+      x.nameEn = cleanEn;
       changed = true;
     });
     if (changed) persist();

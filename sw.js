@@ -4,16 +4,20 @@
  * upstream API calls. Static JSON in /assets/ is cached lazily on first
  * fetch via the same code path.
  *
- * CACHE bumped to v9: v8 shipped the fare worker's per-stop fare pills
- * + the `車費 $X.X – $Y.Y` header range + the `—` chip on routes without
- * fare data, plus KMB / LWB hardcoded fallback JSON. v9 adds the
- * justarrived-style stop-row enhancement — operator stop code (e.g. ST905),
- * `起點` marker on the origin stop, and a stacked multi-arrival ETA
- * column (`X 分鐘 · HH:MM`) — across the KMB / CTB / NWFB / GMB / LRT
- * stop-row render blocks. Existing v8 clients get the working fare UI;
- * the v9 bump forces them to refetch and pick up the new stop-row layout.
+ * CACHE bumped to v10: v9 added the justarrived-style stop row + the
+ * `enrichRecentStop` cache for resolved stop names. v10 self-heals a
+ * hole in that work — direct navigation to `#/stop/<operator-id>` (e.g.
+ * `#/stop/ST905`) reaches the bus-stop view with an ID the KMB upstream
+ * `/stop/{id}` can't resolve (KMB uses internal 16-hex IDs; the
+ * operator-facing code is only exposed as a `(ST905)` suffix on each
+ * stop's name_tc). The new `state.index.kmbOperatorId` reverse map is
+ * built from those suffixes at index time, so the bus-stop view can
+ * resolve `ST905 → 大學站` without a network round-trip, and `renderHome`
+ * now self-heals any recent entries previously poisoned with the raw
+ * operator ID as the cached name. v10 also strips that suffix when
+ * caching so the recent row title reads cleanly.
  */
-const CACHE = 'buseta-v9';
+const CACHE = 'buseta-v10';
 const SHELL = [
   '/',
   '/index.html',

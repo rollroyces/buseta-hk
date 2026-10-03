@@ -66,10 +66,12 @@ h1,h2,h3{margin:0;font-weight:700;letter-spacing:-0.01em}
 </style>
 <!-- Main stylesheet. The original style.css is what we ship today — a
      hand-rolled minifier produced a broken style.min.css earlier, so we
-     load the unminified bundle directly. v=22 forces cached browsers
-     to refetch after the 最近查過 stop-name fix (enrichRecentStop
-     caches the resolved name on the recent entry). -->
-<link rel="stylesheet" href="style.css?v=22" />
+     load the unminified bundle directly. v=23 forces cached browsers
+     to refetch after the 最近查過 stop-name self-heal fix — the KMB
+     operator-ID → real-name reverse map (e.g. ST905 → 大學站) plus the
+     `nameTc === stopId` guard so KMB operator IDs never poison the
+     recent cache. -->
+<link rel="stylesheet" href="style.css?v=23" />
 </head>
 <body>
 <a class="skip-link" href="#main">Skip to content</a>
@@ -362,7 +364,7 @@ window.__buseta = {
   },
 };
 </script>
-<script defer src="app.js?v=22"></script>
+<script defer src="app.js?v=23"></script>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
