@@ -99,6 +99,7 @@
       noNearbyStops: '附近範圍未有常見車站。',
       noNearbyStations: '附近範圍未有港鐵站。',
       searchHint: '輸入路線編號、車站名或港鐵站',
+      searchSuggestLabel: '試下呢啲：',
       noFavHint: '搜尋後可以加入收藏，方便日後對陣查閱。',
       clearRecent: '清除記錄',
       cleared: '已清除',
@@ -120,7 +121,7 @@
       gmapsKeyHint: '用 Google Maps Embed API 嘅 key（網站 HTTP referrer 已限制）。留空就會用連結到 Google Maps 而唔係內嵌地圖。',
       gmapsKeySave: '儲存',
       gmapsKeySaved: '已儲存',
-      schoolTag: 'school',
+      schoolTag: '上學日',
       schoolTagTitle: '此路線另有上學日特別班次',
       gmapsKeyCleared: '已清除',
       clearKey: '清除',
@@ -177,14 +178,6 @@
       trafficDiversion: '改道路線',
       trafficCheckCctv: '附近 CCTV 實時影像',
       trafficLastUpdated: (h) => `最後更新：${h}`,
-      serviceOperatingHours: '運行時間',
-      serviceOperatingHoursEn: 'Operating hours',
-      serviceDaily: '每日服務',
-      serviceDailyEn: 'Daily service',
-      serviceMonFri: '服務只限於星期一至五（公眾假期除外）',
-      serviceMonFriEn: 'Mon–Fri only (except public holidays)',
-      serviceSatSun: '服務只限於星期六、日及公眾假期',
-      serviceSatSunEn: 'Sat, Sun & public holidays only',
       serviceSpecial: '特別班次',
       serviceSpecialEn: 'Special service',
       serviceMain: '主線',
@@ -275,6 +268,7 @@
       noNearbyStops: 'No nearby stops found.',
       noNearbyStations: 'No nearby MTR stations.',
       searchHint: 'Enter route number, stop name or station',
+      searchSuggestLabel: 'Try these:',
       noFavHint: 'Search and tap the star to save routes, stops and stations for quick access.',
       clearRecent: 'Clear',
       cleared: 'Cleared',
@@ -296,7 +290,7 @@
       gmapsKeyHint: 'Use a Google Maps Embed API key (with your site URL restricted as HTTP referrer). Leave blank to fall back to opening Google Maps in a new tab.',
       gmapsKeySave: 'Save',
       gmapsKeySaved: 'Saved',
-      schoolTag: 'school',
+      schoolTag: 'School',
       schoolTagTitle: 'This route also runs school-day special trips',
       gmapsKeyCleared: 'Cleared',
       clearKey: 'Clear',
@@ -353,14 +347,6 @@
       trafficDiversion: 'Diversion',
       trafficCheckCctv: 'Nearby CCTV snapshots',
       trafficLastUpdated: (h) => `Last updated: ${h}`,
-      serviceOperatingHours: 'Operating hours',
-      serviceOperatingHoursEn: '營運時間',
-      serviceDaily: 'Daily service',
-      serviceDailyEn: '每日服務',
-      serviceMonFri: 'Mon–Fri only (except public holidays)',
-      serviceMonFriEn: '服務只限於星期一至五（公眾假期除外）',
-      serviceSatSun: 'Sat, Sun & public holidays only',
-      serviceSatSunEn: '服務只限於星期六、日及公眾假期',
       serviceSpecial: 'Special service',
       serviceSpecialEn: '特別班次',
       serviceMain: 'Main',
@@ -431,6 +417,7 @@
       noNearbyStops: '附近范围未有常见车站。',
       noNearbyStations: '附近范围未有港铁站。',
       searchHint: '输入路线编号、车站名或港铁站',
+      searchSuggestLabel: '试下呢啲：',
       clearRecent: '清除记录',
       cleared: '已清除',
       toStop: '去呢个车站',
@@ -447,7 +434,7 @@
       gmapsKeyHint: '用 Google Maps Embed API 嘅 key（网站 HTTP referrer 已限制）。留空就会用连结去 Google Maps 而唔系内嵌地图。',
       gmapsKeySave: '储存',
       gmapsKeySaved: '已储存',
-      schoolTag: 'school',
+      schoolTag: '上学日',
       schoolTagTitle: '此路线另有上学日特别班次',
       gmapsKeyCleared: '已清除',
       clearKey: '清除',
@@ -518,14 +505,6 @@
       trafficDiversion: '改道路线',
       trafficCheckCctv: '附近 CCTV 实时影像',
       trafficLastUpdated: (h) => `最后更新：${h}`,
-      serviceOperatingHours: '运行时间',
-      serviceOperatingHoursEn: 'Operating hours',
-      serviceDaily: '每日服务',
-      serviceDailyEn: 'Daily service',
-      serviceMonFri: '服务只限于星期一至五（公众假期除外）',
-      serviceMonFriEn: 'Mon–Fri only (except public holidays)',
-      serviceSatSun: '服务只限于星期六、日及公众假期',
-      serviceSatSunEn: 'Sat, Sun & public holidays only',
       serviceSpecial: '特别班次',
       serviceSpecialEn: 'Special service',
       serviceMain: '主线',
@@ -1666,6 +1645,67 @@
       if (pill) container.insertBefore(pill, container.firstChild);
     }
 
+    // First-time user CTA: when the user has no saved routes AND no saved
+    // stops, surface a "熱門路線 / Popular routes" row of one-tap deep links.
+    // This gives new users a working surface to evaluate the app on first
+    // visit, instead of three empty dashed boxes.
+    if (state.savedRoutes.length === 0 && state.savedStops.length === 0) {
+      const popular = el('div', { class: 'popular-cta', 'data-bind': 'popularCta' });
+      const heading = el('h2', { class: 'section-title' },
+        state.lang === 'en' ? 'Popular routes' : '熱門路線');
+      popular.appendChild(heading);
+      popular.appendChild(el('p', { class: 'muted', style: 'margin: 0 0 12px;' },
+        state.lang === 'en'
+          ? 'Tap a route to see live arrivals — or search above for any stop or route in Hong Kong.'
+          : '撳下面嘅路線睇實時到站 — 或者打開搜尋打任何車站同路線。'));
+
+      // Curated, deeply local routes that exercise the app's main surfaces:
+      // KMB cross-harbour tunnel (272A), Airport express (A20), CTB
+      // cross-harbour (680), and a minibus (one of the most-tracked GMBs).
+      const POPULAR = [
+        { co: 'KMB', route: '272A', dir: 'O', service: '1', originTc: '大學站', originEn: 'University Station',
+          destTc: '白石角', destEn: 'Pak Shek Kok' },
+        { co: 'KMB', route: '980X', dir: 'O', service: '1', originTc: '烏溪沙站', originEn: 'Wu Kai Sha Station',
+          destTc: '中環', destEn: 'Central' },
+        { co: 'CTB', route: '680',  dir: 'O', service: '1', originTc: '利安', originEn: 'Lee On',
+          destTc: '中環', destEn: 'Central' },
+      ];
+      const list = el('div', { class: 'list' });
+      POPULAR.forEach((r) => {
+        const row = el('a', {
+          class: 'row',
+          href: `#/route/${encodeURIComponent(r.co)}/${encodeURIComponent(r.route)}/${encodeURIComponent(r.dir)}/${encodeURIComponent(r.service)}`,
+        });
+        // Inline badge for the operator.
+        const badge = el('span', { class: `row-badge co-${r.co}` }, r.co);
+        row.appendChild(badge);
+        const main = el('div', { class: 'row-main' });
+        const title = el('div', { class: 'row-title' });
+        title.appendChild(document.createTextNode(r.route));
+        const dest = state.lang === 'en' ? r.destEn : r.destTc;
+        title.appendChild(el('span', { style: 'color: var(--muted); margin: 0 6px; font-weight: 500;' }, '·'));
+        title.appendChild(document.createTextNode(dest));
+        main.appendChild(title);
+        const orig = state.lang === 'en' ? r.originEn : r.originTc;
+        main.appendChild(el('div', { class: 'row-sub' }, orig));
+        row.appendChild(main);
+        const meta = el('div', { class: 'row-meta' });
+        meta.appendChild(el('div', { class: 'row-dim' }, t_str(opCoKey(r.co))));
+        row.appendChild(meta);
+        const chev = el('span', { class: 'chev', 'aria-hidden': 'true' });
+        chev.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M9 6l6 6-6 6"/></svg>';
+        row.appendChild(chev);
+        list.appendChild(row);
+      });
+      popular.appendChild(list);
+
+      // Insert before the savedRoutes heading so it sits between operators
+      // strip and the (still-empty) saved sections.
+      const savedRoutesHeading = container.querySelector('[data-bind="savedRoutes"]');
+      const anchor = savedRoutesHeading ? savedRoutesHeading.previousElementSibling : container.firstChild;
+      container.insertBefore(popular, anchor);
+    }
+
     const savedRoutesEl = $('[data-bind="savedRoutes"]', view);
     if (state.savedRoutes.length === 0) {
       savedRoutesEl.appendChild(el('p', { class: 'empty' }, t_str('emptyRoutes')));
@@ -1832,6 +1872,31 @@
     const matches = searchIndex(q);
     if (matches.length === 0) {
       out.appendChild(el('p', { class: 'empty', style: 'margin-top: 8px;' }, t_str('noResults')));
+      // "Did you mean" — fuzzy prefix / substring suggestions from the
+      // index, capped at 5 so the empty state stays scannable.
+      const suggestions = collectSuggestions(q);
+      if (suggestions.length > 0) {
+        const wrap = el('div', { class: 'search-suggest', style: 'margin-top: 12px;' });
+        wrap.appendChild(el('p', { class: 'muted', style: 'margin: 0 0 8px;' },
+          t_str('searchSuggestLabel') || '試下呢啲：'));
+        const list = el('div', { class: 'list' });
+        suggestions.forEach((s) => {
+          const a = el('a', {
+            class: 'row search-suggest-row',
+            href: s.kind === 'route'
+              ? `#/route/${encodeURIComponent(s.co)}/${encodeURIComponent(s.route)}/${encodeURIComponent(s.dir || 'O')}/${encodeURIComponent(s.service || '1')}`
+              : `#/stop/${encodeURIComponent(s.stop)}`,
+          });
+          const main = el('div', { class: 'row-main' });
+          main.appendChild(el('div', { class: 'row-title' }, s.label));
+          if (s.sub) main.appendChild(el('div', { class: 'row-sub' }, s.sub));
+          a.appendChild(main);
+          a.appendChild(el('span', { class: 'chev', 'aria-hidden': 'true' }));
+          list.appendChild(a);
+        });
+        wrap.appendChild(list);
+        out.appendChild(wrap);
+      }
       return;
     }
     const ul = el('div', { class: 'list' });
@@ -1840,6 +1905,57 @@
       else ul.appendChild(stopRow(m.data));
     });
     out.appendChild(ul);
+  }
+
+  // Lightweight fuzzy suggestion: walks the route + stop indexes and picks
+  // the first 5 items whose name contains the query as a substring, or
+  // whose name starts with any prefix of the query (catches typos and
+  // half-typed route numbers like "97" → 970 / 971 / 978 etc.).
+  function collectSuggestions(q) {
+    if (!state.index || !q) return [];
+    const lower = q.toLowerCase();
+    const seen = new Set();
+    const out = [];
+    const push = (s) => { if (!seen.has(s.key)) { seen.add(s.key); out.push(s); } };
+
+    // Route numbers — prefix match wins.
+    const routeMaps = [state.index.routes, state.index.ctbRoutes];
+    if (state.index.lrt && state.index.lrt.routes) routeMaps.push(state.index.lrt.routes);
+    routeMaps.forEach((m) => {
+      if (!m) return;
+      m.forEach((entry) => {
+        const r = String(entry.route || '');
+        if (!r) return;
+        if (r.toLowerCase().startsWith(lower)
+            || (r.length >= 2 && lower.startsWith(r.slice(0, 2)))) {
+          const dest = pickFirst(entry.destTc, entry.destEn);
+          push({
+            kind: 'route', key: `${entry.co}|${r}|${entry.dir}|${entry.service}`,
+            co: entry.co, route: r, dir: entry.dir, service: entry.service,
+            label: `${r} · ${dest}`,
+            sub: pickFirst(entry.origTc, entry.origEn),
+          });
+        }
+      });
+    });
+
+    // Stop names — substring / shared-prefix match.
+    state.index.stops.forEach((s) => {
+      const nameTc = (s.nameTc || '').toLowerCase();
+      const nameEn = (s.nameEn || '').toLowerCase();
+      if (!nameTc && !nameEn) return;
+      if (nameTc.includes(lower) || nameEn.includes(lower)
+          || (lower.length >= 2 && (nameTc.startsWith(lower.slice(0, 2))
+                                    || nameEn.startsWith(lower.slice(0, 2))))) {
+        push({
+          kind: 'stop', key: s.stop, stop: s.stop,
+          label: nameFor(s) || s.stop,
+          sub: s.nameEn || '',
+        });
+      }
+    });
+
+    return out.slice(0, 5);
   }
 
   function searchIndex(q) {
@@ -2724,7 +2840,19 @@
       dest, orig, origEn, dirLabel, fare: meta && meta.fares && meta.fares[0],
       boundPills, servicePills, currentDirKey: key,
     }));
-    body.appendChild(el('p', { class: 'muted' }, t_str('loading')));
+    // Skeleton placeholders so the user sees a stable, predictable layout
+    // during the route-stop + ETA fan-out (which can take 1–3 s on cold
+    // cache). 7 rows ≈ the median HK bus route length; long routes expand
+    // once real data arrives. Replaces the old single "載入緊資料…" line.
+    const skelWrap = el('div', { class: 'eta-list', 'data-bind': 'route-skel' });
+    for (let i = 0; i < 7; i++) {
+      const row = el('div', { class: 'stop-row-skeleton' });
+      row.appendChild(el('span', { class: 'skeleton skel-idx' }));
+      row.appendChild(el('span', { class: 'skeleton skel-name' }));
+      row.appendChild(el('span', { class: 'skeleton skel-eta' }));
+      skelWrap.appendChild(row);
+    }
+    body.appendChild(skelWrap);
 
     // Pick the right route-stop endpoint based on operator. KMB / LWB share
     // /route-stop; CTB / NWFB use the Citybus endpoint.
@@ -3347,11 +3475,8 @@
     ));
 
     const topRight = el('div', { class: 'route-topbar-right' });
-    const langPill = el('span', { class: 'route-lang-pill' },
-      state.lang === 'zh-Hant' ? '繁體中文'
-        : state.lang === 'zh-Hans' ? '简体中文'
-        : 'English');
-    topRight.appendChild(langPill);
+    // Lang pill removed — duplicate of the global topbar `.lang-toggle`.
+    // (Was at this position; the topbar button now owns language switching.)
 
     const favKey = { co, route, dir, service };
     const isFav = state.savedRoutes.some((x) => sameRoute(x, favKey));
@@ -3812,7 +3937,18 @@
     // body element so the current rendering logic still works.
     const tabs = buildStopTabs(stopId, isCtb);
     const livePanel = tabs.livePanel;
-    livePanel.appendChild(el('p', { class: 'muted' }, t_str('loading')));
+    // Skeleton placeholders so the user sees the expected arrival-card
+    // shape before the ETA fetch resolves (typically <500 ms on warm cache,
+    // up to ~2 s on cold cache for 30+ arrivals).
+    const stopSkel = el('div', { class: 'arrival-list', 'data-bind': 'stop-skel' });
+    for (let i = 0; i < 4; i++) {
+      const card = el('div', { class: 'stop-row-skeleton' });
+      card.appendChild(el('span', { class: 'skeleton skel-idx' }));
+      card.appendChild(el('span', { class: 'skeleton skel-name' }));
+      card.appendChild(el('span', { class: 'skeleton skel-eta' }));
+      stopSkel.appendChild(card);
+    }
+    livePanel.appendChild(stopSkel);
     tabs.schedulePanel.appendChild(el('p', { class: 'muted', style: 'text-align:center; padding: 24px 8px;' }, t_str('loadingSchedule')));
 
     body.appendChild(tabs.tablist);
@@ -3875,7 +4011,17 @@
 
     // Body only — never wipe the header.
     body.innerHTML = '';
-    body.appendChild(el('p', { class: 'muted' }, t_str('loading')));
+    // Skeleton placeholders so a manual refresh feels instant instead of
+    // flashing an empty panel.
+    const stopSkel = el('div', { class: 'arrival-list', 'data-bind': 'stop-skel' });
+    for (let i = 0; i < 4; i++) {
+      const card = el('div', { class: 'stop-row-skeleton' });
+      card.appendChild(el('span', { class: 'skeleton skel-idx' }));
+      card.appendChild(el('span', { class: 'skeleton skel-name' }));
+      card.appendChild(el('span', { class: 'skeleton skel-eta' }));
+      stopSkel.appendChild(card);
+    }
+    body.appendChild(stopSkel);
 
     const isCtb = typeof stopId === 'string' && /^[0-9]{6}$/.test(stopId);
     const etaPromise = isCtb ? null : fetchKmbStopEta(stopId).catch(() => null);
@@ -4175,12 +4321,7 @@
     })()));
 
     const topRight = el('div', { class: 'stop-topbar-right' });
-    // The pill shows the *current* language; clicking cycles to the next one.
-    const langPill = el('span', { class: 'stop-lang-pill' },
-      state.lang === 'zh-Hant' ? '繁體中文'
-        : state.lang === 'zh-Hans' ? '简体中文'
-        : 'English');
-    topRight.appendChild(langPill);
+    // Lang pill removed — duplicate of the global topbar `.lang-toggle`.
 
     const isFav = state.savedStops.some((s) => sameStop(s, { stop: stopId }));
     const star = el('button', {
