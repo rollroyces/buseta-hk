@@ -4,13 +4,12 @@
  * upstream API calls. Static JSON in /assets/ is cached lazily on first
  * fetch via the same code path.
  *
- * CACHE bumped to v5: v4 fixed the splash freeze + removed a half-shipped
- * TD traffic-banner call site. Bumping once more so any client whose SW
- * was stuck on v3 (broken-install era, where cache.addAll failed and the
- * SW never activated properly) finally picks up the corrected shell with
- * a working app.js + style.css.
+ * CACHE bumped to v6: v5 was the splash-freeze recovery + 'cannot find route'
+ * hotfix. v6 ships the justarrived-style 主線 / 特別班 N service-type tabs
+ * on the route detail header; existing v3-era clients get the corrected
+ * shell on every bump until they pick it up.
  */
-const CACHE = 'buseta-v5';
+const CACHE = 'buseta-v6';
 const SHELL = [
   '/',
   '/index.html',
