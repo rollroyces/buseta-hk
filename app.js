@@ -1054,10 +1054,12 @@
     }
   }
 
-  // Render the route-level map. Embeds a Google Maps iframe (same
-  // `output=embed` URL pattern the stop view uses) with all resolved
-  // stops plotted as pins — Google Maps auto-fits the viewport, so the
-  // user sees "this bus does a loop around the harbour" at a glance.
+  // Render the route-level map. Embeds a Google Maps iframe using the
+  // legacy `output=embed` directions URL (saddr→daddr) — Google Maps
+  // renders a route line + pins at the origin and destination, which is
+  // the most we can get without an API key. Pipe-separated multi-pin
+  // `q=lat,lng|...` URLs are silently ignored by the embed endpoint
+  // (returns an empty `initEmbed` array), so we don't use that form.
   // Takes the resolved stop list and a `coordByStop` Map<stopId, {lat,lng}>;
   // returns a section Node, or null if fewer than two stops have coords.
   function renderRouteMap(stops, coordByStop) {
@@ -1071,6 +1073,20 @@
     });
     if (points.length < 2) return null;
 
+    const origin = points[0];
+    const destination = points[points.length - 1];
+    // Centroid + span, used to center the static open-in-Maps link.
+    let minLat = origin.lat, maxLat = origin.lat;
+    let minLng = origin.lng, maxLng = origin.lng;
+    points.forEach(({ lat, lng }) => {
+      if (lat < minLat) minLat = lat;
+      if (lat > maxLat) maxLat = lat;
+      if (lng < minLng) minLng = lng;
+      if (lng > maxLng) maxLng = lng;
+    });
+    const centerLat = (minLat + maxLat) / 2;
+    const centerLng = (minLng + maxLng) / 2;
+
     const section = el('section', { class: 'route-map', 'aria-label': t_str('mapHeader') });
     const head = el('div', { class: 'route-map-head' },
       el('span', { class: 'route-map-title' }, t_str('mapHeader')),
@@ -1078,12 +1094,13 @@
     );
     section.appendChild(head);
 
-    // Pipe-separated `lat,lng` pairs — Google Maps renders each as a pin
-    // and auto-zooms to fit them all. No `z=` (let it pick) and no API
-    // key required for the no-key embed; the user's saved key upgrades
-    // the styling if present.
-    const q = points.map((p) => `${p.lat.toFixed(6)},${p.lng.toFixed(6)}`).join('|');
-    const params = new URLSearchParams({ q, output: 'embed' });
+    // saddr/daddr directions URL — Google Maps draws a route line between
+    // the two endpoints and shows pins at both. No `z=` (let Maps pick so
+    // both endpoints fit). No API key required; the user's saved key
+    // upgrades the embed styling if present.
+    const saddr = `${origin.lat.toFixed(6)},${origin.lng.toFixed(6)}`;
+    const daddr = `${destination.lat.toFixed(6)},${destination.lng.toFixed(6)}`;
+    const params = new URLSearchParams({ saddr, daddr, output: 'embed' });
     const key = getGmapsKey();
     if (key) params.set('key', key);
     const iframe = el('iframe', {
@@ -1097,11 +1114,11 @@
     frame.appendChild(iframe);
     section.appendChild(frame);
 
-    // Open the same multi-pin map in a new tab so users get the full
-    // Maps UI (pan, zoom, street view).
+    // Open the directions in a new tab so users can pan/zoom and follow
+    // the actual bus path. Centre the link view on the route's midpoint.
     const link = el('a', {
       class: 'stop-map-link',
-      href: `https://www.google.com/maps?q=${q}`,
+      href: `https://www.google.com/maps?saddr=${saddr}&daddr=${daddr}`,
       target: '_blank',
       rel: 'noopener',
     });
