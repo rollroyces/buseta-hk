@@ -6,6 +6,10 @@
 <meta name="theme-color" content="#0A1628" />
 <meta name="description" content="BusETA HK — 香港巴士實時到站 (Real-time Hong Kong bus arrivals, powered by open data)." />
 <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+<link rel="manifest" href="/manifest.json" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="BusETA" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <title>BusETA HK · 巴士到站</title>
 <link rel="stylesheet" href="style.css" />
 </head>
@@ -254,5 +258,14 @@
 </template>
 
 <script src="app.js?v=10"></script>
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js').catch((err) => {
+        console.warn('Service worker registration failed:', err);
+      });
+    });
+  }
+</script>
 </body>
 </html>

@@ -1,0 +1,32 @@
+{
+  "name": "BusETA HK · 巴士到站",
+  "short_name": "BusETA",
+  "description": "Real-time Hong Kong bus, MTR and minibus arrivals",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0A1628",
+  "theme_color": "#0A1628",
+  "lang": "zh-Hant",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "assets/bus.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/bus.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
