@@ -68,25 +68,25 @@ h1,h2,h3{margin:0;font-weight:700;letter-spacing:-0.01em}
 </style>
 <!-- Main stylesheet. The original style.css is what we ship today — a
      hand-rolled minifier produced a broken style.min.css earlier, so we
-     load the unminified bundle directly. v=28 forces cached browsers
-     to refetch after the renderBusRoute ReferenceError hotfix:
-       - The renderBusRoute body had a typo (`etasByStop` at the
-         etaByStop call site) that threw ReferenceError after the
-         header had already been painted. The outer .catch then ran
-         `body.replaceChildren(routeNotFound)` and silently wiped the
-         already-rendered list — so "搵唔到呢條路線" was the ONLY thing
-         users saw on every KMB/CTB/GMB/LRT/MTR route detail page
-         since Batch 3's vehicle-positions feature shipped (the new
-         etaByStop argument was added in that batch). The fix is at
-         app.js:4278 (`etaByStop,` singular) plus the diagnostic
-         console.error in the .catch so future regressions are not
-         silent.
-       - renderBusRoute's `.catch()` was silently swallowing
-         exceptions and overwriting the body with "搵唔到呢條路線"
-         — masking any real error in the route render chain. Now
-         logs the underlying error to console before replacing the
-         body, so future debugging isn't a guessing game. -->
-<link rel="stylesheet" href="style.css?v=28" />
+     load the unminified bundle directly. v=29 forces cached browsers
+     to refetch after the route-map merge:
+       - The route detail page previously had two stacked map cards
+         labelled "地圖" (a Google Maps iframe with an "Open in Maps"
+         link) and "實時車輛位置" (an SVG schematic with live bus
+         icons). Both drew essentially the same polyline, so users
+         saw the route twice and the page wasted ~480px of vertical
+         map space. The merge drops the iframe entirely, keeps the
+         SVG schematic as the only map, renames its title to "地圖",
+         and adds a single "Open in Google Maps" link (same saddr/
+         daddr URL as the deleted iframe) below the SVG. The stop-
+         coverage count (`29/29`) is folded into the link label so
+         we don't need a separate meta chip for it. SVG viewBox
+         height bumped 200 → 220px to fill the now-larger map slot.
+       - v28 was the renderBusRoute ReferenceError hotfix
+         (`etasByStop` typo at the etaByStop call site) that caused
+         "搵唔到呢條路線" on every route detail page. Now superseded
+         by v29's map merge. -->
+<link rel="stylesheet" href="style.css?v=29" />
 <script>
 /* Theme loader — runs synchronously in <head> so :root[data-theme] is set
    BEFORE the body paints. Mirrors the loadThemePreference() logic in app.js
@@ -426,7 +426,7 @@ window.__buseta = {
   },
 };
 </script>
-<script defer src="app.js?v=28"></script>
+<script defer src="app.js?v=29"></script>
 <script>
   // SW path must be RELATIVE — GitHub Pages serves this site under
   // /buseta-hk/ but a leading `/sw.js` would resolve to the site root

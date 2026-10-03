@@ -237,7 +237,6 @@
       notifPermissionDenied: '通知已被瀏覽器封鎖。請喺瀏覽器設定允許通知，再重新整理此頁。',
       offlineMode: '離線模式',
       offlineShowingLastKnown: '顯示最後已知資料',
-      vehicleMap: '實時車輛位置',
       vehicleLive: '實時 GPS 位置',
       vehicleNoData: '目前未有實時車輛位置資料。以下係根據時間表嘅預估位置。',
       vehiclePosition: '車輛位置',
@@ -461,7 +460,6 @@
       notifPermissionDenied: 'Notifications are blocked. Please allow them in your browser settings and reload.',
       offlineMode: 'Offline',
       offlineShowingLastKnown: 'showing last known data',
-      vehicleMap: 'Live vehicle positions',
       vehicleLive: 'Live GPS positions',
       vehicleNoData: 'No live GPS data available right now. Showing estimated positions based on the timetable.',
       vehiclePosition: 'Vehicle position',
@@ -674,7 +672,6 @@
       notifPermissionDenied: '通知已被浏览器封锁。请喺浏览器设定允许通知，再重新整理此页。',
       offlineMode: '离线模式',
       offlineShowingLastKnown: '显示最后已知资料',
-      vehicleMap: '实时车辆位置',
       vehicleLive: '实时 GPS 位置',
       vehicleNoData: '目前未有实时车辆位置资料。以下系根据时间表嘅预估位置。',
       vehiclePosition: '车辆位置',
@@ -1658,77 +1655,30 @@
   // (returns an empty `initEmbed` array), so we don't use that form.
   // Takes the resolved stop list and a `coordByStop` Map<stopId, {lat,lng}>;
   // returns a section Node, or null if fewer than two stops have coords.
-  function renderRouteMap(stops, coordByStop) {
-    if (!stops || stops.length === 0) return null;
-    const points = [];
-    stops.forEach((s) => {
-      const c = coordByStop.get(s.stop);
-      if (c && Number.isFinite(c.lat) && Number.isFinite(c.lng)) {
-        points.push({ lat: c.lat, lng: c.lng });
-      }
-    });
-    if (points.length < 2) return null;
-
-    const origin = points[0];
-    const destination = points[points.length - 1];
-    // Centroid + span, used to center the static open-in-Maps link.
-    let minLat = origin.lat, maxLat = origin.lat;
-    let minLng = origin.lng, maxLng = origin.lng;
-    points.forEach(({ lat, lng }) => {
-      if (lat < minLat) minLat = lat;
-      if (lat > maxLat) maxLat = lat;
-      if (lng < minLng) minLng = lng;
-      if (lng > maxLng) maxLng = lng;
-    });
-    const centerLat = (minLat + maxLat) / 2;
-    const centerLng = (minLng + maxLng) / 2;
-
-    const section = el('section', { class: 'route-map', 'aria-label': t_str('mapHeader') });
-    const head = el('div', { class: 'route-map-head' },
-      el('span', { class: 'route-map-title' }, t_str('mapHeader')),
-      el('span', { class: 'route-map-meta' }, `${points.length}/${stops.length}`),
-    );
-    section.appendChild(head);
-
-    // saddr/daddr directions URL — Google Maps draws a route line between
-    // the two endpoints and shows pins at both. No `z=` (let Maps pick so
-    // both endpoints fit). No API key required; the user's saved key
-    // upgrades the embed styling if present.
-    const saddr = `${origin.lat.toFixed(6)},${origin.lng.toFixed(6)}`;
-    const daddr = `${destination.lat.toFixed(6)},${destination.lng.toFixed(6)}`;
-    const params = new URLSearchParams({ saddr, daddr, output: 'embed' });
-    const key = getGmapsKey();
-    if (key) params.set('key', key);
-    const iframe = el('iframe', {
-      title: `${t_str('mapHeader')} · ${points.length}`,
-      loading: 'lazy',
-      referrerpolicy: 'no-referrer-when-downgrade',
-      src: `https://maps.google.com/maps?${params.toString()}`,
-      style: 'border:0;',
-    });
-    const frame = el('div', { class: 'route-map-frame' });
-    frame.appendChild(iframe);
-    section.appendChild(frame);
-
-    // Open the directions in a new tab so users can pan/zoom and follow
-    // the actual bus path. Centre the link view on the route's midpoint.
-    const link = el('a', {
-      class: 'stop-map-link',
-      href: `https://www.google.com/maps?saddr=${saddr}&daddr=${daddr}`,
-      target: '_blank',
-      rel: 'noopener',
-    });
-    link.appendChild(mapPinIconSVG());
-    link.appendChild(el('span', {}, t_str('openInMaps')));
-    section.appendChild(link);
-    return section;
-  }
+  //
+  // ---- merged with the live-vehicle-positions SVG below in v29 ----
+  // Originally this function embedded a Google Maps directions iframe
+  // with an "Open in Maps" link, and renderVehicleMap() below drew a
+  // separate SVG schematic with the live bus icons. Users saw two stacked
+  // map cards on every route detail page — one labelled "地圖" (the iframe
+  // duplicate) and one labelled "實時車輛位置" (the schematic). The merge
+  // drops the iframe entirely, keeps the SVG schematic as the only map,
+  // renames its title to "地圖", and adds a single "Open in Google Maps"
+  // link (same saddr/daddr URL as the deleted iframe) so users who want
+  // real tiled maps still have a one-tap way to get there. The drop
+  // shaves ~280px of vertical map space down to ~240px and removes the
+  // duplicate polyline render.
 
   // ------------------------------------------------------------------
-  // Vehicle positions (live GPS) — small SVG map of the route polyline
-  // with bus icons at their current positions.
+  // Route map (merged with vehicle positions in v29) — a single SVG
+  // section showing the route polyline, stop dots, and bus icons. When
+  // live GPS data is unavailable, bus icons fall back to placeholder
+  // positions estimated from the ETA pattern; the badge in the header
+  // tells the user which mode they're seeing. An "Open in Google Maps"
+  // link below the SVG provides a one-tap way to see the route on real
+  // tiled maps.
   //
-  // Architecture (separate from renderRouteMap, which embeds Google Maps):
+  // Architecture:
   //   - assets/vehicle-positions.js (BusEtaVehicles.fetchPositions) probes
   //     the operator feeds and resolves to a list of `{co, lat, lng, ...}`
   //     or `null` if no feed is enabled.
@@ -1923,7 +1873,9 @@
     minLat -= padLat; maxLat += padLat;
     minLng -= padLng; maxLng += padLng;
     const bounds = { minLat, maxLat, minLng, maxLng };
-    const view = { width: 320, height: 200, padX: 18, padY: 18 };
+    // Slightly taller than the pre-merge vehicle-map (was 200) since this
+    // is now the only map on the route detail page.
+    const view = { width: 320, height: 220, padX: 18, padY: 18 };
 
     // Build the <svg> root.
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -1931,7 +1883,7 @@
     svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
     svg.setAttribute('class', 'vehicle-map-svg');
     svg.setAttribute('role', 'img');
-    svg.setAttribute('aria-label', t_str('vehicleMap'));
+    svg.setAttribute('aria-label', t_str('mapHeader'));
 
     // ---- route polyline ----
     const polyPts = routePts.map((p) => projectLatLng(p.lat, p.lng, bounds, view));
@@ -1996,13 +1948,14 @@
       svg.appendChild(stripe);
     });
 
-    // ---- section wrapper ----
+    // ---- section wrapper (merged map: was separate iframe + vehicle-map
+    //      cards before v29, now a single section) ----
     const section = el('section', {
       class: 'vehicle-map' + (isPlaceholder ? ' is-placeholder' : ' is-live'),
-      'aria-label': t_str('vehicleMap'),
+      'aria-label': t_str('mapHeader'),
     });
     const head = el('div', { class: 'vehicle-map-head' });
-    head.appendChild(el('span', { class: 'vehicle-map-title' }, t_str('vehicleMap')));
+    head.appendChild(el('span', { class: 'vehicle-map-title' }, t_str('mapHeader')));
     const badge = el('span', {
       class: 'vehicle-map-badge' + (isPlaceholder ? ' is-placeholder' : ' is-live'),
     }, isPlaceholder ? t_str('vehiclePlaceholder') : t_str('vehicleLive'));
@@ -2011,6 +1964,25 @@
     const frame = el('div', { class: 'vehicle-map-frame' });
     frame.appendChild(svg);
     section.appendChild(frame);
+    // "Open in Google Maps" link — same saddr/daddr URL as the deleted
+    // iframe so users who want real tiled maps still have a one-tap
+    // way to get there. The stop-coverage count (`29/29`) is folded
+    // into the link label so we don't need a separate meta chip in
+    // the header for it.
+    const origin = routePts[0];
+    const destination = routePts[routePts.length - 1];
+    const saddr = `${origin.lat.toFixed(6)},${origin.lng.toFixed(6)}`;
+    const daddr = `${destination.lat.toFixed(6)},${destination.lng.toFixed(6)}`;
+    const link = el('a', {
+      class: 'vehicle-map-link',
+      href: `https://www.google.com/maps?saddr=${saddr}&daddr=${daddr}`,
+      target: '_blank',
+      rel: 'noopener',
+    });
+    link.appendChild(mapPinIconSVG());
+    link.appendChild(el('span', {},
+      `${t_str('openInMaps')} · ${routePts.length}/${stops.length}`));
+    section.appendChild(link);
     if (isPlaceholder) {
       const hint = el('p', { class: 'vehicle-map-hint' }, t_str('vehicleNoData'));
       section.appendChild(hint);
@@ -4142,7 +4114,8 @@
           if (c) coordByStop.set(s.stop, c);
         }));
       }
-      const polylineEl = renderRouteMap(stops, coordByStop);
+      // (Removed in v29: renderRouteMap() that built a separate Google Maps
+      // iframe. The merged map below now uses coordByStop directly.)
 
       const list = el('div', { class: 'eta-list' });
       // Pick the row that should be highlighted (the user's current stop)
@@ -4291,14 +4264,11 @@
           vehicleSection.parentNode.replaceChild(next, vehicleSection);
         }
       };
-      // Order: optional alert → polyline map → vehicle map → stop list
-      // heading → rows. The polyline sits between the route header and
-      // the stop list (justarrived aesthetic); the vehicle map lives
-      // just below it so users see the route, then "where the buses
-      // are right now", then the stop-by-stop ETA list.
+      // Order: optional alert → merged map (polyline + live/placeholder
+      // bus icons, single SVG) → stop list heading → rows. v29 collapsed
+      // the old two-card layout (iframe + vehicle-map) into one card.
       const children = [];
       if (alertEl) children.push(alertEl);
-      if (polylineEl) children.push(polylineEl);
       if (vehicleSection) children.push(vehicleSection);
       children.push(heading, list);
       body.replaceChildren(...children);
