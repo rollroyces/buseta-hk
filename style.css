@@ -787,15 +787,24 @@ h1, h2, h3 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 }
 
 /* ------------------------------ stop view tabs (Live / Schedule) ------------------------------ */
+/* Pill-shaped segmented control.
+   - Inactive tab: transparent background, muted text.
+   - Active tab:   brand-blue (--accent) background with white text — works
+                   in both light and dark mode because --accent is a stable
+                   mid-saturation sky blue (#0EA5E9) that contrasts against
+                   both --card backgrounds (#FFFFFF / #131C36).
+   - Hover on active: slightly darker blue (--accent-2) for tactile feedback.
+   - Focus ring uses --accent-2 so it stays visible whether the tab is on the
+     transparent inactive track or the filled blue active pill. */
 .stop-tabs {
   display: inline-flex;
   align-items: stretch;
-  gap: 0;
+  gap: 4px;
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: var(--r-pill);
   padding: 4px;
-  margin: 0 0 16px;
+  margin: 0 0 4px;
   box-shadow: var(--shadow-sm);
 }
 .stop-tab {
@@ -813,19 +822,35 @@ h1, h2, h3 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
   align-items: center;
   justify-content: center;
   line-height: 1.05;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
   -webkit-tap-highlight-color: transparent;
 }
 .stop-tab:hover, .stop-tab:focus-visible {
   color: var(--ink);
   outline: none;
 }
+/* Darker accent shade so the ring is visible on the active blue pill as
+   well as on the transparent inactive tab. */
 .stop-tab:focus-visible {
-  box-shadow: 0 0 0 2px var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-2);
 }
 .stop-tab.is-on {
-  background: var(--ink);
-  color: var(--on-dark);
+  background: var(--accent);
+  color: #fff;
+  /* Slight drop shadow so the active pill "lifts" off the track. The
+     alpha matches the CTA shadow used by .geo-banner-cta for consistency. */
+  box-shadow: 0 2px 6px rgba(14, 165, 233, 0.32);
+}
+.stop-tab.is-on:hover {
+  background: var(--accent-2);
+}
+/* When the active blue pill is focused, keep the lift shadow AND add the
+   focus ring on top (stacked box-shadows) so the ring stays visible. */
+.stop-tab.is-on:focus-visible {
+  box-shadow:
+    0 2px 6px rgba(14, 165, 233, 0.32),
+    0 0 0 2px var(--bg),
+    0 0 0 4px var(--accent-2);
 }
 .stop-tab-primary {
   font-size: 14px;
@@ -840,11 +865,14 @@ h1, h2, h3 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
   opacity: 0.7;
   margin-top: 2px;
 }
+/* Slightly higher opacity on the active pill so the bilingual hint
+   ("Live" / "Schedule") stays readable on the blue background. */
 .stop-tab.is-on .stop-tab-secondary {
-  opacity: 0.65;
+  opacity: 0.85;
+  color: #fff;
 }
 .stop-panel {
-  margin-top: 4px;
+  margin-top: 0;
 }
 
 /* ------------------------------ schedule panel ------------------------------ */
