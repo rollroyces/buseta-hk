@@ -4,12 +4,13 @@
  * upstream API calls. Static JSON in /assets/ is cached lazily on first
  * fetch via the same code path.
  *
- * CACHE bumped to v4: v3 was active when index.html was changed to load
- * non-existent app.min.js / style.min.css, so users got a frozen splash.
- * Bumping forces re-fetch of index.html (now correctly referencing
- * app.js + style.css), a fresh app.js + style.css, and clean state.
+ * CACHE bumped to v5: v4 fixed the splash freeze + removed a half-shipped
+ * TD traffic-banner call site. Bumping once more so any client whose SW
+ * was stuck on v3 (broken-install era, where cache.addAll failed and the
+ * SW never activated properly) finally picks up the corrected shell with
+ * a working app.js + style.css.
  */
-const CACHE = 'buseta-v4';
+const CACHE = 'buseta-v5';
 const SHELL = [
   '/',
   '/index.html',
