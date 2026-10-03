@@ -66,10 +66,12 @@ h1,h2,h3{margin:0;font-weight:700;letter-spacing:-0.01em}
 </style>
 <!-- Main stylesheet. The original style.css is what we ship today — a
      hand-rolled minifier produced a broken style.min.css earlier, so we
-     load the unminified bundle directly. v=19 forces cached browsers
+     load the unminified bundle directly. v=20 forces cached browsers
      to refetch after the justarrived-style stop-row enhancement
-     (stop code, 起點 marker, multi-arrival ETA stack). -->
-<link rel="stylesheet" href="style.css?v=19" />
+     (stop code, 起點 marker, multi-arrival ETA stack) — HTTP caches
+     same-URL responses, so we bump the version even when the file
+     changes underneath. -->
+<link rel="stylesheet" href="style.css?v=20" />
 </head>
 <body>
 <a class="skip-link" href="#main">Skip to content</a>
@@ -362,7 +364,7 @@ window.__buseta = {
   },
 };
 </script>
-<script defer src="app.js?v=19"></script>
+<script defer src="app.js?v=20"></script>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
