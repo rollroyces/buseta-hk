@@ -51,6 +51,7 @@
       locationUnavailable: '未能取得位置，未能提供附近路線。',
       locationGranted: '已取得位置',
       locationUnavailableShort: '位置不可用',
+      locationBlockedHint: '瀏覽器已封鎖呢個網站嘅位置請求。請撳網址列嘅鎖頭／圖示，將「位置」改為「允許」或「詢問」，然後重新載入。',
       retryLocation: '再試一次',
       geoBannerTitle: '想睇附近嘅車站同路線？',
       geoBannerBody: '授權使用你嘅位置，我哋會列出最近嘅巴士站、港鐵站同常見路線，仲可以幫你直接跳到最近嗰個車站。',
@@ -200,6 +201,7 @@
       locationUnavailable: 'Location unavailable — nearby routes unavailable.',
       locationGranted: 'Location received',
       locationUnavailableShort: 'Location unavailable',
+      locationBlockedHint: 'This site has been blocked from accessing your location. Open the address-bar lock/icon, change Location to "Allow" or "Ask", then reload.',
       retryLocation: 'Try again',
       geoBannerTitle: 'See nearby stops and routes?',
       geoBannerBody: 'Allow location access to list the closest bus stops, MTR stations and frequent routes — and jump straight to the nearest stop.',
@@ -1316,6 +1318,27 @@
   // in case the browser's callback never fires (silent WebView reject).
   let geoInFlight = false;
   let geoWatchdog = null;
+  // Cache the latest known permission state from the Permissions API so we
+  // can proactively detect "browser has cached a Block decision" without
+  // having to wait for getCurrentPosition to fire its (silent) error
+  // callback. Browsers never re-show the permission prompt after a Block
+  // decision until they reset the site's permission manually.
+  let geoPermissionState = 'prompt'; // 'granted' | 'denied' | 'prompt'
+  async function probeGeoPermission() {
+    if (!navigator.permissions || !navigator.permissions.query) return 'prompt';
+    try {
+      const r = await navigator.permissions.query({ name: 'geolocation' });
+      geoPermissionState = r.state;
+      // Track future changes (e.g. user resets in site settings).
+      if (r.addEventListener) {
+        r.addEventListener('change', () => { geoPermissionState = r.state; logGeoStatus(`permission changed: ${r.state}`); });
+      }
+      logGeoStatus(`permission probed: ${r.state}`);
+      return r.state;
+    } catch {
+      return 'prompt';
+    }
+  }
   function requestLocation() {
     // Always allow re-prompt: a stuck 'pending' can happen if the previous
     // getCurrentPosition callback never fired (silent WebView reject).
@@ -1328,6 +1351,16 @@
       toast(t_str('locationUnavailable'));
       return;
     }
+    // Proactively detect "blocked at browser level" — once a site is
+    // blocked, the browser will never show the prompt again. Call the
+    // user out on it instead of silently falling through to a denied
+    // error path that looks like the app is broken.
+    if (geoPermissionState === 'denied') {
+      setLocationStatus('denied');
+      toast(t_str('locationBlockedHint'));
+      rerenderLocationViews();
+      return;
+    }
     geoInFlight = true;
     setLocationStatus('pending');
     rerenderLocationViews();
@@ -1338,6 +1371,7 @@
     geoWatchdog = setTimeout(() => {
       if (!geoInFlight) return;
       geoInFlight = false;
+      logGeoStatus('watchdog: getCurrentPosition never resolved');
       setLocationStatus('unavailable');
       toast(t_str('locationUnavailable'));
       rerenderLocationViews();
@@ -1348,6 +1382,7 @@
         geoInFlight = false;
         state.location = { lat: pos.coords.latitude, lng: pos.coords.longitude };
         state.userLoc = state.location;
+        geoPermissionState = 'granted';
         setLocationStatus('ok');
         toast(t_str('locationGranted'));
         rerenderLocationViews();
@@ -1360,6 +1395,7 @@
         // return guard).
         const code = (err && typeof err.code === 'number') ? err.code : null;
         const next = code === GEO_ERR_PERMISSION_DENIED ? 'denied' : 'unavailable';
+        if (next === 'denied') geoPermissionState = 'denied';
         setLocationStatus(next);
         // Some embedded WebViews (incl. some in-app browsers) return
         // PERMISSION_DENIED even after the user clicks "Allow" in the
@@ -1377,6 +1413,18 @@
       },
       { enableHighAccuracy: false, maximumAge: 60_000, timeout: 8_000 }
     );
+    // Fire the permission probe asynchronously; if it discovers the
+    // browser has cached a Block decision, we'll catch the user before
+    // they stare at the spinner.
+    probeGeoPermission().then((s) => {
+      if (s === 'denied' && geoInFlight) {
+        clearTimeout(geoWatchdog);
+        geoInFlight = false;
+        setLocationStatus('denied');
+        toast(t_str('locationBlockedHint'));
+        rerenderLocationViews();
+      }
+    });
   }
 
   // Reset state so the user can opt back in from a denied/unavailable
@@ -4076,12 +4124,26 @@
     showView('view-planner');
     const view = document.getElementById('view-planner');
     if (!view) return;
-    // Planner.js owns the markup; we just hand it the view shell.
-    if (window.Planner && typeof window.Planner.renderPlanner === 'function') {
-      window.Planner.renderPlanner(view);
-    } else {
+    // Planner.js + planner.css are lazy-loaded on first visit. The inline
+    // bootstrap in index.html installs `window.__buseta.loadPlannerScript`
+    // and `loadPlannerCss` which fetch + inject them on demand and cache
+    // the promise so subsequent navigations don't refetch.
+    const ready = (window.__buseta
+      ? Promise.all([
+          window.__buseta.loadPlannerScript(),
+          window.__buseta.loadPlannerCss(),
+        ])
+      : Promise.reject(new Error('Lazy planner loader missing')));
+    ready.then(() => {
+      if (window.Planner && typeof window.Planner.renderPlanner === 'function') {
+        window.Planner.renderPlanner(view);
+      } else {
+        view.innerHTML = '<div class="container" style="padding: 24px 16px; color: var(--muted);">Trip planner failed to load.</div>';
+      }
+    }).catch((err) => {
+      console.warn('Planner load failed', err);
       view.innerHTML = '<div class="container" style="padding: 24px 16px; color: var(--muted);">Trip planner failed to load.</div>';
-    }
+    });
   }
 
   // ------------------------------------------------------------------
@@ -4207,15 +4269,29 @@
 
     // Best-effort: load any site-wide config (e.g. the Google Maps API key)
     // before rendering so the embedded map is ready on first visit.
-    await loadGmapsConfig().catch(() => {});
+    loadGmapsConfig().catch(() => {});
 
-    try {
-      await loadIndex();
-    } catch (err) {
+    // Kick off the index build but DON'T await it — the splash + first
+    // home render should not block on the 5 MB hk-stops.json download.
+    // loadIndex resolves into state.index and the watcher below re-renders
+    // the current view once it lands so populated lists replace the
+    // empty-state placeholders we show in the meantime.
+    loadIndex().then(() => {
+      try { if (currentRoute() === 'home') renderHome(); } catch (e) { /* noop */ }
+    }).catch((err) => {
       console.error('Index build failed', err);
-    }
+    });
 
     if (!location.hash) location.hash = '#/';
+    // Probe the browser's remembered permission state on boot so the
+    // banner can immediately reflect "blocked at browser level" without
+    // waiting for the user to click and hit a silent denial.
+    probeGeoPermission().then((st) => {
+      if (st === 'denied') {
+        setLocationStatus('denied');
+        rerenderLocationViews();
+      }
+    });
     onHashChange();
   }
 
