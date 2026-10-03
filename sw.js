@@ -4,25 +4,30 @@
  * upstream API calls. Static JSON in /assets/ is cached lazily on first
  * fetch via the same code path.
  *
- * CACHE bumped to v14: hotfix over v13.
- *   - etaSWR() was reading the upstream response body via
- *     timestampedResponse(resp) and then returning the SAME `resp`
- *     object back to the caller. The Response body is a single-shot
- *     stream, so the second consumer (the app's `resp.json()`) saw an
- *     empty body. Effect: every KMB / CTB / GMB route-stop / stop-eta
- *     fetch the SW intercepted returned an empty data array, which
- *     `renderBusRoute` translated into "搵唔到呢條路線 / route not
- *     found" for routes whose upstream worked fine. Fix: clone the
- *     response before passing it to timestampedResponse so the live
- *     body handed back to the caller is untouched.
- *   - Also widens the activate-side legacy-drop filter to N < 14 so
- *     the v13 SHELL cache is cleaned up when v14 activates.
- * v13 was Batch 3 (local notifications + vehicle positions + offline
- * mode runtime caches). v12 was Batch 2 (light theme + empty state +
- * bound swap). v11 was Batch 1 (service-alerts banner + share/QR +
- * planner depart-by mode).
+ * CACHE bumped to v15: hotfix over v14.
+ *   - v14 fixed the etaSWR body-consumption bug (timestampedResponse
+ *     was eating the upstream body and returning the consumed resp)
+ *     but did NOT invalidate the ETA_CACHE entries that v13 had
+ *     already poisoned with empty bodies. Within the 5-minute
+ *     freshness window, etaSWR was happily serving those poisoned
+ *     cached responses back to the app — so "搵唔到呢條路線" kept
+ *     showing even after the SW fix was deployed. The user's browser
+ *     still had empty-body cached entries for /route-stop/680/outbound/1
+ *     and any other KMB / CTB / GMB / MTR URLs visited during the v13
+ *     era.
+ *   - Fix: bump ETA_CACHE name from `buseta-eta-v1` to `buseta-eta-v2`
+ *     so the poisoned v1 entries are abandoned. Activate handler also
+ *     explicitly deletes any leftover `buseta-eta-v1` cache for safety.
+ *   - ASSET_CACHE (the same-origin /assets/*.json cache) does NOT
+ *     suffer from this poisoning — its handler was already using
+ *     `resp.clone()` before the cache write, so v1 entries are still
+ *     trustworthy and we keep it.
+ * v14 was the body-consumption hotfix. v13 was Batch 3 (local
+ * notifications + vehicle positions + offline mode runtime caches).
+ * v12 was Batch 2 (light theme + empty state + bound swap). v11 was
+ * Batch 1 (service-alerts banner + share/QR + planner depart-by mode).
  */
-const CACHE = 'buseta-v14';
+const CACHE = 'buseta-v15';
 const SHELL = [
   '/',
   '/index.html',
@@ -36,7 +41,9 @@ const SHELL = [
 // future shape change can ship as `:v2` while old entries age out
 // via the activate-handler cleanup below.
 const ASSET_CACHE = 'buseta-assets-v1';
-const ETA_CACHE = 'buseta-eta-v1';
+const ETA_CACHE = 'buseta-eta-v2';
+// (was 'buseta-eta-v1' before v15 — bumped to invalidate the empty-
+// body poisoned entries left over from the v13 body-consumption bug.)
 
 // 5-minute freshness window for cached ETA responses. The operator
 // feeds update roughly every minute, so 5 min balances "don't
@@ -73,11 +80,15 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys()
       .then((keys) => Promise.all(
-        // Drop legacy `buseta-vN` for N < 14; keep v14 + runtime
-        // caches so existing offline data survives the bump.
+        // Drop legacy `buseta-vN` for N < 15; keep v15 + ASSET_CACHE
+        // + the new ETA_CACHE so existing offline data survives.
+        // Also explicitly drop the poisoned `buseta-eta-v1` cache
+        // (bumped to v2) so users on the v13-era poisoned SWR cache
+        // stop getting empty-body responses back.
         keys.filter((k) => {
+          if (k === 'buseta-eta-v1') return true;  // poisoned, drop
           const m = /^buseta-v(\d+)$/.exec(k);
-          if (m) return parseInt(m[1], 10) < 14;
+          if (m) return parseInt(m[1], 10) < 15;
           return k !== CACHE && k !== ASSET_CACHE && k !== ETA_CACHE;
         }).map((k) => caches.delete(k))
       ))
