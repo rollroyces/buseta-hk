@@ -68,11 +68,13 @@ h1,h2,h3{margin:0;font-weight:700;letter-spacing:-0.01em}
 </style>
 <!-- Main stylesheet. The original style.css is what we ship today — a
      hand-rolled minifier produced a broken style.min.css earlier, so we
-     load the unminified bundle directly. v=24 forces cached browsers
-     to refetch after Batch 1 of the v11 feature push — service-alerts
-     banner on the home view, share button + inline QR on stop/route
-     views, and trip planner "depart by HH:MM" mode. -->
-<link rel="stylesheet" href="style.css?v=24" />
+     load the unminified bundle directly. v=25 forces cached browsers
+     to refetch after Batch 2 of the v12 feature push — light theme +
+     system-preference toggle (cycle dark → light → system), home view
+     first-run empty-state hero with three CTA pills, and an in-place
+     O↔I bound-swap control on the route detail with optional swipe
+     gesture. -->
+<link rel="stylesheet" href="style.css?v=25" />
 <script>
 /* Theme loader — runs synchronously in <head> so :root[data-theme] is set
    BEFORE the body paints. Mirrors the loadThemePreference() logic in app.js
@@ -405,7 +407,7 @@ window.__buseta = {
   },
 };
 </script>
-<script defer src="app.js?v=24"></script>
+<script defer src="app.js?v=25"></script>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {

@@ -4,18 +4,23 @@
  * upstream API calls. Static JSON in /assets/ is cached lazily on first
  * fetch via the same code path.
  *
- * CACHE bumped to v11: Batch 1 of the feature push.
- *   - Service-disruption banner on the home view (curated
- *     `assets/disruptions.json`; no public upstream feed exists).
- *   - Share button + inline QR on stop and route views (vendored
- *     `qrcode-generator@1.4.4`, MIT, lazy-loaded as `assets/qrcode.js`).
- *   - Trip planner "depart by HH:MM" mode — works backward from a
- *     target arrival time instead of departing from now.
- * v10 was the recent-stops self-heal fix (KMB operator-ID reverse map).
- * The v11 bump forces cached clients to refetch the app shell and pick
- * up the three new features.
+ * CACHE bumped to v12: Batch 2 of the feature push.
+ *   - Light theme + system-preference-aware toggle (dark → light →
+ *     system → dark cycle; first paint remains dark for first-time
+ *     visitors). Inline theme loader in `<head>` so first paint never
+ *     flashes the wrong palette.
+ *   - First-run empty-state hero on the home view (3 CTA pills:
+ *     search / location / hot routes), pure-CSS bus illustration,
+ *     shows only when saved routes / saved stops / recent are all
+ *     empty.
+ *   - In-place O↔I bound swap control on the route detail view, with
+ *     optional swipe gesture (left = O → I, right = I → O). One-way
+ *     routes get the button hidden.
+ * v11 was Batch 1 (service-alerts banner + share/QR + planner
+ * depart-by mode). The v12 bump forces cached clients to refetch the
+ * app shell and pick up the three new features.
  */
-const CACHE = 'buseta-v11';
+const CACHE = 'buseta-v12';
 const SHELL = [
   '/',
   '/index.html',
