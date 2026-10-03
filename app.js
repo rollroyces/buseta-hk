@@ -5178,7 +5178,7 @@
       const s = document.createElement('script');
       // Cache-buster matches the project's convention. We only bump this
       // locally for now; the SW owns its own version.
-      s.src = 'assets/qrcode.js?v=1';
+      s.src = 'assets/qrcode.js?v=11';
       s.async = true;
       s.onload = () => resolve();
       s.onerror = () => {

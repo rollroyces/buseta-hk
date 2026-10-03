@@ -66,12 +66,11 @@ h1,h2,h3{margin:0;font-weight:700;letter-spacing:-0.01em}
 </style>
 <!-- Main stylesheet. The original style.css is what we ship today — a
      hand-rolled minifier produced a broken style.min.css earlier, so we
-     load the unminified bundle directly. v=23 forces cached browsers
-     to refetch after the 最近查過 stop-name self-heal fix — the KMB
-     operator-ID → real-name reverse map (e.g. ST905 → 大學站) plus the
-     `nameTc === stopId` guard so KMB operator IDs never poison the
-     recent cache. -->
-<link rel="stylesheet" href="style.css?v=23" />
+     load the unminified bundle directly. v=24 forces cached browsers
+     to refetch after Batch 1 of the v11 feature push — service-alerts
+     banner on the home view, share button + inline QR on stop/route
+     views, and trip planner "depart by HH:MM" mode. -->
+<link rel="stylesheet" href="style.css?v=24" />
 </head>
 <body>
 <a class="skip-link" href="#main">Skip to content</a>
@@ -364,7 +363,7 @@ window.__buseta = {
   },
 };
 </script>
-<script defer src="app.js?v=23"></script>
+<script defer src="app.js?v=24"></script>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {

@@ -4,20 +4,18 @@
  * upstream API calls. Static JSON in /assets/ is cached lazily on first
  * fetch via the same code path.
  *
- * CACHE bumped to v10: v9 added the justarrived-style stop row + the
- * `enrichRecentStop` cache for resolved stop names. v10 self-heals a
- * hole in that work — direct navigation to `#/stop/<operator-id>` (e.g.
- * `#/stop/ST905`) reaches the bus-stop view with an ID the KMB upstream
- * `/stop/{id}` can't resolve (KMB uses internal 16-hex IDs; the
- * operator-facing code is only exposed as a `(ST905)` suffix on each
- * stop's name_tc). The new `state.index.kmbOperatorId` reverse map is
- * built from those suffixes at index time, so the bus-stop view can
- * resolve `ST905 → 大學站` without a network round-trip, and `renderHome`
- * now self-heals any recent entries previously poisoned with the raw
- * operator ID as the cached name. v10 also strips that suffix when
- * caching so the recent row title reads cleanly.
+ * CACHE bumped to v11: Batch 1 of the feature push.
+ *   - Service-disruption banner on the home view (curated
+ *     `assets/disruptions.json`; no public upstream feed exists).
+ *   - Share button + inline QR on stop and route views (vendored
+ *     `qrcode-generator@1.4.4`, MIT, lazy-loaded as `assets/qrcode.js`).
+ *   - Trip planner "depart by HH:MM" mode — works backward from a
+ *     target arrival time instead of departing from now.
+ * v10 was the recent-stops self-heal fix (KMB operator-ID reverse map).
+ * The v11 bump forces cached clients to refetch the app shell and pick
+ * up the three new features.
  */
-const CACHE = 'buseta-v10';
+const CACHE = 'buseta-v11';
 const SHELL = [
   '/',
   '/index.html',
