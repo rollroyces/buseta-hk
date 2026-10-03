@@ -4,13 +4,13 @@
  * upstream API calls. Static JSON in /assets/ is cached lazily on first
  * fetch via the same code path.
  *
- * CACHE bumped to v2: v1 was pinned to the pre-geolocation-fix bundle
- * (broken `err.PERMISSION_DENIED` check + no error toast). Users with v1
- * already installed kept getting the old code via cache-first even after
- * the CDN served the fix. Bumping forces the new SW's `install` handler
- * to re-fetch and re-cache the shell from the network.
+ * CACHE bumped to v3: v2 served the geolocation fix (correct
+ * PERMISSION_DENIED check + visible state transitions) but did not yet
+ * probe the Permissions API to surface browser-level blocks. Bumping
+ * forces the new SW's `install` handler to re-fetch and re-cache the
+ * shell from the network so existing clients get the probe at boot.
  */
-const CACHE = 'buseta-v2';
+const CACHE = 'buseta-v3';
 const SHELL = [
   '/',
   '/index.html',
