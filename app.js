@@ -2906,12 +2906,15 @@
 
       // Wait for the fare promise (already in flight above) and expand it
       // into a Map<seq, fare> suitable for the row loop. Errors are swallowed
-      // and result in `null` (UI skips the per-stop fare).
+      // and result in `null` (UI shows `—` chip per stop rather than an
+      // empty placeholder, so the user sees "no fare data" vs "broken").
       let fareBySeq = null;
+      let fareAttempted = false;
       try {
         const rawFare = await fareP;
+        fareAttempted = true;
         fareBySeq = expandFareForStops(rawFare, stops);
-      } catch (e) { fareBySeq = null; }
+      } catch (e) { fareAttempted = true; fareBySeq = null; }
       const fareRangeInfo = fareRange(fareBySeq);
 
       // Live arrivals for every stop on the route. CTB/NWFB stops use the
@@ -3030,13 +3033,18 @@
         info.appendChild(el('div', { class: 'stop-name-row' }, nameDisplay || s.stop));
         if (enDisplay) info.appendChild(el('div', { class: 'stop-name-en' }, enDisplay));
         // Per-stop fare pill (justarrived style — small `$X.X` under the
-        // stop name). Shown only when the operator exposes a fare for this
-        // seq (KMB per-stop) or when a flat fare is in scope (CTB / GMB /
-        // LRT). When `fareBySeq` is null the pill is omitted entirely so
-        // we don't ship an empty placeholder.
+        // stop name). Three states:
+        //   - fare known  → `$X.X` (KMB per-stop, or flat-fare CTB/GMB/LRT)
+        //   - fare attempted but null → `—` chip in muted style (so the
+        //     user sees "no fare data" rather than silent absence)
+        //   - fare not yet attempted → nothing (still loading)
         const stopFare = fareBySeq && fareBySeq.get(seq);
         if (stopFare != null && Number.isFinite(Number(stopFare))) {
           info.appendChild(el('div', { class: 'stop-fare' }, `$${fmtFare(Number(stopFare))}`));
+        } else if (fareAttempted) {
+          const chip = el('div', { class: 'stop-fare is-na' }, '—');
+          chip.title = t_str('fareUnavailable');
+          info.appendChild(chip);
         }
         row.appendChild(info);
         const etaBox = el('div', { class: 'stop-eta' });
@@ -3377,10 +3385,15 @@
         const info = el('div', { class: 'stop-info' });
         info.appendChild(el('div', { class: 'stop-name-row' }, stopMeta ? nameFor(stopMeta) : s.stop));
         if (stopMeta && stopMeta.nameEn) info.appendChild(el('div', { class: 'stop-name-en' }, stopMeta.nameEn));
-        // Per-stop fare pill (LRT: same flat fare on every row).
+        // Per-stop fare pill (LRT: same flat fare on every row, or `—`
+        // when the LRT route isn't in our hardcoded fares table).
         const stopFare = lrtFareBySeq && lrtFareBySeq.get(idx + 1);
         if (stopFare != null && Number.isFinite(Number(stopFare))) {
           info.appendChild(el('div', { class: 'stop-fare' }, `$${fmtFare(Number(stopFare))}`));
+        } else {
+          const chip = el('div', { class: 'stop-fare is-na' }, '—');
+          chip.title = t_str('fareUnavailable');
+          info.appendChild(chip);
         }
         row.appendChild(info);
         const etaBox = el('div', { class: 'stop-eta' });
@@ -3516,10 +3529,15 @@
           const info = el('div', { class: 'stop-info' });
           info.appendChild(el('div', { class: 'stop-name-row' }, nameFor(s) || s.stop));
           if (s.nameEn) info.appendChild(el('div', { class: 'stop-name-en' }, s.nameEn));
-          // Per-stop fare pill (GMB: same flat fare on every row).
+          // Per-stop fare pill (GMB: same flat fare on every row, or `—`
+          // when the GMB route isn't in our hardcoded fares table).
           const stopFare = gmbFareBySeq && gmbFareBySeq.get(seq);
           if (stopFare != null && Number.isFinite(Number(stopFare))) {
             info.appendChild(el('div', { class: 'stop-fare' }, `$${fmtFare(Number(stopFare))}`));
+          } else {
+            const chip = el('div', { class: 'stop-fare is-na' }, '—');
+            chip.title = t_str('fareUnavailable');
+            info.appendChild(chip);
           }
           row.appendChild(info);
           const etaBox = el('div', { class: 'stop-eta' });
