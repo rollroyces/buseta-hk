@@ -68,25 +68,19 @@ h1,h2,h3{margin:0;font-weight:700;letter-spacing:-0.01em}
 </style>
 <!-- Main stylesheet. The original style.css is what we ship today — a
      hand-rolled minifier produced a broken style.min.css earlier, so we
-     load the unminified bundle directly. v=29 forces cached browsers
-     to refetch after the route-map merge:
-       - The route detail page previously had two stacked map cards
-         labelled "地圖" (a Google Maps iframe with an "Open in Maps"
-         link) and "實時車輛位置" (an SVG schematic with live bus
-         icons). Both drew essentially the same polyline, so users
-         saw the route twice and the page wasted ~480px of vertical
-         map space. The merge drops the iframe entirely, keeps the
-         SVG schematic as the only map, renames its title to "地圖",
-         and adds a single "Open in Google Maps" link (same saddr/
-         daddr URL as the deleted iframe) below the SVG. The stop-
-         coverage count (`29/29`) is folded into the link label so
-         we don't need a separate meta chip for it. SVG viewBox
-         height bumped 200 → 220px to fill the now-larger map slot.
-       - v28 was the renderBusRoute ReferenceError hotfix
-         (`etasByStop` typo at the etaByStop call site) that caused
-         "搵唔到呢條路線" on every route detail page. Now superseded
-         by v29's map merge. -->
-<link rel="stylesheet" href="style.css?v=29" />
+     load the unminified bundle directly. v=30 forces cached browsers
+     to refetch after the v29→v30 hybrid layout change:
+       - v29 tried to merge the iframe + SVG schematic into one card by
+         dropping the iframe entirely (SVG schematic as the only map).
+         Users found the SVG too abstract (no streets, no buildings) so
+         v30 brings the iframe back as the primary map AND keeps the
+         SVG schematic nested as a sub-section inside the same card.
+       - The schematic is built by renderVehicleMap() with a thin
+         `.vehicle-map-inline` wrapper (no outer card chrome — the
+         route-map card above already has the section title and frame).
+         Title says "實時車輛位置" (not "地圖") and the "Open in Google
+         Maps" link is dropped since the iframe IS the Google Maps view.
+<link rel="stylesheet" href="style.css?v=30" />
 <script>
 /* Theme loader — runs synchronously in <head> so :root[data-theme] is set
    BEFORE the body paints. Mirrors the loadThemePreference() logic in app.js
@@ -426,7 +420,7 @@ window.__buseta = {
   },
 };
 </script>
-<script defer src="app.js?v=29"></script>
+<script defer src="app.js?v=30"></script>
 <script>
   // SW path must be RELATIVE — GitHub Pages serves this site under
   // /buseta-hk/ but a leading `/sw.js` would resolve to the site root

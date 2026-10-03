@@ -237,6 +237,7 @@
       notifPermissionDenied: '通知已被瀏覽器封鎖。請喺瀏覽器設定允許通知，再重新整理此頁。',
       offlineMode: '離線模式',
       offlineShowingLastKnown: '顯示最後已知資料',
+      vehicleMap: '實時車輛位置',
       vehicleLive: '實時 GPS 位置',
       vehicleNoData: '目前未有實時車輛位置資料。以下係根據時間表嘅預估位置。',
       vehiclePosition: '車輛位置',
@@ -460,6 +461,7 @@
       notifPermissionDenied: 'Notifications are blocked. Please allow them in your browser settings and reload.',
       offlineMode: 'Offline',
       offlineShowingLastKnown: 'showing last known data',
+      vehicleMap: 'Live vehicle positions',
       vehicleLive: 'Live GPS positions',
       vehicleNoData: 'No live GPS data available right now. Showing estimated positions based on the timetable.',
       vehiclePosition: 'Vehicle position',
@@ -672,6 +674,7 @@
       notifPermissionDenied: '通知已被浏览器封锁。请喺浏览器设定允许通知，再重新整理此页。',
       offlineMode: '离线模式',
       offlineShowingLastKnown: '显示最后已知资料',
+      vehicleMap: '实时车辆位置',
       vehicleLive: '实时 GPS 位置',
       vehicleNoData: '目前未有实时车辆位置资料。以下系根据时间表嘅预估位置。',
       vehiclePosition: '车辆位置',
@@ -1656,45 +1659,107 @@
   // Takes the resolved stop list and a `coordByStop` Map<stopId, {lat,lng}>;
   // returns a section Node, or null if fewer than two stops have coords.
   //
-  // ---- merged with the live-vehicle-positions SVG below in v29 ----
-  // Originally this function embedded a Google Maps directions iframe
-  // with an "Open in Maps" link, and renderVehicleMap() below drew a
-  // separate SVG schematic with the live bus icons. Users saw two stacked
-  // map cards on every route detail page — one labelled "地圖" (the iframe
-  // duplicate) and one labelled "實時車輛位置" (the schematic). The merge
-  // drops the iframe entirely, keeps the SVG schematic as the only map,
-  // renames its title to "地圖", and adds a single "Open in Google Maps"
-  // link (same saddr/daddr URL as the deleted iframe) so users who want
-  // real tiled maps still have a one-tap way to get there. The drop
-  // shaves ~280px of vertical map space down to ~240px and removes the
-  // duplicate polyline render.
+  // ---- v30 hybrid layout ----
+  // v29 tried to merge this iframe with the live-vehicle-positions SVG
+  // into a single card by dropping the iframe. Users found the SVG
+  // schematic too abstract (no streets, no buildings) so v30 brings the
+  // iframe back as the primary map, with the SVG schematic nested as a
+  // sub-section inside the same card. The third parameter
+  // `innerSchematic` lets renderBusRoute build the SVG schematic first
+  // and pass it in for nesting; this preserves both the real tiled map
+  // and the live/placeholder bus position markers in a single card.
 
   // ------------------------------------------------------------------
-  // Route map (merged with vehicle positions in v29) — a single SVG
-  // section showing the route polyline, stop dots, and bus icons. When
-  // live GPS data is unavailable, bus icons fall back to placeholder
-  // positions estimated from the ETA pattern; the badge in the header
-  // tells the user which mode they're seeing. An "Open in Google Maps"
-  // link below the SVG provides a one-tap way to see the route on real
-  // tiled maps.
+  // Route map (hybrid in v30) — outer card with the Google Maps iframe
+  // directions view, the "Open in Maps" link, and an optional nested
+  // SVG schematic showing the live/placeholder bus positions. When live
+  // GPS data is unavailable, bus icons in the schematic fall back to
+  // placeholder positions estimated from the ETA pattern; the badge in
+  // the schematic's header tells the user which mode they're seeing.
   //
   // Architecture:
   //   - assets/vehicle-positions.js (BusEtaVehicles.fetchPositions) probes
   //     the operator feeds and resolves to a list of `{co, lat, lng, ...}`
   //     or `null` if no feed is enabled.
   //   - renderVehicleMap() is a self-contained pure-SVG renderer that
-  //     projects lat/lng → SVG viewBox via a simple equirectangular
-  //     projection (fine for HK scale, no Leaflet/Mapbox/Google needed).
+  //     returns just the schematic (head + SVG + hint, in a
+  //     .vehicle-map-inline wrapper). It no longer renders an outer
+  //     section chrome — that lives on the .route-map card this
+  //     function builds.
   //   - placeholderVehiclePositions() builds pseudo-positions from the
   //     ETA pattern when no live feed is available — buses are spread
   //     evenly along the polyline so the user sees something move-like
-  //     instead of an empty box. The map header surfaces the "estimated"
-  //     tag so it's obvious to the user that this is not live data.
+  //     instead of an empty box.
   //   - startVehicleRefresh() / stopVehicleRefresh() are paired with the
   //     existing eta refresh so the map's auto-refresh stops on view
   //     switch, matching the existing pattern (startEtaRefresh /
   //     stopEtaRefresh).
   // ------------------------------------------------------------------
+  // v30 hybrid: outer route-map card (Google Maps iframe) with optional
+  // nested SVG schematic for live bus positions. Returns a `<section>`,
+  // or null if fewer than two stops have coords.
+  function renderRouteMap(stops, coordByStop, innerSchematic) {
+    if (!stops || stops.length === 0) return null;
+    const points = [];
+    stops.forEach((s) => {
+      const c = coordByStop.get(s.stop);
+      if (c && Number.isFinite(c.lat) && Number.isFinite(c.lng)) {
+        points.push({ lat: c.lat, lng: c.lng });
+      }
+    });
+    if (points.length < 2) return null;
+
+    const origin = points[0];
+    const destination = points[points.length - 1];
+
+    const section = el('section', { class: 'route-map', 'aria-label': t_str('mapHeader') });
+    const head = el('div', { class: 'route-map-head' },
+      el('span', { class: 'route-map-title' }, t_str('mapHeader')),
+      el('span', { class: 'route-map-meta' }, `${points.length}/${stops.length}`),
+    );
+    section.appendChild(head);
+
+    // saddr/daddr directions URL — Google Maps draws a route line between
+    // the two endpoints and shows pins at both. No `z=` (let Maps pick so
+    // both endpoints fit). No API key required; the user's saved key
+    // upgrades the embed styling if present.
+    const saddr = `${origin.lat.toFixed(6)},${origin.lng.toFixed(6)}`;
+    const daddr = `${destination.lat.toFixed(6)},${destination.lng.toFixed(6)}`;
+    const params = new URLSearchParams({ saddr, daddr, output: 'embed' });
+    const key = getGmapsKey();
+    if (key) params.set('key', key);
+    const iframe = el('iframe', {
+      title: `${t_str('mapHeader')} · ${points.length}`,
+      loading: 'lazy',
+      referrerpolicy: 'no-referrer-when-downgrade',
+      src: `https://maps.google.com/maps?${params.toString()}`,
+      style: 'border:0;',
+    });
+    const frame = el('div', { class: 'route-map-frame' });
+    frame.appendChild(iframe);
+    section.appendChild(frame);
+
+    // "Open in Google Maps" link so users can pan/zoom the full map in a
+    // new tab. Centred on the route's midpoint.
+    const link = el('a', {
+      class: 'stop-map-link',
+      href: `https://www.google.com/maps?saddr=${saddr}&daddr=${daddr}`,
+      target: '_blank',
+      rel: 'noopener',
+    });
+    link.appendChild(mapPinIconSVG());
+    link.appendChild(el('span', {}, t_str('openInMaps')));
+    section.appendChild(link);
+
+    // Nest the SVG schematic as a sub-section inside the same card.
+    // The schematic is built by renderVehicleMap() with a
+    // `.vehicle-map-inline` wrapper (no outer chrome — the card above
+    // already has the section title and frame).
+    if (innerSchematic) {
+      section.appendChild(innerSchematic);
+    }
+    return section;
+  }
 
   // Operator → colour used for the bus icon + polyline stroke. Falls back
   // to the route's accent when we don't recognise the operator. Kept in
@@ -1883,7 +1948,7 @@
     svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
     svg.setAttribute('class', 'vehicle-map-svg');
     svg.setAttribute('role', 'img');
-    svg.setAttribute('aria-label', t_str('mapHeader'));
+    svg.setAttribute('aria-label', t_str('vehicleMap'));
 
     // ---- route polyline ----
     const polyPts = routePts.map((p) => projectLatLng(p.lat, p.lng, bounds, view));
@@ -1948,46 +2013,32 @@
       svg.appendChild(stripe);
     });
 
-    // ---- section wrapper (merged map: was separate iframe + vehicle-map
-    //      cards before v29, now a single section) ----
-    const section = el('section', {
-      class: 'vehicle-map' + (isPlaceholder ? ' is-placeholder' : ' is-live'),
-      'aria-label': t_str('mapHeader'),
+    // ---- sub-section wrapper (v30 hybrid) ----
+    // The route-map card above owns the section title and frame chrome,
+    // so this wrapper is just a thin inline container — no section
+    // borders, no card padding. The title says "實時車輛位置" (not
+    // "地圖") to make it clear it's a sub-section, and the Open-in-
+    // Maps link is dropped because the iframe above is the Google
+    // Maps view.
+    const wrapper = el('div', {
+      class: 'vehicle-map-inline' + (isPlaceholder ? ' is-placeholder' : ' is-live'),
+      'aria-label': t_str('vehicleMap'),
     });
-    const head = el('div', { class: 'vehicle-map-head' });
-    head.appendChild(el('span', { class: 'vehicle-map-title' }, t_str('mapHeader')));
+    const head = el('div', { class: 'vehicle-map-inline-head' });
+    head.appendChild(el('span', { class: 'vehicle-map-inline-title' }, t_str('vehicleMap')));
     const badge = el('span', {
       class: 'vehicle-map-badge' + (isPlaceholder ? ' is-placeholder' : ' is-live'),
     }, isPlaceholder ? t_str('vehiclePlaceholder') : t_str('vehicleLive'));
     head.appendChild(badge);
-    section.appendChild(head);
+    wrapper.appendChild(head);
     const frame = el('div', { class: 'vehicle-map-frame' });
     frame.appendChild(svg);
-    section.appendChild(frame);
-    // "Open in Google Maps" link — same saddr/daddr URL as the deleted
-    // iframe so users who want real tiled maps still have a one-tap
-    // way to get there. The stop-coverage count (`29/29`) is folded
-    // into the link label so we don't need a separate meta chip in
-    // the header for it.
-    const origin = routePts[0];
-    const destination = routePts[routePts.length - 1];
-    const saddr = `${origin.lat.toFixed(6)},${origin.lng.toFixed(6)}`;
-    const daddr = `${destination.lat.toFixed(6)},${destination.lng.toFixed(6)}`;
-    const link = el('a', {
-      class: 'vehicle-map-link',
-      href: `https://www.google.com/maps?saddr=${saddr}&daddr=${daddr}`,
-      target: '_blank',
-      rel: 'noopener',
-    });
-    link.appendChild(mapPinIconSVG());
-    link.appendChild(el('span', {},
-      `${t_str('openInMaps')} · ${routePts.length}/${stops.length}`));
-    section.appendChild(link);
+    wrapper.appendChild(frame);
     if (isPlaceholder) {
       const hint = el('p', { class: 'vehicle-map-hint' }, t_str('vehicleNoData'));
-      section.appendChild(hint);
+      wrapper.appendChild(hint);
     }
-    return section;
+    return wrapper;
   }
 
   // Try to get live positions for the current route. Returns a Promise
@@ -4114,8 +4165,9 @@
           if (c) coordByStop.set(s.stop, c);
         }));
       }
-      // (Removed in v29: renderRouteMap() that built a separate Google Maps
-      // iframe. The merged map below now uses coordByStop directly.)
+      // (The route-map iframe is built below from `coordByStop`. We build
+      // the inner SVG schematic first so we can nest it inside the same
+      // card — see renderRouteMap(stops, coordByStop, innerSchematic).)
 
       const list = el('div', { class: 'eta-list' });
       // Pick the row that should be highlighted (the user's current stop)
@@ -4237,11 +4289,15 @@
 
       const heading = el('h2', { class: 'section-title' }, t_str('showingStop', stops.length));
       // ---- Vehicle positions (live GPS) ----
-      // Build the small SVG vehicle map now (placeholder mode by default —
-      // buses spread along the polyline based on the ETA pattern) and
-      // kick off a background probe for live positions. When live data
-      // arrives, the timer below swaps the section in-place via
-      // updateVehicleMap() without a full re-render.
+      // Build the small SVG schematic first (placeholder mode by default —
+      // buses spread along the polyline based on the ETA pattern). In
+      // v30's hybrid layout this gets nested inside the .route-map card
+      // below (renderRouteMap accepts it as the third arg) so users see
+      // the real Google Maps iframe AND the live bus positions in one
+      // card. We still kick off a background probe for live positions;
+      // when live data arrives, updateVehicleMap() swaps just the SVG
+      // schematic in-place (the iframe is left alone) without a full
+      // re-render.
       //
       // We pass `coordByStop` and `etaByStop` so the placeholder logic
       // can interpolate positions along the polyline. `op` lets the
@@ -4264,12 +4320,19 @@
           vehicleSection.parentNode.replaceChild(next, vehicleSection);
         }
       };
-      // Order: optional alert → merged map (polyline + live/placeholder
-      // bus icons, single SVG) → stop list heading → rows. v29 collapsed
-      // the old two-card layout (iframe + vehicle-map) into one card.
+      // Build the outer route-map card (Google Maps iframe + "Open in
+      // Maps" link) with the SVG schematic nested as a sub-section.
+      // v30 hybrid layout — see renderRouteMap() for the innerSchematic
+      // parameter. If renderRouteMap returns null (fewer than 2 stops
+      // have coords) we fall back to rendering the schematic standalone
+      // so the user still sees the bus positions.
+      const routeMapEl = renderRouteMap(stops, coordByStop, vehicleSection);
+      // Order: optional alert → hybrid map card (iframe + nested SVG
+      // schematic) → stop list heading → rows.
       const children = [];
       if (alertEl) children.push(alertEl);
-      if (vehicleSection) children.push(vehicleSection);
+      if (routeMapEl) children.push(routeMapEl);
+      else if (vehicleSection) children.push(vehicleSection);
       children.push(heading, list);
       body.replaceChildren(...children);
       // Wire the live-GPS probe: try once now, then re-poll every 30s
