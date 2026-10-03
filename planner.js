@@ -866,17 +866,86 @@
   const LRT_TRANSFER_MIN    = 4;          // LRT paid-area transfer
   const MTR_LINES_URL       = 'assets/mtr-lines.json?v=15';
   const LRT_LINES_URL       = 'assets/lrt-routes.json?v=15';
+  const MTR_FARES_URL       = 'assets/mtr-fares.json?v=1';
+  const LRT_FARES_URL       = 'assets/lrt-fares.json?v=1';
 
   let _mtrGraphCache   = null;
   let _lrtGraphCache   = null;
   let _mtrGraphPromise = null;
   let _lrtGraphPromise = null;
+  let _mtrFaresCache   = null;
+  let _mtrFaresPromise = null;
+  let _lrtFaresCache   = null;
+  let _lrtFaresPromise = null;
 
   function invalidateRailGraphs() {
     _mtrGraphCache = null;
     _lrtGraphCache = null;
     _mtrGraphPromise = null;
     _lrtGraphPromise = null;
+    _mtrFaresCache = null;
+    _lrtFaresCache = null;
+    _mtrFaresPromise = null;
+    _lrtFaresPromise = null;
+  }
+
+  // ---- MTR / LRT fare tables (lazy-load on first planner query) ----
+  // Returns the parsed JSON object from assets/mtr-fares.json, which
+  // holds curated station-to-station Octopus fares (curated subset of
+  // HK rail stations, see file's _meta.source). On any fetch error the
+  // cache stores `null` so subsequent calls return immediately.
+  async function ensureMtrFares() {
+    if (_mtrFaresCache !== null) return _mtrFaresCache;
+    if (_mtrFaresPromise) return _mtrFaresPromise;
+    _mtrFaresPromise = (async () => {
+      try {
+        const resp = await fetch(MTR_FARES_URL);
+        if (!resp.ok) return null;
+        return await resp.json();
+      } catch (e) { return null; }
+    })();
+    try {
+      _mtrFaresCache = await _mtrFaresPromise;
+    } finally {
+      _mtrFaresPromise = null;
+    }
+    return _mtrFaresCache;
+  }
+  async function ensureLrtFares() {
+    if (_lrtFaresCache !== null) return _lrtFaresCache;
+    if (_lrtFaresPromise) return _lrtFaresPromise;
+    _lrtFaresPromise = (async () => {
+      try {
+        const resp = await fetch(LRT_FARES_URL);
+        if (!resp.ok) return null;
+        return await resp.json();
+      } catch (e) { return null; }
+    })();
+    try {
+      _lrtFaresCache = await _lrtFaresPromise;
+    } finally {
+      _lrtFaresPromise = null;
+    }
+    return _lrtFaresCache;
+  }
+  // Look up MTR fare between two 3-letter station codes. Returns a number
+  // (HKD Octopus) or null when no fare is available. Looks up both
+  // (A→B) and (B→A) since fares are symmetric.
+  function lookupMtrFare(fares, from, to) {
+    if (!fares || !from || !to || from === to) return null;
+    const f1 = fares[from];
+    if (f1 && f1[to] && Number.isFinite(Number(f1[to].octopus))) return Number(f1[to].octopus);
+    const f2 = fares[to];
+    if (f2 && f2[from] && Number.isFinite(Number(f2[from].octopus))) return Number(f2[from].octopus);
+    return null;
+  }
+  // LRT fares are flat per-route, so the lookup is route-only.
+  function lookupLrtFare(fares, route) {
+    if (!fares || !route) return null;
+    const entry = fares[String(route)];
+    if (!entry) return null;
+    const v = Number(entry.octopus != null ? entry.octopus : entry.fare);
+    return Number.isFinite(v) ? v : null;
   }
 
   async function ensureMtrGraph(idx) {
@@ -1207,9 +1276,25 @@
       if (m) return { co: 'MTR', route: lineCode, origTc: m.origTc, origEn: m.origEn, destTc: m.destTc, destEn: m.destEn };
       return { co: 'MTR', route: lineCode };
     };
-    return railRoute(graph, origin, dest, idx, {
+    const result = await railRoute(graph, origin, dest, idx, {
       co: 'MTR', perStationMin: MTR_PER_STATION_MIN, transferMin: RAIL_TRANSFER_MIN, routeMetaFor,
     });
+    // Attach MTR fares to ride legs (curated station-to-station lookup in
+    // assets/mtr-fares.json). For multi-leg rides the fare is the per-leg
+    // O/D fare — accurate enough to give the user a sensible budget number.
+    const fares = await ensureMtrFares();
+    [result.direct, result.oneTransfer].forEach((arr) => {
+      arr.forEach((j) => {
+        if (!j || !j.legs) return;
+        j.legs.forEach((l) => {
+          if (l && l.kind === 'ride' && l.from && l.to) {
+            const f = lookupMtrFare(fares, l.from, l.to);
+            if (f != null) l.fare = f;
+          }
+        });
+      });
+    });
+    return result;
   }
 
   async function findLrtRoutes(idx, origin, dest) {
@@ -1226,9 +1311,24 @@
       if (m) return { co: 'LRT', route: routeNo, origTc: m.origTc, origEn: m.origEn, destTc: m.destTc, destEn: m.destEn };
       return { co: 'LRT', route: routeNo };
     };
-    return railRoute(graph, origin, dest, idx, {
+    const result = await railRoute(graph, origin, dest, idx, {
       co: 'LRT', perStationMin: LRT_PER_STATION_MIN, transferMin: LRT_TRANSFER_MIN, routeMetaFor,
     });
+    // LRT fares are flat per-route (assets/lrt-fares.json). Same fare on
+    // every ride leg of a journey since they're all on the same line.
+    const fares = await ensureLrtFares();
+    [result.direct, result.oneTransfer].forEach((arr) => {
+      arr.forEach((j) => {
+        if (!j || !j.legs) return;
+        j.legs.forEach((l) => {
+          if (l && l.kind === 'ride' && l.routeMeta && l.routeMeta.route) {
+            const f = lookupLrtFare(fares, l.routeMeta.route);
+            if (f != null) l.fare = f;
+          }
+        });
+      });
+    });
+    return result;
   }
 
   // ---- Top-level search ----------------------------------------------
@@ -1508,10 +1608,13 @@
         const co = rm.co || '';
         // Rail legs have `meters: 0` because we don't compute km. Show
         // minutes instead of "0 m" so the user understands how long the
-        // ride is at a glance.
+        // ride is at a glance. When `l.fare` is set (MTR / LRT rides
+        // only — sourced from assets/mtr-fares.json / lrt-fares.json),
+        // append `· $X.X` so the user has an at-a-glance cost estimate.
         if (co === 'MTR' || co === 'LRT') {
-          text.appendChild(el('div', { class: 'leg-sub' },
-            `${t_str('plannerRide')} · ${mins(l.minutes)} ${t_str('minShort')}`));
+          const rideParts = [`${t_str('plannerRide')} · ${mins(l.minutes)} ${t_str('minShort')}`];
+          if (Number.isFinite(l.fare)) rideParts.push(`$${Number(l.fare).toFixed(1)}`);
+          text.appendChild(el('div', { class: 'leg-sub' }, rideParts.join(' · ')));
         } else {
           text.appendChild(el('div', { class: 'leg-sub' },
             `${t_str('plannerRide')} ${fmtDistance(l.meters || 0)}`));
