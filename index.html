@@ -68,13 +68,14 @@ h1,h2,h3{margin:0;font-weight:700;letter-spacing:-0.01em}
 </style>
 <!-- Main stylesheet. The original style.css is what we ship today — a
      hand-rolled minifier produced a broken style.min.css earlier, so we
-     load the unminified bundle directly. v=25 forces cached browsers
-     to refetch after Batch 2 of the v12 feature push — light theme +
-     system-preference toggle (cycle dark → light → system), home view
-     first-run empty-state hero with three CTA pills, and an in-place
-     O↔I bound-swap control on the route detail with optional swipe
-     gesture. -->
-<link rel="stylesheet" href="style.css?v=25" />
+     load the unminified bundle directly. v=26 forces cached browsers
+     to refetch after Batch 3 of the v13 feature push — local
+     notifications for ETA thresholds (Web Notification API while
+     the page is open), real-time vehicle positions on the route
+     detail (placeholder pseudo-positions until a public GPS feed
+     exists), and offline mode (runtime caches for /assets/*.json
+     and ETA APIs, plus an offline banner on the home view). -->
+<link rel="stylesheet" href="style.css?v=26" />
 <script>
 /* Theme loader — runs synchronously in <head> so :root[data-theme] is set
    BEFORE the body paints. Mirrors the loadThemePreference() logic in app.js
@@ -414,7 +415,7 @@ window.__buseta = {
   },
 };
 </script>
-<script defer src="app.js?v=25"></script>
+<script defer src="app.js?v=26"></script>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {

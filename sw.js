@@ -4,44 +4,30 @@
  * upstream API calls. Static JSON in /assets/ is cached lazily on first
  * fetch via the same code path.
  *
- * CACHE bumped to v12: Batch 2 of the feature push.
- *   - Light theme + system-preference-aware toggle (dark → light →
- *     system → dark cycle; first paint remains dark for first-time
- *     visitors). Inline theme loader in `<head>` so first paint never
- *     flashes the wrong palette.
- *   - First-run empty-state hero on the home view (3 CTA pills:
- *     search / location / hot routes), pure-CSS bus illustration,
- *     shows only when saved routes / saved stops / recent are all
- *     empty.
- *   - In-place O↔I bound swap control on the route detail view, with
- *     optional swipe gesture (left = O → I, right = I → O). One-way
- *     routes get the button hidden.
- * v11 was Batch 1 (service-alerts banner + share/QR + planner
- * depart-by mode). The v12 bump forces cached clients to refetch the
- * app shell and pick up the three new features.
- *
- * Offline mode (Batch 3, layered on top of v12 — SW version itself is
- * still v12, so the cache-buster bump stays the parent's job):
- *   - ASSET_CACHE: same-origin /assets/*.json — cache-first with
- *     background revalidation, so static JSON (routes / stops / MTR /
- *     LRT / curated disruption snapshot) is available offline after
- *     the first online load.
- *   - ETA_CACHE: cross-origin ETA responses (KMB / LWB / CTB / GMB /
- *     MTR / MTR-static) — stale-while-revalidate with a 5-minute
- *     freshness window. Cache hits within the window return
- *     immediately and refresh in the background; stale cache hits
- *     fall back to the cached copy only if the network request fails.
- *   - Navigation requests for `/` (and any SPA-style navigate) serve
- *     the pre-cached `/index.html` when the network is unreachable,
- *     so the app shell boots cold-offline.
- *   - `activate` only drops legacy `buseta-vN` caches with N < 12;
- *     the new ASSET_CACHE / ETA_CACHE are kept alongside the SHELL
- *     cache so future deploys don't wipe offline data.
- * NEXT DEPLOY MUST bump `CACHE` to v13 so cached clients re-fetch the
- * shell + new fetch handlers. (Parent's cache-buster bump will pick
- * that up.)
+ * CACHE bumped to v13: Batch 3 of the feature push.
+ *   - Local notifications: Web Notification API fires an alert when a
+ *     saved/recent stop's ETA crosses the user's threshold (3/5/10 min).
+ *     Polling is paused while the tab is hidden and re-fires on resume.
+ *   - Real-time vehicle positions on the route detail: pure-inline-SVG
+ *     map of the route polyline + stops + bus icons. No public GPS
+ *     feed exists for any HK operator on the open-data hosts, so the
+ *     helper probes every plausible endpoint and falls back to
+ *     pseudo-positions derived from the ETA `diff` minutes.
+ *   - Offline mode: runtime caches for `/assets/*.json` (cache-first
+ *     with background revalidation, ASSET_CACHE = 'buseta-assets-v1')
+ *     and the ETA API origins (stale-while-revalidate with a 5-minute
+ *     freshness window, ETA_CACHE = 'buseta-eta-v1'). Navigation
+ *     requests fall back to `/index.html` when offline so the SPA
+ *     shell boots cold-offline. The home view shows an offline banner
+ *     while `navigator.onLine === false`. `activate` only drops legacy
+ *     `buseta-vN` caches with N < 12; the runtime caches are kept
+ *     alongside the SHELL cache so future deploys don't wipe offline
+ *     data.
+ * v12 was Batch 2 (light theme + empty state + bound swap). The v13
+ * bump forces cached clients to refetch the app shell and pick up the
+ * three new features plus the new runtime cache buckets.
  */
-const CACHE = 'buseta-v12';
+const CACHE = 'buseta-v13';
 const SHELL = [
   '/',
   '/index.html',
