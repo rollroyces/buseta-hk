@@ -3,8 +3,14 @@
  * network fallback for same-origin GETs; network-only for cross-origin
  * upstream API calls. Static JSON in /assets/ is cached lazily on first
  * fetch via the same code path.
+ *
+ * CACHE bumped to v2: v1 was pinned to the pre-geolocation-fix bundle
+ * (broken `err.PERMISSION_DENIED` check + no error toast). Users with v1
+ * already installed kept getting the old code via cache-first even after
+ * the CDN served the fix. Bumping forces the new SW's `install` handler
+ * to re-fetch and re-cache the shell from the network.
  */
-const CACHE = 'buseta-v1';
+const CACHE = 'buseta-v2';
 const SHELL = [
   '/',
   '/index.html',

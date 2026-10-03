@@ -492,7 +492,9 @@
 
   // Bump this whenever the on-disk shape of the index changes, so old
   // cached snapshots get discarded and rebuilt against the live APIs.
-  const INDEX_SCHEMA_VERSION = 3;
+  // v4: index entries now carry `co` (KMB / MTR / GMB) so list rows render
+  // a proper operator badge instead of the generic STOP placeholder.
+  const INDEX_SCHEMA_VERSION = 4;
 
   const REFRESH_INTERVAL_MS = 60_000;
   const INDEX_MAX_AGE_MS = 12 * 60 * 60 * 1000;
@@ -721,8 +723,12 @@
     }
     if (kmbStops && Array.isArray(kmbStops.data)) {
       for (const s of kmbStops.data) {
+        // Tag every KMB stop with its operator so list rows render a proper
+        // operator badge instead of falling back to the generic STOP placeholder
+        // (which used to ship as a stray "·" character before the stop name).
         stops.set(s.stop, {
           stop: s.stop,
+          co: 'KMB',
           nameTc: s.name_tc, nameSc: s.name_sc || '', nameEn: s.name_en,
           lat: parseFloat(s.lat), lng: parseFloat(s.long),
         });
@@ -759,8 +765,16 @@
             existing.lng = lng;
           }
         } else {
+          // Best-effort operator tag for the curated hk-stops.json entries so
+          // they get a proper operator badge in list rows instead of the
+          // generic STOP placeholder. The hk-stops.json catalogue is
+          // (mostly) MTR stations by alphabetic code + GMB / NLB stops by
+          // numeric ID; LRT stops live in `state.index.lrt.stops` and are
+          // not duplicated here.
+          const co = /^[A-Za-z]{3,4}$/.test(id) ? 'MTR' : 'GMB';
           stops.set(id, {
             stop: id,
+            co,
             nameTc: info.zh || '',
             nameEn: info.en || '',
             lat, lng,
@@ -1347,8 +1361,18 @@
         const code = (err && typeof err.code === 'number') ? err.code : null;
         const next = code === GEO_ERR_PERMISSION_DENIED ? 'denied' : 'unavailable';
         setLocationStatus(next);
-        if (next === 'denied') toast(t_str('locationDenied'));
-        else toast(t_str('locationUnavailable'));
+        // Some embedded WebViews (incl. some in-app browsers) return
+        // PERMISSION_DENIED even after the user clicks "Allow" in the
+        // permission dialog because the underlying OS-level location
+        // service is unavailable. Surface this with a clearer toast so
+        // users know it's a browser/environment limitation, not their
+        // own action.
+        if (next === 'denied') {
+          logGeoStatus(`browser refused (code=${code}, message=${err && err.message})`);
+          toast(t_str('locationDenied'));
+        } else {
+          toast(t_str('locationUnavailable'));
+        }
         rerenderLocationViews();
       },
       { enableHighAccuracy: false, maximumAge: 60_000, timeout: 8_000 }
@@ -2217,9 +2241,26 @@
   // Row builders
   // ------------------------------------------------------------------
   function makeBadge(co) {
-    if (co === 'STOP') return el('span', { class: 'row-badge co-STOP' }, '·');
     if (co === 'MTR') return el('span', { class: 'row-badge co-MTR', 'aria-label': 'MTR' }, 'M');
     if (co === 'LRT') return el('span', { class: 'row-badge co-LRT', 'aria-label': 'Light Rail' }, 'L');
+    // Fallback for unknown operators (e.g. a legacy saved stop whose index
+    // entry we can't classify). Render a generic bus-stop pin icon rather
+    // than a stray "·" character so the row still looks intentional.
+    if (co === 'STOP' || !co) {
+      const badge = el('span', { class: 'row-badge co-STOP', 'aria-label': 'Bus stop' });
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('viewBox', '0 0 24 24');
+      svg.setAttribute('width', '22');
+      svg.setAttribute('height', '22');
+      svg.setAttribute('aria-hidden', 'true');
+      const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      p.setAttribute('fill', 'currentColor');
+      p.setAttribute('d',
+        'M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z');
+      svg.appendChild(p);
+      badge.appendChild(svg);
+      return badge;
+    }
     return el('span', { class: `row-badge co-${co}` }, co);
   }
 
