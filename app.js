@@ -49,6 +49,11 @@
       locating: '定位中…',
       locationDenied: '定位被拒絕，未能取得附近路線。',
       locationUnavailable: '未能取得位置，未能提供附近路線。',
+      geoBannerTitle: '想睇附近嘅車站同路線？',
+      geoBannerBody: '授權使用你嘅位置，我哋會列出最近嘅巴士站、港鐵站同常見路線，仲可以幫你直接跳到最近嗰個車站。',
+      geoBannerCta: '啟用位置',
+      geoBannerError: '未能取得位置。你可以稍後再試一次。',
+      nearestStopLabel: '最近車站',
       noResults: '搵唔到相關嘅路線、車站或港鐵站。',
       back: '返回',
       route: '路線',
@@ -117,6 +122,10 @@
       updatedMeta: '到站時間每分鐘更新',
       refresh: '更新',
       ctbNoEtaHint: '請打開個別路線嘅詳情睇實時到站。',
+      lastBusAlert: '尾班車已過，今日已無下一班',
+      affectedServices: (n) => `${n} 班次受影響`,
+      noServiceAlert: '暫無班次',
+      dismissAlert: '關閉通知',
     },
     'en': {
       brandSub: 'Hong Kong Bus',
@@ -147,6 +156,11 @@
       locating: 'Locating…',
       locationDenied: 'Location denied — nearby routes unavailable.',
       locationUnavailable: 'Location unavailable — nearby routes unavailable.',
+      geoBannerTitle: 'See nearby stops and routes?',
+      geoBannerBody: 'Allow location access to list the closest bus stops, MTR stations and frequent routes — and jump straight to the nearest stop.',
+      geoBannerCta: 'Use my location',
+      geoBannerError: 'Could not get your location. Try again later.',
+      nearestStopLabel: 'Nearest stop',
       noResults: 'No matching routes, stops or stations.',
       back: 'Back',
       route: 'Route',
@@ -215,6 +229,10 @@
       updatedMeta: 'Live arrivals refresh every minute',
       refresh: 'Refresh',
       ctbNoEtaHint: 'Open a route to see live arrivals for this stop.',
+      lastBusAlert: 'Last bus has departed — no more services today',
+      affectedServices: (n) => `${n} services affected`,
+      noServiceAlert: 'No service running',
+      dismissAlert: 'Dismiss',
     },
     'zh-Hans': {
       brandSub: '香港巴士',
@@ -300,6 +318,15 @@
       updatedMeta: '到站时间每分钟更新',
       refresh: '更新',
       ctbNoEtaHint: '请打开个别路线嘅详情睇实时到站。',
+      lastBusAlert: '尾班车已过，今日已无下一班',
+      affectedServices: (n) => `${n} 班次受影响`,
+      noServiceAlert: '暂无班次',
+      dismissAlert: '关闭通知',
+      geoBannerTitle: '想睇附近嘅车站同路线？',
+      geoBannerBody: '授权使用你嘅位置，我哋会列出最近嘅巴士站、港铁站同常见路线，仲可以帮你直接跳到最近嗰个车站。',
+      geoBannerCta: '启用位置',
+      geoBannerError: '未能取得位置。你可以稍后再试一次。',
+      nearestStopLabel: '最近车站',
     },
   };
 
@@ -353,7 +380,9 @@
     savedStops: [],
     recent: [],
     location: null,
+    userLoc: null,
     locationStatus: 'idle',
+    _geoAsked: false,
     refreshTimer: null,
     lastSearchQ: '',
     filter: 'ALL',
@@ -361,6 +390,11 @@
     detailStop: null,
     gmapsKey: '',
     gmapsConfigLoaded: false,
+    // In-memory only: alert banners the user has dismissed this session.
+    // Keyed by route + alert type so different routes / different alerts are
+    // tracked independently. Cleared on full page reload (intentional —
+    // spec says dismissals do not persist across visits).
+    dismissedAlerts: new Set(),
   };
 
   // ------------------------------------------------------------------
@@ -1008,22 +1042,44 @@
   // ------------------------------------------------------------------
   // Geolocation
   // ------------------------------------------------------------------
+  // Banner-triggered single-shot request for the user's location.
+  // Must be invoked from a user gesture (click handler) so the browser
+  // will surface the native permission prompt. We never call this
+  // automatically on page load — instead the home view shows an
+  // in-page banner that the user taps to opt in.
   function requestLocation() {
     if (state.locationStatus === 'pending' || state.locationStatus === 'ok') return;
-    if (!navigator.geolocation) { state.locationStatus = 'unavailable'; renderSearchStatus(); return; }
+    if (!navigator.geolocation) {
+      state.locationStatus = 'unavailable';
+      state._geoAsked = true;
+      toast(t_str('locationUnavailable'));
+      rerenderLocationViews();
+      return;
+    }
     state.locationStatus = 'pending';
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         state.location = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        state.userLoc = state.location;
         state.locationStatus = 'ok';
-        if (currentRoute() === 'search') renderNearby();
+        rerenderLocationViews();
       },
       (err) => {
         state.locationStatus = err && err.code === err.PERMISSION_DENIED ? 'denied' : 'unavailable';
-        if (currentRoute() === 'search') renderNearby();
+        state._geoAsked = true;
+        rerenderLocationViews();
       },
-      { enableHighAccuracy: false, maximumAge: 5 * 60_000, timeout: 10_000 }
+      { enableHighAccuracy: false, maximumAge: 60_000, timeout: 8_000 }
     );
+  }
+
+  // Re-render whichever views depend on the user's location, so the
+  // banner disappears / nearby sections populate after a permission
+  // decision without forcing the user to leave the page.
+  function rerenderLocationViews() {
+    const view = currentRoute();
+    if (view === 'home') renderHome();
+    else if (view === 'search') renderSearch();
   }
 
   // ------------------------------------------------------------------
@@ -1783,6 +1839,124 @@
     return renderBusRoute(r);
   }
 
+  // ------------------------------------------------------------------
+  // Route-level service alerts
+  // ------------------------------------------------------------------
+  // Inspect every ETA across the route and decide whether to surface one
+  // (and only one) banner. The result is always a single banner or null —
+  // the priority order is intentional:
+  //   1. No service at all        → "noServiceAlert" (warning)
+  //   2. Last bus of day          → "lastBusAlert"   (critical)
+  //   3. Cancelled/delayed stops  → "affectedServices" with count (warning)
+  // We return an array (not a single object) so future severities can stack
+  // without changing the call site, but the current banner UI only renders
+  // alerts[0].
+  function detectRouteAlerts(etaByStop, affectedStops) {
+    // 1. No service at all: nothing returned for any stop on the route.
+    if (etaByStop.size === 0) {
+      return [{ severity: 'warning', key: 'noServiceAlert', args: [] }];
+    }
+
+    // 2. Last bus of day: at least one rmk_en === 'Last Bus' AND no
+    //    remaining non-Last-Bus arrivals anywhere on the route. The "no
+    //    other arrivals" half is the key — if regular services are still
+    //    coming, we don't want to alarm the user that it's over.
+    let hasLastBus = false;
+    let hasNonLastBus = false;
+    for (const etas of etaByStop.values()) {
+      if (!Array.isArray(etas)) continue;
+      for (const e of etas) {
+        if (e && e.rmk_en === 'Last Bus') hasLastBus = true;
+        else hasNonLastBus = true;
+      }
+    }
+    if (hasLastBus && !hasNonLastBus) {
+      return [{ severity: 'critical', key: 'lastBusAlert', args: [] }];
+    }
+
+    // 3. Cancelled / delayed individual arrivals: counted per-stop in the
+    //    render loop above. Banner reports the number of affected stops,
+    //    not the stop list, to keep the banner compact.
+    if (affectedStops > 0) {
+      return [{ severity: 'warning', key: 'affectedServices', args: [affectedStops] }];
+    }
+
+    return [];
+  }
+
+  function renderRouteAlert(alert, routeKey) {
+    const banner = el('div', {
+      class: `route-alert is-${alert.severity}`,
+      role: alert.severity === 'critical' ? 'alert' : 'status',
+      'aria-live': alert.severity === 'critical' ? 'assertive' : 'polite',
+    });
+    banner.appendChild(el('span', {
+      class: 'route-alert-icon',
+      'aria-hidden': 'true',
+    }, alertIconSVG(alert.severity)));
+    banner.appendChild(el('span', { class: 'route-alert-text' },
+      t_str(alert.key, ...(alert.args || []))));
+    const dismissKey = `${routeKey}|${alert.key}`;
+    const dismissBtn = el('button', {
+      type: 'button',
+      class: 'route-alert-dismiss',
+      'aria-label': t_str('dismissAlert'),
+      onclick: () => {
+        state.dismissedAlerts.add(dismissKey);
+        banner.remove();
+      },
+    }, '\u00d7'); // ×
+    banner.appendChild(dismissBtn);
+    return banner;
+  }
+
+  function alertIconSVG(severity) {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('width', '20');
+    svg.setAttribute('height', '20');
+    svg.setAttribute('aria-hidden', 'true');
+    if (severity === 'critical') {
+      // Filled circle with bang — "service disrupted, take this seriously".
+      const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      c.setAttribute('cx', '12'); c.setAttribute('cy', '12'); c.setAttribute('r', '10');
+      c.setAttribute('fill', 'currentColor'); c.setAttribute('fill-opacity', '0.15');
+      svg.appendChild(c);
+      const ring = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      ring.setAttribute('cx', '12'); ring.setAttribute('cy', '12'); ring.setAttribute('r', '10');
+      ring.setAttribute('fill', 'none'); ring.setAttribute('stroke', 'currentColor');
+      ring.setAttribute('stroke-width', '1.6');
+      svg.appendChild(ring);
+      const bar = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      bar.setAttribute('d', 'M12 7v6');
+      bar.setAttribute('stroke', 'currentColor'); bar.setAttribute('stroke-width', '2');
+      bar.setAttribute('stroke-linecap', 'round'); bar.setAttribute('fill', 'none');
+      svg.appendChild(bar);
+      const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      dot.setAttribute('cx', '12'); dot.setAttribute('cy', '16.5'); dot.setAttribute('r', '1.1');
+      dot.setAttribute('fill', 'currentColor');
+      svg.appendChild(dot);
+    } else {
+      // Triangle with bang — heads-up but not service-stopped.
+      const tri = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      tri.setAttribute('d', 'M12 3.2 L22 20.5 L2 20.5 Z');
+      tri.setAttribute('fill', 'currentColor'); tri.setAttribute('fill-opacity', '0.15');
+      tri.setAttribute('stroke', 'currentColor'); tri.setAttribute('stroke-width', '1.6');
+      tri.setAttribute('stroke-linejoin', 'round');
+      svg.appendChild(tri);
+      const bar = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      bar.setAttribute('d', 'M12 9v5.5');
+      bar.setAttribute('stroke', 'currentColor'); bar.setAttribute('stroke-width', '2');
+      bar.setAttribute('stroke-linecap', 'round'); bar.setAttribute('fill', 'none');
+      svg.appendChild(bar);
+      const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      dot.setAttribute('cx', '12'); dot.setAttribute('cy', '17'); dot.setAttribute('r', '1.1');
+      dot.setAttribute('fill', 'currentColor');
+      svg.appendChild(dot);
+    }
+    return svg;
+  }
+
   function renderBusRoute(r) {
     showView('view-route');
     const view = renderInto('route', 'route');
@@ -1887,6 +2061,13 @@
       // and remember its DOM node so we can scroll it into view below.
       let targetRow = null;
       const targetSeq = (r.stopSeq && /^\d+$/.test(r.stopSeq)) ? parseInt(r.stopSeq, 10) : null;
+      // Service-alert detection — see detectRouteAlerts() below for the
+      // priority order (no-service > last-bus > cancelled/delayed). We also
+      // accumulate the count of stops whose leading arrival is marked as
+      // Cancelled/Suspended/Delayed/Disrupted so the warning banner can
+      // surface a count of affected stops without naming each one.
+      let affectedStops = 0;
+      const CRITICAL_RMK = new Set(['Cancelled', 'Suspended', 'Delayed', 'Disrupted']);
       stops.forEach((s, idx) => {
         const seq = idx + 1;
         const isOrigin = idx === 0;
@@ -1920,6 +2101,10 @@
           etaBox.appendChild(big);
           etaBox.appendChild(el('span', { class: 'small' },
             etas.length > 1 ? t_str('etaCount', etas.length - 1) : (etas[0].rmk_en === 'Scheduled Bus' ? t_str('scheduled') : '')));
+          // Leading-arrival remark drives the route-level cancelled/delayed
+          // banner. We only check etas[0] per the spec — earlier arrivals have
+          // already passed, so flagging them would mislead the user.
+          if (CRITICAL_RMK.has(etas[0].rmk_en)) affectedStops++;
         } else if (idx === 0) {
           etaBox.appendChild(el('span', { class: 'small' }, t_str('loading')));
         } else {
@@ -1928,7 +2113,19 @@
         row.appendChild(etaBox);
         list.appendChild(row);
       });
-      body.replaceChildren(el('h2', { class: 'section-title' }, t_str('showingStop', stops.length)), list);
+
+      // Build a route-level alert banner (if any). Detection runs over the
+      // full etaByStop map, not just the visible row, so a Last Bus marker
+      // anywhere on the route can trigger the "last bus has departed" alert
+      // even if the user is parked at a stop with its own upcoming service.
+      const alerts = detectRouteAlerts(etaByStop, affectedStops);
+      const routeKey = `${r.co}/${r.route}/${r.dir}/${r.service}`;
+      const alertEl = (!state.dismissedAlerts.has(`${routeKey}|${alerts[0] && alerts[0].key}`) && alerts.length)
+        ? renderRouteAlert(alerts[0], routeKey)
+        : null;
+
+      const heading = el('h2', { class: 'section-title' }, t_str('showingStop', stops.length));
+      body.replaceChildren(...(alertEl ? [alertEl, heading, list] : [heading, list]));
       // Anchor the view at the user's current stop, justarrived-style.
       if (targetRow) {
         requestAnimationFrame(() => {

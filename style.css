@@ -903,6 +903,71 @@ h1, h2, h3 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 .eta-list { display: flex; flex-direction: column; gap: 8px; }
 .eta-list .stop-row.is-origin { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
 
+/* ------------------------------ route service alert banner ------------------------------ */
+/* Sits above the stops list on the route detail page. Three states:
+   .route-alert              — base layout (icon + text + dismiss ×)
+   .route-alert.is-warning   — yellow/amber; heads-up the user about delays
+   .route-alert.is-critical  — red; last bus has departed (terminal state)
+   Dismissing is handled in JS by removing the node and remembering the
+   route+alert key in state.dismissedAlerts (in-memory only). */
+.route-alert {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  margin: 16px 0 8px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line);
+  background: var(--card);
+  font-size: 14px;
+  line-height: 1.4;
+  font-weight: 600;
+  color: var(--ink);
+  /* Slight lift so it reads as "this is different from the stop rows". */
+  box-shadow: var(--shadow-sm);
+}
+.route-alert.is-warning {
+  background: #FEF3C7;          /* amber-100 */
+  border-color: #FCD34D;        /* amber-300 */
+  color: #78350F;               /* amber-900 — readable on amber */
+}
+.route-alert.is-critical {
+  background: #FEE2E2;          /* red-100 */
+  border-color: #FCA5A5;        /* red-300 */
+  color: #7F1D1D;               /* red-900 */
+}
+.route-alert-icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.route-alert.is-warning .route-alert-icon { color: #B45309; }  /* amber-700 */
+.route-alert.is-critical .route-alert-icon { color: #B91C1C; } /* red-700 */
+.route-alert-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  word-break: normal;
+}
+.route-alert-dismiss {
+  flex: 0 0 auto;
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  font-size: 20px;
+  line-height: 1;
+  padding: 4px 8px;
+  margin: -4px -8px -4px 0;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.15s ease, background-color 0.15s ease;
+}
+.route-alert-dismiss:hover { opacity: 1; background: rgba(0, 0, 0, 0.06); }
+.route-alert-dismiss:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+
 /* ------------------------------ back link ------------------------------ */
 .back-link {
   display: inline-flex; align-items: center; gap: 4px;
