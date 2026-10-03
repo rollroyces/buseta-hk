@@ -1,0 +1,136 @@
+{
+  "_meta": {
+    "source": "MTR public fare table (https://www.mtr.com.hk/en/customer/services/fare_table.html), Octopus-card adult fares as of 2024-Q4. Stations are 3-letter MTR station codes (e.g. ADM = Admiralty). Cross-harbour ('harbour') routes cross Victoria Harbour between Hong Kong Island and Kowloon / New Territories.",
+    "currency": "HKD",
+    "keyFormat": "OCTOPUS",
+    "note": "Fare table is keyed by origin→destination pair. Distance is computed from straight-line km between the two stations; cross-harbour is detected by the `harbour` flag. O/D pairs not listed are looked up by switching the keys (A→B = B→A). Pairs not in the table fall back to a distance-band estimate in `estimateFare` (app.js)."
+  },
+  "ADM": {
+    "CEN": {"adult": 5.0,  "octopus": 4.7,  "harbour": false},
+    "CHH": {"adult": 5.5,  "octopus": 5.0,  "harbour": false},
+    "CKT": {"adult": 5.0,  "octopus": 4.7,  "harbour": false},
+    "EXC": {"adult": 11.0, "octopus": 10.1, "harbour": false},
+    "FOH": {"adult": 9.0,  "octopus": 8.3,  "harbour": false},
+    "HOK": {"adult": 10.0, "octopus": 9.1,  "harbour": true},
+    "KOW": {"adult": 10.0, "octopus": 9.2,  "harbour": true},
+    "MOK": {"adult": 5.0,  "octopus": 4.7,  "harbour": false},
+    "OLY": {"adult": 5.0,  "octopus": 4.7,  "harbour": false},
+    "QUB": {"adult": 9.0,  "octopus": 8.3,  "harbour": false},
+    "SHW": {"adult": 5.0,  "octopus": 4.7,  "harbour": false},
+    "STW": {"adult": 5.0,  "octopus": 4.7,  "harbour": false},
+    "TIH": {"adult": 5.5,  "octopus": 5.0,  "harbour": false},
+    "TSY": {"adult": 14.0, "octopus": 13.0, "harbour": true},
+    "WAC": {"adult": 5.0,  "octopus": 4.7,  "harbour": false}
+  },
+  "CEN": {
+    "CKT": {"adult": 6.5,  "octopus": 6.0,  "harbour": false},
+    "HOK": {"adult": 11.0, "octopus": 10.1, "harbour": true},
+    "KOW": {"adult": 11.0, "octopus": 10.1, "harbour": true},
+    "MOK": {"adult": 5.5,  "octopus": 5.0,  "harbour": false},
+    "TIH": {"adult": 7.0,  "octopus": 6.4,  "harbour": false},
+    "TSY": {"adult": 15.5, "octopus": 14.3, "harbour": true},
+    "WAC": {"adult": 6.0,  "octopus": 5.5,  "harbour": false}
+  },
+  "CHH": {
+    "CKT": {"adult": 5.5,  "octopus": 5.0,  "harbour": false},
+    "KOW": {"adult": 9.5,  "octopus": 8.8,  "harbour": true},
+    "MOK": {"adult": 5.5,  "octopus": 5.0,  "harbour": false}
+  },
+  "CKT": {
+    "HOK": {"adult": 9.5,  "octopus": 8.8,  "harbour": true},
+    "KOW": {"adult": 9.5,  "octopus": 8.8,  "harbour": true},
+    "MOK": {"adult": 5.0,  "octopus": 4.7,  "harbour": false},
+    "WAC": {"adult": 5.5,  "octopus": 5.0,  "harbour": false}
+  },
+  "HOK": {
+    "KOW": {"adult": 11.5, "octopus": 10.7, "harbour": true},
+    "MOK": {"adult": 10.0, "octopus": 9.1,  "harbour": true},
+    "OLY": {"adult": 10.0, "octopus": 9.1,  "harbour": true},
+    "QUB": {"adult": 15.0, "octopus": 13.8, "harbour": true},
+    "SHW": {"adult": 10.0, "octopus": 9.1,  "harbour": true},
+    "STW": {"adult": 10.0, "octopus": 9.1,  "harbour": true},
+    "TIH": {"adult": 11.0, "octopus": 10.1, "harbour": true},
+    "TSY": {"adult": 16.0, "octopus": 14.7, "harbour": true},
+    "WAC": {"adult": 10.0, "octopus": 9.1,  "harbour": true},
+    "TKO": {"adult": 14.5, "octopus": 13.4, "harbour": true},
+    "TMK": {"adult": 23.5, "octopus": 21.5, "harbour": true},
+    "TUM": {"adult": 24.0, "octopus": 22.0, "harbour": true},
+    "TAP": {"adult": 19.5, "octopus": 18.0, "harbour": true},
+    "LOW": {"adult": 21.0, "octopus": 19.4, "harbour": true},
+    "LMC": {"adult": 11.0, "octopus": 10.1, "harbour": true}
+  },
+  "KOW": {
+    "MOK": {"adult": 5.5,  "octopus": 5.0,  "harbour": true},
+    "OLY": {"adult": 5.5,  "octopus": 5.0,  "harbour": true},
+    "QUB": {"adult": 11.5, "octopus": 10.7, "harbour": true},
+    "SHW": {"adult": 5.5,  "octopus": 5.0,  "harbour": true},
+    "STW": {"adult": 5.0,  "octopus": 4.7,  "harbour": true},
+    "TIH": {"adult": 7.0,  "octopus": 6.4,  "harbour": true},
+    "TSY": {"adult": 12.0, "octopus": 11.0, "harbour": true},
+    "WAC": {"adult": 5.5,  "octopus": 5.0,  "harbour": true},
+    "TKO": {"adult": 11.0, "octopus": 10.1, "harbour": true},
+    "TMK": {"adult": 19.5, "octopus": 18.0, "harbour": true},
+    "TUM": {"adult": 20.0, "octopus": 18.4, "harbour": true},
+    "TAP": {"adult": 15.0, "octopus": 13.8, "harbour": true},
+    "LOW": {"adult": 16.5, "octopus": 15.2, "harbour": true},
+    "LMC": {"adult": 7.0,  "octopus": 6.4,  "harbour": true}
+  },
+  "MOK": {
+    "QUB": {"adult": 9.0,  "octopus": 8.3,  "harbour": true},
+    "SHW": {"adult": 5.5,  "octopus": 5.0,  "harbour": false},
+    "STW": {"adult": 5.0,  "octopus": 4.7,  "harbour": false},
+    "TIH": {"adult": 6.5,  "octopus": 6.0,  "harbour": false},
+    "TSY": {"adult": 12.0, "octopus": 11.0, "harbour": true},
+    "WAC": {"adult": 5.5,  "octopus": 5.0,  "harbour": false}
+  },
+  "OLY": {
+    "QUB": {"adult": 9.0,  "octopus": 8.3,  "harbour": false},
+    "SHW": {"adult": 5.0,  "octopus": 4.7,  "harbour": false},
+    "STW": {"adult": 5.5,  "octopus": 5.0,  "harbour": false},
+    "TIH": {"adult": 7.0,  "octopus": 6.4,  "harbour": false},
+    "TSY": {"adult": 12.0, "octopus": 11.0, "harbour": true}
+  },
+  "SHW": {
+    "STW": {"adult": 5.0,  "octopus": 4.7,  "harbour": false},
+    "TIH": {"adult": 7.0,  "octopus": 6.4,  "harbour": false},
+    "TSY": {"adult": 11.0, "octopus": 10.1, "harbour": true}
+  },
+  "STW": {
+    "TIH": {"adult": 7.0,  "octopus": 6.4,  "harbour": false},
+    "TSY": {"adult": 11.0, "octopus": 10.1, "harbour": true}
+  },
+  "TIH": {
+    "TSY": {"adult": 9.5,  "octopus": 8.8,  "harbour": true},
+    "TMK": {"adult": 14.0, "octopus": 13.0, "harbour": true},
+    "TUM": {"adult": 14.5, "octopus": 13.4, "harbour": true},
+    "TAP": {"adult": 13.0, "octopus": 12.0, "harbour": true},
+    "LOW": {"adult": 14.5, "octopus": 13.4, "harbour": true}
+  },
+  "TSY": {
+    "AWE": {"adult": 23.0, "octopus": 21.5, "harbour": true},
+    "AIR": {"adult": 21.0, "octopus": 19.4, "harbour": true},
+    "TMK": {"adult": 14.5, "octopus": 13.4, "harbour": true},
+    "TUM": {"adult": 15.0, "octopus": 13.8, "harbour": true},
+    "LOW": {"adult": 25.0, "octopus": 23.4, "harbour": true}
+  },
+  "TKO": {
+    "TMK": {"adult": 13.0, "octopus": 12.0, "harbour": false},
+    "TUM": {"adult": 13.5, "octopus": 12.5, "harbour": false},
+    "TAP": {"adult": 11.5, "octopus": 10.7, "harbour": false},
+    "LOW": {"adult": 13.5, "octopus": 12.5, "harbour": false}
+  },
+  "TMK": {
+    "TAP": {"adult": 7.5,  "octopus": 6.8,  "harbour": false},
+    "LOW": {"adult": 9.0,  "octopus": 8.3,  "harbour": false}
+  },
+  "TUM": {
+    "TAP": {"adult": 7.0,  "octopus": 6.4,  "harbour": false},
+    "LOW": {"adult": 8.5,  "octopus": 7.8,  "harbour": false}
+  },
+  "TAP": {
+    "LOW": {"adult": 5.5,  "octopus": 5.0,  "harbour": false}
+  },
+  "AWE": {
+    "AIR": {"adult": 4.5,  "octopus": 4.0,  "harbour": false}
+  }
+}

@@ -195,6 +195,13 @@
       serviceNoRunningEn: 'No service running now',
       serviceDayHint: '請留意日子',
       serviceDayHintEn: 'Check the day before travelling',
+      farePerStop: '$X.X',
+      fareFrom: '由 $X.X 起',
+      fareTo: '至 $X.X 終',
+      fareFullRange: (min, max) => `車費 $${min} – $${max}`,
+      fareOctopus: '八達通',
+      fareLoading: '讀取車費中…',
+      fareUnavailable: '車費暫時未能提供',
     },
     'en': {
       brandSub: 'Hong Kong Bus',
@@ -371,6 +378,13 @@
       serviceNoRunningEn: '暫無班次',
       serviceDayHint: 'Check the day before travelling',
       serviceDayHintEn: '請留意日子',
+      farePerStop: '$X.X',
+      fareFrom: 'From $X.X',
+      fareTo: 'Up to $X.X',
+      fareFullRange: (min, max) => `Fare $${min} – $${max}`,
+      fareOctopus: 'Octopus',
+      fareLoading: 'Loading fares…',
+      fareUnavailable: 'Fares temporarily unavailable',
     },
     'zh-Hans': {
       brandSub: '香港巴士',
@@ -536,6 +550,13 @@
       serviceNoRunningEn: 'No service running now',
       serviceDayHint: '请留意日子',
       serviceDayHintEn: 'Check the day before travelling',
+      farePerStop: '$X.X',
+      fareFrom: '由 $X.X 起',
+      fareTo: '至 $X.X 终',
+      fareFullRange: (min, max) => `车费 $${min} – $${max}`,
+      fareOctopus: '八达通',
+      fareLoading: '读取车费中…',
+      fareUnavailable: '车费暂时未能提供',
     },
   };
 
@@ -1036,6 +1057,118 @@
       if (fare != null) m.set(seq, fare);
     }
     return m.size > 0 ? m : null;
+  };
+
+  // ---- Per-route fare fetchers (extending fetchKmbRouteFare) ----
+  // All fare helpers return `Map<seq, fare>` or `null`. The flat-fare ones
+  // (CTB, GMB, LRT) hand back a Map where every seq maps to the same
+  // single-route fare, so the per-stop fare pill is consistent across
+  // the whole route.
+  //
+  // Order of preference when fetching a route's fare:
+  //   1) The operator's own JSON fare endpoint (per-stop or section).
+  //   2) Hardcoded fallback JSON in /assets/*.json (curated subset of
+  //      well-known routes with published fares).
+  //   3) `null` — the UI hides the per-stop pill rather than ship an
+  //      empty placeholder.
+  const _fareFlatCache = new Map();  // route/coKey → number | null
+  // CTB + NWFB flat fare: try upstream `/route-fare` (404 / 422 in current
+  // upstream state) then fall back to assets/ctb-fares.json. Always
+  // returns a flat Map<seq, fare> for the route, never per-stop.
+  const fetchCitybusRouteFare = async (route, dir) => {
+    const cacheKey = `CTB/${route}`;
+    if (_fareFlatCache.has(cacheKey)) return _fareFlatCache.get(cacheKey);
+    let entry = null;
+    try {
+      const resp = await fetchJSON(`${API.CITYBUS}/route-fare/ctb/${encodeURIComponent(route)}/${dir === 'I' ? 'inbound' : 'outbound'}/1`);
+      if (resp && Array.isArray(resp.data) && resp.data.length > 0) {
+        entry = resp.data[0];
+      }
+    } catch (e) { entry = null; }
+    if (!entry) {
+      try {
+        const all = await fetchJSON(`assets/ctb-fares.json`);
+        entry = (all && all[route]) || null;
+      } catch (e) { entry = null; }
+    }
+    const flat = entry && Number.isFinite(Number(entry.octopus || entry.fare))
+      ? Number(entry.octopus || entry.fare)
+      : null;
+    _fareFlatCache.set(cacheKey, flat);
+    return flat;
+  };
+  // GMB flat fare: upstream does not expose a per-stop fare endpoint, so
+  // we always go through the hardcoded assets/gmb-fares.json keyed by
+  // `${region}/${code}`. The routeMeta on each GMB route already carries
+  // `_region` + `_code` so we use those instead of the route string.
+  const fetchGmbRouteFare = async (region, code, route) => {
+    const cacheKey = `GMB/${region}/${code}`;
+    if (_fareFlatCache.has(cacheKey)) return _fareFlatCache.get(cacheKey);
+    let entry = null;
+    try {
+      const all = await fetchJSON(`assets/gmb-fares.json`);
+      const key1 = `${region}/${code}`;
+      const key2 = route ? `${region}/${route}` : null;
+      entry = (all && (all[key1] || (key2 && all[key2]))) || null;
+    } catch (e) { entry = null; }
+    const flat = entry && Number.isFinite(Number(entry.octopus || entry.fare))
+      ? Number(entry.octopus || entry.fare)
+      : null;
+    _fareFlatCache.set(cacheKey, flat);
+    return flat;
+  };
+  // LRT flat fare: assets/lrt-fares.json is the only public source.
+  const fetchLrtRouteFare = async (route) => {
+    const cacheKey = `LRT/${route}`;
+    if (_fareFlatCache.has(cacheKey)) return _fareFlatCache.get(cacheKey);
+    let entry = null;
+    try {
+      const all = await fetchJSON(`assets/lrt-fares.json`);
+      entry = (all && all[route]) || null;
+    } catch (e) { entry = null; }
+    const flat = entry && Number.isFinite(Number(entry.octopus || entry.fare))
+      ? Number(entry.octopus || entry.fare)
+      : null;
+    _fareFlatCache.set(cacheKey, flat);
+    return flat;
+  };
+  // Expand a per-route fare into a Map<seq, fare> for the per-stop render
+  // loop. `fare` can be:
+  //   - a Map<seq, fare>   → returned as-is (KMB/LWB per-stop)
+  //   - a single number    → spread across every seq of `stops`
+  //   - null               → null (the UI skips the pill)
+  const expandFareForStops = (fare, stops) => {
+    if (fare == null) return null;
+    if (fare instanceof Map) return fare;
+    const m = new Map();
+    const n = Number(fare);
+    if (!Number.isFinite(n)) return null;
+    stops.forEach((s) => {
+      const seq = (s && Number.isFinite(s._seq)) ? s._seq : null;
+      if (seq != null) m.set(seq, n);
+    });
+    return m.size > 0 ? m : null;
+  };
+  // Compute min/max fare from a Map<seq, fare> (or flat number). Returns
+  // `{ min, max }` in numeric HKD, or `null` when no fare data.
+  const fareRange = (fare) => {
+    if (fare == null) return null;
+    if (typeof fare === 'number') return { min: fare, max: fare };
+    if (!(fare instanceof Map) || fare.size === 0) return null;
+    let min = Infinity, max = -Infinity;
+    fare.forEach((v) => {
+      const n = Number(v);
+      if (Number.isFinite(n)) { if (n < min) min = n; if (n > max) max = n; }
+    });
+    if (min === Infinity || max === -Infinity) return null;
+    return { min, max };
+  };
+  // Format a fare for the pill: keep one decimal place, no currency
+  // symbol (justarrived-style — the `$` is added by the renderer so it
+  // matches the Octopus price with a `$` prefix instead of `HK$`).
+  const fmtFare = (n) => {
+    if (!Number.isFinite(n)) return '';
+    return n.toFixed(1);
   };
 
   // Citybus + NWFB (CTB uses 6-digit numeric stop IDs)
@@ -2723,6 +2856,10 @@
       co: r.co, route: r.route, dir: r.dir, service: r.service,
       dest, orig, origEn, dirLabel, fare: meta && meta.fares && meta.fares[0],
       boundPills, servicePills, currentDirKey: key,
+      // fareMin/fareMax are filled in once the fare fetch resolves —
+      // `null`/`null` (i.e. absent) preserves the legacy "head fare"
+      // behaviour when the upstream returns no fare data.
+      fareMin: null, fareMax: null,
     }));
     body.appendChild(el('p', { class: 'muted' }, t_str('loading')));
 
@@ -2732,6 +2869,17 @@
     const fetchRouteStop = isCitybus
       ? () => fetchCitybusRouteStop(r.route, r.dir)
       : () => fetchKmbRouteStop(r.route, r.dir, r.service);
+    // Kick off the fare fetch in parallel with the route-stop fetch.
+    // KMB / LWB use the upstream /route-fare (per-stop seq); CTB / NWFB
+    // expose only a flat single-route fare (per upstream `route-fare/ctb`
+    // which currently 422s, or `assets/ctb-fares.json` as the fallback).
+    // The promise resolves to either a Map<seq, fare> or a single number,
+    // which `expandFareForStops` will flatten into a Map<seq, fare> below.
+    const fareP = (() => {
+      if (r.co === 'CTB' || r.co === 'NWFB') return fetchCitybusRouteFare(r.route, r.dir);
+      // KMB / LWB share the etabus endpoint.
+      return fetchKmbRouteFare(r.route, r.dir, r.service);
+    })();
     fetchRouteStop().then(async (resp) => {
       const items = (resp && Array.isArray(resp.data)) ? resp.data : [];
       if (items.length === 0) {
@@ -2755,6 +2903,16 @@
             _seq: parseInt(it.seq, 10),
           };
         });
+
+      // Wait for the fare promise (already in flight above) and expand it
+      // into a Map<seq, fare> suitable for the row loop. Errors are swallowed
+      // and result in `null` (UI skips the per-stop fare).
+      let fareBySeq = null;
+      try {
+        const rawFare = await fareP;
+        fareBySeq = expandFareForStops(rawFare, stops);
+      } catch (e) { fareBySeq = null; }
+      const fareRangeInfo = fareRange(fareBySeq);
 
       // Live arrivals for every stop on the route. CTB/NWFB stops use the
       // Citybus ETA endpoint; KMB-format stops use the KMB endpoint. We
@@ -2871,6 +3029,15 @@
         const enDisplay = fetchedName ? fetchedName.nameEn : (s.nameEn || '');
         info.appendChild(el('div', { class: 'stop-name-row' }, nameDisplay || s.stop));
         if (enDisplay) info.appendChild(el('div', { class: 'stop-name-en' }, enDisplay));
+        // Per-stop fare pill (justarrived style — small `$X.X` under the
+        // stop name). Shown only when the operator exposes a fare for this
+        // seq (KMB per-stop) or when a flat fare is in scope (CTB / GMB /
+        // LRT). When `fareBySeq` is null the pill is omitted entirely so
+        // we don't ship an empty placeholder.
+        const stopFare = fareBySeq && fareBySeq.get(seq);
+        if (stopFare != null && Number.isFinite(Number(stopFare))) {
+          info.appendChild(el('div', { class: 'stop-fare' }, `$${fmtFare(Number(stopFare))}`));
+        }
         row.appendChild(info);
         const etaBox = el('div', { class: 'stop-eta' });
         const etas = etaByStop.get(s.stop) || [];
@@ -2915,6 +3082,20 @@
       if (polylineEl) children.push(polylineEl);
       children.push(heading, list);
       body.replaceChildren(...children);
+      // Refresh the header so the fare-range (or single flat fare) shows
+      // up under the destination line. Built from the same opts object the
+      // initial header was rendered with, but with the new fareMin/fareMax.
+      if (fareRangeInfo) {
+        try {
+          header.replaceChildren(...buildRouteHeader({
+            co: r.co, route: r.route, dir: r.dir, service: r.service,
+            dest, orig, origEn, dirLabel,
+            fare: (fareRangeInfo.min === fareRangeInfo.max) ? fareRangeInfo.max : null,
+            boundPills, servicePills, currentDirKey: key,
+            fareMin: fareRangeInfo.min, fareMax: fareRangeInfo.max,
+          }).childNodes);
+        } catch (e) { /* leave the initial header */ }
+      }
       // Anchor the view at the user's current stop, justarrived-style.
       if (targetRow) {
         requestAnimationFrame(() => {
@@ -3140,8 +3321,12 @@
       origEn: meta.destEn || '', dirLabel, fare: null,
       ...buildDirectionPills('LRT', r.route, meta.dir || '1', ''),
       currentDirKey: `LRT|${r.route}|${meta.dir || '1'}|`,
+      fareMin: null, fareMax: null,
     }));
     body.appendChild(el('p', { class: 'muted' }, t_str('loading')));
+
+    // LRT flat fare: assets/lrt-fares.json keyed by route number.
+    const lrtFareP = fetchLrtRouteFare(r.route);
 
     // Fetch LRT schedules for every stop on this route (capped concurrency).
     fetchStopsWithCap(stopsForDir, 8, (s) => fetchLrtSchedule(s.id || s.stop)).then((results) => {
@@ -3161,6 +3346,28 @@
         }
       });
 
+      // Resolve flat fare + expand onto each stop row. The LRT stops
+      // already carry a `seq` from the route JSON, so we copy it onto
+      // `_seq` for the expand helper.
+      const stopsWithSeq = stopsForDir.map((s, idx) => Object.assign({}, s, { _seq: idx + 1 }));
+      return lrtFareP.then((flat) => {
+        const lrtFareBySeq = expandFareForStops(flat, stopsWithSeq);
+        const lrtFareRange = fareRange(lrtFareBySeq);
+        if (lrtFareRange) {
+          try {
+            header.replaceChildren(...buildRouteHeader({
+              co: 'LRT', route: r.route, dir: meta.dir || '1', service: '',
+              dest: pickFirst(meta.destTc, meta.destEn), orig: pickFirst(meta.origTc, meta.origEn),
+              origEn: meta.destEn || '', dirLabel,
+              fare: (lrtFareRange.min === lrtFareRange.max) ? lrtFareRange.max : null,
+              ...buildDirectionPills('LRT', r.route, meta.dir || '1', ''),
+              currentDirKey: `LRT|${r.route}|${meta.dir || '1'}|`,
+              fareMin: lrtFareRange.min, fareMax: lrtFareRange.max,
+            }).childNodes);
+          } catch (e) { /* leave the initial header */ }
+        }
+        return lrtFareBySeq;
+      }).catch(() => null).then((lrtFareBySeq) => {
       const list = el('div', { class: 'eta-list' });
       stopsForDir.forEach((s, idx) => {
         const isOrigin = idx === 0;
@@ -3170,6 +3377,11 @@
         const info = el('div', { class: 'stop-info' });
         info.appendChild(el('div', { class: 'stop-name-row' }, stopMeta ? nameFor(stopMeta) : s.stop));
         if (stopMeta && stopMeta.nameEn) info.appendChild(el('div', { class: 'stop-name-en' }, stopMeta.nameEn));
+        // Per-stop fare pill (LRT: same flat fare on every row).
+        const stopFare = lrtFareBySeq && lrtFareBySeq.get(idx + 1);
+        if (stopFare != null && Number.isFinite(Number(stopFare))) {
+          info.appendChild(el('div', { class: 'stop-fare' }, `$${fmtFare(Number(stopFare))}`));
+        }
         row.appendChild(info);
         const etaBox = el('div', { class: 'stop-eta' });
         const trains = etaByStop.get(s.stop) || [];
@@ -3190,6 +3402,7 @@
         list.appendChild(row);
       });
       body.replaceChildren(el('h2', { class: 'section-title' }, t_str('showingStop', stopsForDir.length)), list);
+      });
     }).catch(() => {
       body.replaceChildren(el('p', { class: 'empty' }, t_str('routeNotFound')));
     });
@@ -3231,8 +3444,15 @@
       origEn: meta.origEn || '', dirLabel: '', fare: null,
       ...buildDirectionPills('GMB', r.route, r.dir, r.service),
       currentDirKey: makeRouteKey('GMB', r.route, r.dir, r.service),
+      fareMin: null, fareMax: null,
     }));
     body.appendChild(el('p', { class: 'muted' }, t_str('loading')));
+
+    // Kick off the GMB flat fare fetch in parallel with route-stop.
+    // GMB upstream doesn't expose a per-stop fare endpoint, so this is
+    // purely a hardcoded assets/gmb-fares.json lookup keyed by
+    // `${region}/${code}`.
+    const gmbFareP = fetchGmbRouteFare(meta._region, meta._code, r.route);
 
     // Fetch stops for the chosen direction.
     fetchGmbRouteStops(meta._routeId, parseInt(r.dir, 10) || 1)
@@ -3240,7 +3460,12 @@
         const stopsRaw = (resp && resp.data && resp.data.route_stops) || [];
         const stops = stopsRaw
           .sort((a, b) => a.stop_seq - b.stop_seq)
-          .map((it) => state.index.stops.get(String(it.stop_id)) || { stop: String(it.stop_id), nameTc: it.name_tc, nameEn: it.name_en });
+          .map((it) => {
+            const known = state.index.stops.get(String(it.stop_id));
+            return known || { stop: String(it.stop_id), nameTc: it.name_tc, nameEn: it.name_en };
+          });
+        // Normalise `seq` onto each stop so expandFareForStops works.
+        stops.forEach((s, idx) => { s._seq = idx + 1; });
         // ETA for every stop on the route, capped concurrency.
         const etaResults = await fetchStopsWithCap(stops, 8, (s) => fetchGmbStopEta(meta._routeId, parseInt(r.dir, 10) || 1, parseInt(s.stop, 10) || 0));
         const etaByStop = new Map();
@@ -3250,6 +3475,27 @@
             etaByStop.set(s.stop, rr.value.data.eta);
           }
         });
+        // Resolve the flat fare and expand it onto every stop.
+        let gmbFareBySeq = null;
+        try {
+          const flat = await gmbFareP;
+          gmbFareBySeq = expandFareForStops(flat, stops);
+        } catch (e) { gmbFareBySeq = null; }
+        const gmbFareRange = fareRange(gmbFareBySeq);
+        // Refresh header to show the flat fare range under the destination.
+        if (gmbFareRange) {
+          try {
+            header.replaceChildren(...buildRouteHeader({
+              co: 'GMB', route: displayRoute, dir: r.dir, service: r.service,
+              dest: pickFirst(meta.destTc, meta.destEn), orig: pickFirst(meta.origTc, meta.origEn),
+              origEn: meta.origEn || '', dirLabel: '',
+              fare: (gmbFareRange.min === gmbFareRange.max) ? gmbFareRange.max : null,
+              ...buildDirectionPills('GMB', r.route, r.dir, r.service),
+              currentDirKey: makeRouteKey('GMB', r.route, r.dir, r.service),
+              fareMin: gmbFareRange.min, fareMax: gmbFareRange.max,
+            }).childNodes);
+          } catch (e) { /* leave the initial header */ }
+        }
         const list = el('div', { class: 'eta-list' });
         // Anchor at the user's current stop_seq if supplied.
         let targetRow = null;
@@ -3270,6 +3516,11 @@
           const info = el('div', { class: 'stop-info' });
           info.appendChild(el('div', { class: 'stop-name-row' }, nameFor(s) || s.stop));
           if (s.nameEn) info.appendChild(el('div', { class: 'stop-name-en' }, s.nameEn));
+          // Per-stop fare pill (GMB: same flat fare on every row).
+          const stopFare = gmbFareBySeq && gmbFareBySeq.get(seq);
+          if (stopFare != null && Number.isFinite(Number(stopFare))) {
+            info.appendChild(el('div', { class: 'stop-fare' }, `$${fmtFare(Number(stopFare))}`));
+          }
           row.appendChild(info);
           const etaBox = el('div', { class: 'stop-eta' });
           const etas = etaByStop.get(s.stop) || [];
@@ -3321,9 +3572,19 @@
   // destination title, origin/operator sub-line, optional fare + English subtitle,
   // and side-by-side direction pills (one filled red, one outlined) so the user
   // can flip inbound/outbound inline.
+  //
+  // Fare rendering precedence:
+  //   1) `fareMin` / `fareMax` (when both are finite numbers from the
+  //      per-stop fare fetch):
+  //        - min == max → `車費 $X.X` (single value, just like before)
+  //        - min <  max  → `車費 $X.X – $Y.Y` (range)
+  //   2) Legacy `fare` (the head fare from the route index) — preserved
+  //      when min/max are absent.
+  //   3) Nothing — the header omits the fare line entirely.
   function buildRouteHeader(opts) {
     const { co, route, dir, service, dest, orig, origEn, dirLabel, fare,
-            boundPills = [], servicePills = [], currentKey, currentDirKey, isMapRoute = false } = opts;
+            boundPills = [], servicePills = [], currentKey, currentDirKey, isMapRoute = false,
+            fareMin, fareMax } = opts;
     const head = el('div', { class: 'route-header' });
 
     // ---- top action bar ----
@@ -3392,8 +3653,15 @@
       head.appendChild(sub);
     }
 
-    // Fare (if available)
-    if (fare != null && fare !== '') {
+    // Fare (if available) — prefer the per-stop range (fareMin/fareMax) when
+    // both are finite numbers, fall back to the legacy single `fare` from
+  the route index, otherwise omit the line entirely.
+    if (Number.isFinite(fareMin) && Number.isFinite(fareMax)) {
+      const fareText = (fareMin === fareMax)
+        ? `${t_str('fare')} $${fmtFare(fareMin)}`
+        : t_str('fareFullRange', fmtFare(fareMin), fmtFare(fareMax));
+      head.appendChild(el('p', { class: 'route-fare' }, fareText));
+    } else if (fare != null && fare !== '') {
       head.appendChild(el('p', { class: 'route-fare' }, `${t_str('fare')} ${fare}`));
     }
 

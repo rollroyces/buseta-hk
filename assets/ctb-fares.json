@@ -1,0 +1,18 @@
+{
+  "_meta": {
+    "source": "Hong Kong Citybus / NWFB (新巴/城巴) public fare tables. Head (max) fare per single ride, adult Octopus-card price. After the 2023 CTB+NWFB merger both operators use the Citybus fare scale. https://www.citybus.com.hk/",
+    "currency": "HKD",
+    "keyFormat": "OCTOPUS",
+    "note": "Flat fare per route — CTB does not publish per-stop fare data publicly, so the route-detail screen renders the same single fare on every stop row. Keys are the route numbers; values include the operator 'CTB' or 'NWFB' so the helper can fall back correctly. Routes not in this table render no fare pill."
+  },
+  "1":   {"co": "CTB", "fare": 7.7,  "octopus": 7.7},
+  "6":   {"co": "CTB", "fare": 11.0, "octopus": 11.0},
+  "6X":  {"co": "CTB", "fare": 11.0, "octopus": 11.0},
+  "680": {"co": "CTB", "fare": 13.8, "octopus": 13.8},
+  "8X":  {"co": "CTB", "fare": 5.95, "octopus": 5.95},
+  "88X": {"co": "CTB", "fare": 5.95, "octopus": 5.95},
+  "90B": {"co": "CTB", "fare": 7.5,  "octopus": 7.5},
+  "970": {"co": "CTB", "fare": 7.8,  "octopus": 7.8},
+  "982": {"co": "CTB", "fare": 7.0,  "octopus": 7.0},
+  "A11": {"co": "CTB", "fare": 48.0, "octopus": 48.0}
+}

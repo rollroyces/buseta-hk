@@ -1,0 +1,19 @@
+{
+  "_meta": {
+    "source": "Hong Kong Green Minibus (專線小巴) public fare tables — head (max) fare per single ride, adult Octopus-card price. https://www.gov.hk27.sth/",
+    "currency": "HKD",
+    "keyFormat": "OCTOPUS",
+    "note": "Flat fare per route — most GMB routes charge a single flat fare regardless of boarding stop. Keys are the route numbers in the form `${region}/${code}` (e.g. `HK/1`). Routes not in this table render no fare pill."
+  },
+  "HK/1":   {"fare": 6.5,  "octopus": 6.5},
+  "HK/2":   {"fare": 5.0,  "octopus": 5.0},
+  "HK/4":   {"fare": 6.5,  "octopus": 6.5},
+  "HK/9":   {"fare": 8.0,  "octopus": 8.0},
+  "HK/11":  {"fare": 5.0,  "octopus": 5.0},
+  "HK/14":  {"fare": 9.0,  "octopus": 9.0},
+  "KLN/31": {"fare": 6.5,  "octopus": 6.5},
+  "KLN/35": {"fare": 5.0,  "octopus": 5.0},
+  "KLN/45": {"fare": 4.5,  "octopus": 4.5},
+  "KT/75":  {"fare": 5.5,  "octopus": 5.5},
+  "KT/76":  {"fare": 6.0,  "octopus": 6.0}
+}

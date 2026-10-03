@@ -1,0 +1,19 @@
+{
+  "_meta": {
+    "source": "Hong Kong MTR Light Rail (輕鐵) public fare tables — flat single-ride adult Octopus-card fare per route. https://www.mtr.com.hk/en/customer/services/light_rail.html",
+    "currency": "HKD",
+    "keyFormat": "OCTOPUS",
+    "note": "Flat fare per route — Light Rail charges a single flat fare per route regardless of where you board. Keys are route numbers (e.g. '505'). Routes not in this table render no fare pill."
+  },
+  "505":  {"fare": 5.5, "octopus": 5.5},
+  "507":  {"fare": 5.5, "octopus": 5.5},
+  "610":  {"fare": 6.5, "octopus": 6.5},
+  "614":  {"fare": 6.5, "octopus": 6.5},
+  "614P": {"fare": 6.5, "octopus": 6.5},
+  "615":  {"fare": 6.5, "octopus": 6.5},
+  "615P": {"fare": 6.5, "octopus": 6.5},
+  "705":  {"fare": 5.5, "octopus": 5.5},
+  "706":  {"fare": 5.5, "octopus": 5.5},
+  "751":  {"fare": 6.5, "octopus": 6.5},
+  "761P": {"fare": 6.5, "octopus": 6.5}
+}
