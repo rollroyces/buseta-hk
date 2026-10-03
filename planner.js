@@ -259,6 +259,37 @@
     return `${(m / 1000).toFixed(1)} km`;
   }
 
+  // ---- depart-by mode helpers ---------------------------------------
+  // Format a Date as HH:MM (24h, zero-padded) for `<input type="time">` and
+  // for journey card sub-labels.
+  function formatHHMM(date) {
+    const hh = String(date.getHours()).padStart(2, '0');
+    const mm = String(date.getMinutes()).padStart(2, '0');
+    return `${hh}:${mm}`;
+  }
+
+  // Parse the `<input type="time">` value ("HH:MM") into a Date set on
+  // today's calendar day. Returns null on bad input.
+  function parseTargetTime(value) {
+    if (!value || typeof value !== 'string') return null;
+    const m = value.match(/^(\d{1,2}):(\d{2})$/);
+    if (!m) return null;
+    const hh = parseInt(m[1], 10);
+    const mm = parseInt(m[2], 10);
+    if (!Number.isFinite(hh) || !Number.isFinite(mm)) return null;
+    if (hh < 0 || hh > 23 || mm < 0 || mm > 59) return null;
+    const d = new Date();
+    d.setHours(hh, mm, 0, 0);
+    return d;
+  }
+
+  // Work backward from the target arrival date by `totalMin` minutes.
+  // Returns null on bad input.
+  function computeDepartureTime(targetDate, totalMin) {
+    if (!targetDate || !Number.isFinite(totalMin)) return null;
+    return new Date(targetDate.getTime() - totalMin * 60000);
+  }
+
   // ---- Index helpers --------------------------------------------------
   // Return all routeKeys whose `service` key in the global index matches.
   function allRouteKeys(idx) {
@@ -1460,6 +1491,21 @@
     ensure('zh-Hant', 'plannerSuggestAria', (q) => `車站建議，輸入緊「${q}」`);
     ensure('en',      'plannerSuggestAria', (q) => `Stop suggestions for "${q}"`);
     ensure('zh-Hans', 'plannerSuggestAria', (q) => `车站建议，输入紧「${q}」`);
+    ensure('zh-Hant', 'plannerDepartNow',  '現在出發');
+    ensure('en',      'plannerDepartNow',  'Depart now');
+    ensure('zh-Hans', 'plannerDepartNow',  '现在出发');
+    ensure('zh-Hant', 'plannerDepartBy',   '指定時間出發');
+    ensure('en',      'plannerDepartBy',   'Depart by time');
+    ensure('zh-Hans', 'plannerDepartBy',   '指定时间出发');
+    ensure('zh-Hant', 'plannerArriveBy',   '目標到達時間');
+    ensure('en',      'plannerArriveBy',   'Target arrival time');
+    ensure('zh-Hans', 'plannerArriveBy',   '目标到达时间');
+    ensure('zh-Hant', 'plannerDepartAt',   '出發時間');
+    ensure('en',      'plannerDepartAt',   'Departure time');
+    ensure('zh-Hans', 'plannerDepartAt',   '出发时间');
+    ensure('zh-Hant', 'plannerNeedLeaveBy', (hhmm) => `需 ${hhmm} 出發`);
+    ensure('en',      'plannerNeedLeaveBy', (hhmm) => `Leave by ${hhmm}`);
+    ensure('zh-Hans', 'plannerNeedLeaveBy', (hhmm) => `需 ${hhmm} 出发`);
   }
   patchPlannerStrings();
 
@@ -1697,12 +1743,22 @@
     if (journey.totalMin <= 2) big.classList.add('is-now');
     else if (journey.totalMin <= 15) big.classList.add('is-soon');
     timeBox.appendChild(big);
-    const now = new Date();
-    const eta = new Date(now.getTime() + journey.totalMin * 60000);
-    const hh = String(eta.getHours()).padStart(2, '0');
-    const mm = String(eta.getMinutes()).padStart(2, '0');
-    timeBox.appendChild(el('span', { class: 'small' },
-      `${t_str('plannerArrive')} ${hh}:${mm}`));
+    // In "now" mode (default) we show the arrival time computed from now.
+    // In "depart by HH:MM" mode we work backward from the user's target
+    // arrival and show the latest departure time for THIS journey.
+    if (opts.targetArrival) {
+      const dep = computeDepartureTime(opts.targetArrival, journey.totalMin);
+      const hhmm = dep ? formatHHMM(dep) : '--:--';
+      timeBox.appendChild(el('span', { class: 'small' },
+          t_str('plannerNeedLeaveBy', hhmm)));
+    } else {
+      const now = new Date();
+      const eta = new Date(now.getTime() + journey.totalMin * 60000);
+      const hh = String(eta.getHours()).padStart(2, '0');
+      const mm = String(eta.getMinutes()).padStart(2, '0');
+      timeBox.appendChild(el('span', { class: 'small' },
+        `${t_str('plannerArrive')} ${hh}:${mm}`));
+    }
     card.appendChild(timeBox);
     return card;
   }
@@ -1815,6 +1871,70 @@
     destWrap.appendChild(destSuggest);
     form.appendChild(destWrap);
 
+    // ---- selection state ----
+    const _selected = { origin: null, dest: null };
+
+    // ---- depart-by mode toggle + target arrival time picker ----
+    // "現在出發" (now, default) and "指定時間出發" (target arrival). When the
+    // user picks a target arrival time, each journey card shows the latest
+    // departure time needed to arrive by that target (working backward
+    // from `totalMin`).
+    // `_hasRunOnce` flips true after the first successful journey calc so
+    // changing mode or time re-runs the search. We don't want it to auto-
+    // fire before both stops are selected.
+    let _hasRunOnce = false;
+
+    const modeRow = el('div', { class: 'planner-mode-row', role: 'radiogroup',
+      'aria-label': t_str('plannerDepartNow') });
+    const modeNowInput = el('input', { type: 'radio', name: 'planner-mode',
+      value: 'now', id: 'planner-mode-now' });
+    modeNowInput.checked = true;
+    const modeByInput  = el('input', { type: 'radio', name: 'planner-mode',
+      value: 'departBy', id: 'planner-mode-by' });
+    const modeNowLabel = el('label', { class: 'planner-mode-opt is-active', for: 'planner-mode-now' },
+      t_str('plannerDepartNow'));
+    const modeByLabel  = el('label', { class: 'planner-mode-opt', for: 'planner-mode-by' },
+      t_str('plannerDepartBy'));
+    modeNowLabel.appendChild(modeNowInput);
+    modeByLabel.appendChild(modeByInput);
+    modeRow.appendChild(modeNowLabel);
+    modeRow.appendChild(modeByLabel);
+    form.appendChild(modeRow);
+
+    const timeRow = el('div', { class: 'planner-time-row is-hidden',
+      'aria-hidden': 'true' });
+    const timeLabel = el('label', { class: 'planner-time-label', for: 'planner-target-time' },
+      t_str('plannerArriveBy'));
+    const timeField = el('input', { type: 'time', id: 'planner-target-time',
+      class: 'planner-time-field', step: '60' });
+    // Default target: 30 minutes from now, rounded up to next 5 minutes.
+    const defaultTarget = new Date(Date.now() + 30 * 60000);
+    defaultTarget.setMinutes(Math.ceil(defaultTarget.getMinutes() / 5) * 5, 0, 0);
+    timeField.value = formatHHMM(defaultTarget);
+    timeLabel.appendChild(timeField);
+    timeRow.appendChild(timeLabel);
+    form.appendChild(timeRow);
+
+    const setDepartByMode = (on) => {
+      modeNowInput.checked = !on;
+      modeByInput.checked  = on;
+      modeNowLabel.classList.toggle('is-active', !on);
+      modeByLabel.classList.toggle('is-active',  on);
+      timeRow.classList.toggle('is-hidden', !on);
+      timeRow.setAttribute('aria-hidden', on ? 'false' : 'true');
+    };
+    modeNowLabel.addEventListener('click', () => {
+      setDepartByMode(false);
+      if (_hasRunOnce) runSearch();
+    });
+    modeByLabel.addEventListener('click', () => {
+      setDepartByMode(true);
+      if (_hasRunOnce) runSearch();
+    });
+    timeField.addEventListener('change', () => {
+      if (_hasRunOnce) runSearch();
+    });
+
     const submitRow = el('div', { class: 'planner-submit-row' });
     const submitBtn = el('button', { type: 'submit', class: 'planner-submit' }, t_str('plannerGo'));
     submitRow.appendChild(submitBtn);
@@ -1860,9 +1980,6 @@
     root.appendChild(recentSec);
 
     viewEl.appendChild(root);
-
-    // ---- selection state ----
-    const _selected = { origin: null, dest: null };
 
     // ---- autocomplete (rebuilt for visibility + UX) --------------------
     // The previous wiring only *defined* attachAutocomplete but never
@@ -2152,6 +2269,14 @@
         const origin = { stop: originId, lat: originLL ? originLL.lat : NaN, lng: originLL ? originLL.lng : NaN };
         const dest = { stop: destId, lat: destLL ? destLL.lat : NaN, lng: destLL ? destLL.lng : NaN };
 
+        // In "depart by HH:MM" mode we pass a target arrival date through to
+        // each journey card so it can show the latest recommended departure
+        // time (target − totalMin). In default ("now") mode we pass nothing
+        // and the card shows arrival from now.
+        const departBy = !!modeByInput.checked;
+        const targetArrival = departBy ? parseTargetTime(timeField.value) : null;
+        const cardOpts = targetArrival ? { targetArrival } : {};
+
         results.appendChild(buildSummary(result.direct, origin, dest));
 
         // ---- direct ----
@@ -2159,7 +2284,9 @@
           const sec = buildSection(t_str('plannerDirect'), result.direct.length, 'var(--accent)');
           results.appendChild(sec);
           result.direct.forEach((j, i) => {
-            results.appendChild(buildJourneyCard(i + 1, j, { bestBadge: i === 0 }));
+            const o = Object.assign({}, cardOpts);
+            if (i === 0) o.bestBadge = true;
+            results.appendChild(buildJourneyCard(i + 1, j, o));
           });
         }
 
@@ -2168,7 +2295,7 @@
           const sec = buildSection(t_str('planner1Hop'), result.oneTransfer.length, 'var(--accent-2)');
           results.appendChild(sec);
           result.oneTransfer.forEach((j, i) => {
-            results.appendChild(buildJourneyCard(i + 1, j, {}));
+            results.appendChild(buildJourneyCard(i + 1, j, Object.assign({}, cardOpts)));
           });
         }
 
@@ -2177,9 +2304,13 @@
           const sec = buildSection(t_str('planner2Hop'), result.twoTransfer.length, 'var(--muted)');
           results.appendChild(sec);
           result.twoTransfer.forEach((j, i) => {
-            results.appendChild(buildJourneyCard(i + 1, j, {}));
+            results.appendChild(buildJourneyCard(i + 1, j, Object.assign({}, cardOpts)));
           });
         }
+
+        // The journey calc has produced renderable output; remember that
+        // for the depart-by mode + time picker so subsequent changes re-run.
+        _hasRunOnce = true;
 
         if (result.direct.length === 0 && result.oneTransfer.length === 0 && result.twoTransfer.length === 0) {
           results.appendChild(el('div', { class: 'planner-empty' },
