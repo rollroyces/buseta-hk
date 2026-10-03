@@ -3655,7 +3655,7 @@
 
     // Fare (if available) — prefer the per-stop range (fareMin/fareMax) when
     // both are finite numbers, fall back to the legacy single `fare` from
-  the route index, otherwise omit the line entirely.
+    // the route index, otherwise omit the line entirely.
     if (Number.isFinite(fareMin) && Number.isFinite(fareMax)) {
       const fareText = (fareMin === fareMax)
         ? `${t_str('fare')} $${fmtFare(fareMin)}`
