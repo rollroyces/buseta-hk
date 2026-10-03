@@ -1856,14 +1856,21 @@
       const ul = el('div', { class: 'list' });
       state.recent.slice(0, 8).forEach((r) => {
         if (r.stop) {
-          // Hydrate the recent stop with the actual name metadata from the
-          // index — without it stopRow falls back to slicing the raw 16-hex
-          // operator id down to 12 chars ("0C81107C4ABFCD56" → "0C81107C4ABF").
+          // Resolve the name in priority order:
+          //   1) cached on the recent entry (set by enrichRecentStop when the
+          //      stop view resolved its real name from the operator endpoint)
+          //   2) hk-stops.json index lookup (MTR / GMB / LRT / some CTB)
+          //   3) raw operator id (last-resort fallback — better than a 16-char
+          //      hash sub-line)
           const idxMeta = state.index && state.index.stops.get(r.stop);
-          ul.appendChild(stopRow(idxMeta
-            ? { stop: r.stop, co: r.co || idxMeta.co || 'STOP',
-                nameTc: idxMeta.nameTc, nameSc: idxMeta.nameSc, nameEn: idxMeta.nameEn }
-            : { stop: r.stop, co: r.co }));
+          const hasName = r.nameTc || (idxMeta && (idxMeta.nameTc || idxMeta.nameEn));
+          const row = hasName
+            ? { stop: r.stop, co: r.co || (idxMeta && idxMeta.co) || 'STOP',
+                nameTc: r.nameTc || (idxMeta && idxMeta.nameTc) || '',
+                nameSc: r.nameSc || (idxMeta && idxMeta.nameSc) || '',
+                nameEn: r.nameEn || (idxMeta && idxMeta.nameEn) || '' }
+            : { stop: r.stop, co: r.co || (idxMeta && idxMeta.co) || 'STOP' };
+          ul.appendChild(stopRow(row));
         } else if (r.route) {
           // Hydrate the recent item with the current route meta (dest/orig
           // are not stored in localStorage — look them up from the index so
@@ -4269,6 +4276,9 @@
       header.replaceChildren(...buildStopHeader(stopId, nameTc, nameEn, opGuess, nameSc).childNodes);
       state._lastStopName = nameFor({ nameTc, nameSc, nameEn });
       state._lastStopNameEn = nameEn;
+      // Cache the resolved name on the recent entry so 最近查過 shows the
+      // real stop name on the home page instead of just the operator ID.
+      enrichRecentStop(stopId, nameTc, nameSc, nameEn);
     });
 
     refreshBusStopView(stateRef, 'live');
@@ -4431,6 +4441,7 @@
     const stop = state.index.lrt.stops.get(stopCode);
     const nameTc = stop ? stop.nameTc : stopCode;
     const nameEn = stop ? stop.nameEn : '';
+    if (stop) enrichRecentStop(stopCode, nameTc, stop.nameSc || '', nameEn);
     header.appendChild(buildStopHeader(stopCode, nameFor(stop || { nameTc, nameEn }) || nameTc, nameEn, 'LRT'));
     body.appendChild(el('p', { class: 'muted' }, t_str('loading')));
 
@@ -4500,6 +4511,9 @@
       if (meta) header.replaceChildren(...buildStopHeader(stopId, meta.nameTc || stopId, meta.nameEn || '', 'GMB').childNodes);
       // Stash for the map append after the routes list renders.
       state._lastGmbStopMeta = meta || null;
+      // Cache the resolved name on the recent entry so 最近查過 shows the
+      // real GMB stop name instead of just the numeric operator ID.
+      if (meta && meta.nameTc) enrichRecentStop(stopId, meta.nameTc, meta.nameSc || '', meta.nameEn || '');
     });
 
     fetchGmbStopRoutes(stopId).then(async (resp) => {
@@ -4721,6 +4735,26 @@
       return k !== key;
     })].slice(0, 20);
     persist();
+  }
+
+  // After a stop view resolves its real name from the operator endpoint, write
+  // the name fields back into the matching recent entry so the home page can
+  // render the actual stop name instead of falling back to the raw operator
+  // ID (e.g. "002256" for CTB, "ST905" for KMB). Without this, hk-stops.json
+  // doesn't index KMB stops by operator ID and the recent row shows just the
+  // raw id + a sliced hash sub-line.
+  function enrichRecentStop(stopId, nameTc, nameSc, nameEn) {
+    if (!stopId || !nameTc) return;
+    let changed = false;
+    state.recent.forEach((x) => {
+      if (x.stop !== stopId) return;
+      if (x.nameTc === nameTc && x.nameSc === nameSc && x.nameEn === nameEn) return;
+      x.nameTc = nameTc;
+      x.nameSc = nameSc;
+      x.nameEn = nameEn;
+      changed = true;
+    });
+    if (changed) persist();
   }
 
   // ------------------------------------------------------------------
