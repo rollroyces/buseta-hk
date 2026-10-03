@@ -1054,41 +1054,23 @@
     }
   }
 
-  // Render the route-level polyline map. Pure SVG — no Leaflet/Mapbox/
-  // Google Maps JS dependency. Takes the resolved stop list and a
-  // `coordByStop` Map<stopId, {lat,lng}>; returns a section Node, or null
-  // if fewer than two stops have coords (caller should then skip rendering).
-  function renderRoutePolyline(stops, coordByStop) {
+  // Render the route-level map. Embeds a Google Maps iframe (same
+  // `output=embed` URL pattern the stop view uses) with all resolved
+  // stops plotted as pins — Google Maps auto-fits the viewport, so the
+  // user sees "this bus does a loop around the harbour" at a glance.
+  // Takes the resolved stop list and a `coordByStop` Map<stopId, {lat,lng}>;
+  // returns a section Node, or null if fewer than two stops have coords.
+  function renderRouteMap(stops, coordByStop) {
     if (!stops || stops.length === 0) return null;
     const points = [];
-    stops.forEach((s, i) => {
+    stops.forEach((s) => {
       const c = coordByStop.get(s.stop);
       if (c && Number.isFinite(c.lat) && Number.isFinite(c.lng)) {
-        points.push({ idx: i, lat: c.lat, lng: c.lng });
+        points.push({ lat: c.lat, lng: c.lng });
       }
     });
     if (points.length < 2) return null;
 
-    let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity;
-    points.forEach(({ lat, lng }) => {
-      if (lat < minLat) minLat = lat;
-      if (lat > maxLat) maxLat = lat;
-      if (lng < minLng) minLng = lng;
-      if (lng > maxLng) maxLng = lng;
-    });
-    const spanLat = maxLat - minLat || 0.01;
-    const spanLng = maxLng - minLng || 0.01;
-    const padLat = spanLat * 0.08;
-    const padLng = spanLng * 0.08;
-    const W = 1000, H = 360;
-    const project = (lat, lng) => {
-      const x = ((lng - (minLng - padLng)) / (spanLng + padLng * 2)) * W;
-      // Flip Y because SVG origin is top-left and latitude grows upward.
-      const y = ((maxLat + padLat - lat) / (spanLat + padLng * 2)) * H;
-      return [x, y];
-    };
-
-    const NS = 'http://www.w3.org/2000/svg';
     const section = el('section', { class: 'route-map', 'aria-label': t_str('mapHeader') });
     const head = el('div', { class: 'route-map-head' },
       el('span', { class: 'route-map-title' }, t_str('mapHeader')),
@@ -1096,39 +1078,36 @@
     );
     section.appendChild(head);
 
-    const svg = document.createElementNS(NS, 'svg');
-    svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-    svg.setAttribute('class', 'route-map-svg');
-    svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
-    svg.setAttribute('role', 'img');
-
-    const lineD = points.map(({ lat, lng }, i) => {
-      const [x, y] = project(lat, lng);
-      return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)} ${y.toFixed(1)}`;
-    }).join(' ');
-    const path = document.createElementNS(NS, 'path');
-    path.setAttribute('d', lineD);
-    path.setAttribute('class', 'route-map-line');
-    svg.appendChild(path);
-
-    points.forEach((p, i) => {
-      const [x, y] = project(p.lat, p.lng);
-      const isOrigin = i === 0;
-      const isTarget = i === points.length - 1;
-      const c = document.createElementNS(NS, 'circle');
-      c.setAttribute('cx', x.toFixed(1));
-      c.setAttribute('cy', y.toFixed(1));
-      c.setAttribute('r', isOrigin || isTarget ? '5.5' : '3.5');
-      const cls = ['route-map-stop'];
-      if (isOrigin) cls.push('is-origin');
-      if (isTarget) cls.push('is-target');
-      c.setAttribute('class', cls.join(' '));
-      svg.appendChild(c);
+    // Pipe-separated `lat,lng` pairs — Google Maps renders each as a pin
+    // and auto-zooms to fit them all. No `z=` (let it pick) and no API
+    // key required for the no-key embed; the user's saved key upgrades
+    // the styling if present.
+    const q = points.map((p) => `${p.lat.toFixed(6)},${p.lng.toFixed(6)}`).join('|');
+    const params = new URLSearchParams({ q, output: 'embed' });
+    const key = getGmapsKey();
+    if (key) params.set('key', key);
+    const iframe = el('iframe', {
+      title: `${t_str('mapHeader')} · ${points.length}`,
+      loading: 'lazy',
+      referrerpolicy: 'no-referrer-when-downgrade',
+      src: `https://maps.google.com/maps?${params.toString()}`,
+      style: 'border:0;',
     });
-
     const frame = el('div', { class: 'route-map-frame' });
-    frame.appendChild(svg);
+    frame.appendChild(iframe);
     section.appendChild(frame);
+
+    // Open the same multi-pin map in a new tab so users get the full
+    // Maps UI (pan, zoom, street view).
+    const link = el('a', {
+      class: 'stop-map-link',
+      href: `https://www.google.com/maps?q=${q}`,
+      target: '_blank',
+      rel: 'noopener',
+    });
+    link.appendChild(mapPinIconSVG());
+    link.appendChild(el('span', {}, t_str('openInMaps')));
+    section.appendChild(link);
     return section;
   }
 
@@ -2500,7 +2479,7 @@
           if (c) coordByStop.set(s.stop, c);
         }));
       }
-      const polylineEl = renderRoutePolyline(stops, coordByStop);
+      const polylineEl = renderRouteMap(stops, coordByStop);
 
       const list = el('div', { class: 'eta-list' });
       // Pick the row that should be highlighted (the user's current stop)
