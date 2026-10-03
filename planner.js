@@ -46,7 +46,7 @@
   // index so subsequent 1-/2-hop searches are cheap.
   const _routeStopsCache = new Map();        // routeKey -> [{ stop, seq, lat, lng }]
   const _stopRoutesCache = new Map();        // stopId -> Set(routeKey)  (reverse index)
-  const _adjacencyCache  = new WeakMap();    // state.index -> { stops: Map(stopId -> [{ toStop, routeKey, km }]) }
+  let   _adjacencyCache  = new WeakMap();    // state.index -> { stops: Map(stopId -> [{ toStop, routeKey, km }]) }
   let   _indexVersion    = 0;
 
   function invalidateCaches() {
