@@ -2,21 +2,26 @@
    BusETA HK · 巴士到站 — clean modern mobile-first styles
    =========================================================== */
 
+/* Default theme is DARK so first-time visitors (no localStorage override)
+   get the same look they had before. Light theme is opt-in via the
+   data-theme="light" attribute, set by the theme toggle in app.js.
+   System preference is honoured only when the user has not made an
+   explicit choice (no data-theme attribute). */
 :root {
-  --bg: #FAFAF7;
-  --bg-soft: #F4F4F0;
-  --card: #FFFFFF;
-  --ink: #0F172A;
-  --ink-2: #334155;
-  --muted: #64748B;
-  --muted-2: #94A3B8;
-  --line: #E5E7EB;
-  --line-2: #F1F5F9;
-  --accent: #0EA5E9;
-  --accent-2: #0369A1;
-  --accent-soft: #E0F2FE;
+  --bg: #0B1220;
+  --bg-soft: #131C36;
+  --card: #131C36;
+  --ink: #F1F5F9;
+  --ink-2: #CBD5E1;
+  --muted: #94A3B8;
+  --muted-2: #64748B;
+  --line: #1F2A44;
+  --line-2: #1A2440;
+  --accent: #38BDF8;
+  --accent-2: #7DD3FC;
+  --accent-soft: rgba(56, 189, 248, 0.18);
   --warn: #F59E0B;
-  --danger: #DC2626;
+  --danger: #F87171;
   --dark: #0A1628;
   --dark-2: #142235;
   --on-dark: #F8FAFC;
@@ -27,11 +32,59 @@
   --r-lg: 20px;
   --r-pill: 999px;
 
-  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
-  --shadow-md: 0 4px 14px rgba(15, 23, 42, 0.06);
-  --shadow-lg: 0 12px 32px rgba(15, 23, 42, 0.08);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.32);
+  --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.38);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.48);
 
   --tap: -webkit-tap-highlight-color: transparent;
+}
+
+/* Light theme overrides — polished, not just inverted. Tokens chosen for
+   better contrast on white surfaces (slightly darker lines, a touch more
+   saturated accent, shadows with cool-grey tint). */
+:root[data-theme="light"] {
+  --bg: #FAFAF7;
+  --bg-soft: #F1F2EE;
+  --card: #FFFFFF;
+  --ink: #0F172A;
+  --ink-2: #334155;
+  --muted: #64748B;
+  --muted-2: #94A3B8;
+  --line: #D8DCE2;
+  --line-2: #ECEEF1;
+  --accent: #0284C2;
+  --accent-2: #0369A1;
+  --accent-soft: #E0F2FE;
+  --warn: #B45309;
+  --danger: #B91C1C;
+
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --shadow-md: 0 4px 14px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 12px 32px rgba(15, 23, 42, 0.12);
+}
+
+/* System prefers light when no manual override has been recorded. */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) {
+    --bg: #FAFAF7;
+    --bg-soft: #F1F2EE;
+    --card: #FFFFFF;
+    --ink: #0F172A;
+    --ink-2: #334155;
+    --muted: #64748B;
+    --muted-2: #94A3B8;
+    --line: #D8DCE2;
+    --line-2: #ECEEF1;
+    --accent: #0284C2;
+    --accent-2: #0369A1;
+    --accent-soft: #E0F2FE;
+    --warn: #B45309;
+    --danger: #B91C1C;
+
+    --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+    --shadow-md: 0 4px 14px rgba(15, 23, 42, 0.08);
+    --shadow-lg: 0 12px 32px rgba(15, 23, 42, 0.12);
+  }
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -128,6 +181,42 @@ h1, h2, h3 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
   background: rgba(255, 255, 255, 0.06);
   border-radius: var(--r-pill);
 }
+/* Theme toggle (sun = dark-mode active, moon = light-mode active,
+   auto = system preference active). All three icons stack inside the
+   button; .theme-toggle[data-mode] controls which one is visible.
+   The button visually echoes .lang-toggle so the top-right reads as
+   one coherent group of small pill controls. */
+.theme-toggle {
+  width: 36px; height: 36px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: var(--r-pill);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: var(--on-dark);
+  background: rgba(255, 255, 255, 0.04);
+  transition: background 0.15s ease, transform 0.18s ease;
+  position: relative;
+  padding: 0;
+}
+.theme-toggle:hover, .theme-toggle:focus-visible { background: rgba(255, 255, 255, 0.10); outline: none; }
+.theme-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.theme-toggle:active { transform: scale(0.94); }
+.theme-icon {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0;
+  transform: rotate(-30deg) scale(0.6);
+  transition: opacity 0.18s ease, transform 0.22s ease;
+}
+/* Default (data-theme="dark" or system dark): show sun icon to indicate
+   "tap to switch to light". */
+.theme-toggle .theme-icon--sun { opacity: 1; transform: none; }
+.theme-toggle[data-mode="light"] .theme-icon--sun { opacity: 0; transform: rotate(30deg) scale(0.6); }
+.theme-toggle[data-mode="light"] .theme-icon--moon { opacity: 1; transform: none; }
+.theme-toggle[data-mode="system"] .theme-icon--sun,
+.theme-toggle[data-mode="system"] .theme-icon--moon { opacity: 0; }
+.theme-toggle[data-mode="system"] .theme-icon--auto { opacity: 1; transform: none; }
 .lang-toggle {
   height: 36px;
   padding: 0 14px;
@@ -1266,6 +1355,31 @@ h1, h2, h3 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
   border-color: #FCA5A5;        /* red-300 */
   color: #7F1D1D;               /* red-900 */
 }
+/* Dark-theme variants — replace the pastel cream backgrounds with
+   translucent amber / red washes so the alert still pops on the dark
+   page without fighting the surrounding palette. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .route-alert.is-warning {
+    background: rgba(252, 211, 77, 0.14);
+    border-color: rgba(252, 211, 77, 0.45);
+    color: #FCD34D;
+  }
+  :root:not([data-theme]) .route-alert.is-critical {
+    background: rgba(248, 113, 113, 0.14);
+    border-color: rgba(248, 113, 113, 0.5);
+    color: #FCA5A5;
+  }
+}
+:root[data-theme="dark"] .route-alert.is-warning {
+  background: rgba(252, 211, 77, 0.14);
+  border-color: rgba(252, 211, 77, 0.45);
+  color: #FCD34D;
+}
+:root[data-theme="dark"] .route-alert.is-critical {
+  background: rgba(248, 113, 113, 0.14);
+  border-color: rgba(248, 113, 113, 0.5);
+  color: #FCA5A5;
+}
 .route-alert-icon {
   flex: 0 0 auto;
   display: inline-flex;
@@ -1568,14 +1682,22 @@ h1, h2, h3 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 }
 
 @media (prefers-color-scheme: dark) {
-  .geo-banner--denied {
+  :root:not([data-theme]) .geo-banner--denied {
     background: linear-gradient(135deg, rgba(239, 68, 68, 0.16), rgba(239, 68, 68, 0.06));
     border-color: rgba(239, 68, 68, 0.4);
   }
-  .geo-banner--unavailable {
+  :root:not([data-theme]) .geo-banner--unavailable {
     background: linear-gradient(135deg, rgba(148, 163, 184, 0.16), rgba(148, 163, 184, 0.06));
     border-color: rgba(148, 163, 184, 0.4);
   }
+}
+:root[data-theme="dark"] .geo-banner--denied {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.16), rgba(239, 68, 68, 0.06));
+  border-color: rgba(239, 68, 68, 0.4);
+}
+:root[data-theme="dark"] .geo-banner--unavailable {
+  background: linear-gradient(135deg, rgba(148, 163, 184, 0.16), rgba(148, 163, 184, 0.06));
+  border-color: rgba(148, 163, 184, 0.4);
 }
 
 @media (max-width: 380px) {
@@ -1584,10 +1706,14 @@ h1, h2, h3 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 }
 
 @media (prefers-color-scheme: dark) {
-  .geo-banner {
+  :root:not([data-theme]) .geo-banner {
     background: linear-gradient(135deg, rgba(14, 165, 233, 0.16), rgba(14, 165, 233, 0.06));
     border-color: rgba(14, 165, 233, 0.4);
   }
+}
+:root[data-theme="dark"] .geo-banner {
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.16), rgba(14, 165, 233, 0.06));
+  border-color: rgba(14, 165, 233, 0.4);
 }
 
 /* ------------------------------ nearest stop pill (home) ------------------------------ */
@@ -1740,22 +1866,16 @@ h1, h2, h3 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
   .splash-title { font-size: 44px; }
 }
 
+/* Dark-mode-only element overrides. Applied when:
+     (a) the system reports prefers-color-scheme: dark AND no explicit
+         data-theme override is set, OR
+     (b) the user has explicitly chosen the dark theme (data-theme="dark").
+   The `:root` variable block above already carries the dark palette as
+   first-paint defaults, so we only need to flip element-level colors here. */
 @media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0B1220;
-    --bg-soft: #131C36;
-    --line: #1F2A44;
-    --line-2: #1A2440;
-    --card: #131C36;
-    --ink: #F1F5F9;
-    --ink-2: #CBD5E1;
-    --muted: #94A3B8;
-    --muted-2: #64748B;
-    --accent-soft: rgba(14, 165, 233, 0.18);
-  }
-  .bottom-nav { background: rgba(11, 18, 32, 0.94); }
-  .search-field input::placeholder { color: var(--muted-2); }
+  :root:not([data-theme]) .bottom-nav { background: rgba(11, 18, 32, 0.94); }
 }
+:root[data-theme="dark"] .bottom-nav { background: rgba(11, 18, 32, 0.94); }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
@@ -1970,13 +2090,20 @@ h1, h2, h3 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
   letter-spacing: 0.01em;
 }
 @media (prefers-color-scheme: dark) {
-  .traffic-banner { border-left-color: #F87171; }
-  .traffic-incident.is-critical { background: rgba(248, 113, 113, 0.10); border-color: #7F1D1D; }
-  .traffic-incident.is-warning  { background: rgba(252, 211, 77, 0.10); border-color: #92400E; }
-  .planner-leg.is-traffic-affected {
+  :root:not([data-theme]) .traffic-banner { border-left-color: #F87171; }
+  :root:not([data-theme]) .traffic-incident.is-critical { background: rgba(248, 113, 113, 0.10); border-color: #7F1D1D; }
+  :root:not([data-theme]) .traffic-incident.is-warning  { background: rgba(252, 211, 77, 0.10); border-color: #92400E; }
+  :root:not([data-theme]) .planner-leg.is-traffic-affected {
     border-color: #7F1D1D;
     background: rgba(248, 113, 113, 0.10);
   }
+}
+:root[data-theme="dark"] .traffic-banner { border-left-color: #F87171; }
+:root[data-theme="dark"] .traffic-incident.is-critical { background: rgba(248, 113, 113, 0.10); border-color: #7F1D1D; }
+:root[data-theme="dark"] .traffic-incident.is-warning  { background: rgba(252, 211, 77, 0.10); border-color: #92400E; }
+:root[data-theme="dark"] .planner-leg.is-traffic-affected {
+  border-color: #7F1D1D;
+  background: rgba(248, 113, 113, 0.10);
 }
 /* ----------------------------------------------------------------------
  * Share button + inline QR modal
@@ -2287,39 +2414,336 @@ h1, h2, h3 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 }
 
 @media (prefers-color-scheme: dark) {
-  .disruption-banner {
+  :root:not([data-theme]) .disruption-banner {
     background: linear-gradient(135deg, rgba(148, 163, 184, 0.10), rgba(148, 163, 184, 0.04));
     border-color: rgba(148, 163, 184, 0.28);
     color: var(--ink);
   }
-  .disruption-banner.is-warn {
+  :root:not([data-theme]) .disruption-banner.is-warn {
     background: linear-gradient(135deg, rgba(252, 211, 77, 0.14), rgba(252, 211, 77, 0.04));
     border-color: rgba(252, 211, 77, 0.45);
     color: #FCD34D;
     --warn-2: #FBBF24;
   }
-  .disruption-banner.is-severe {
+  :root:not([data-theme]) .disruption-banner.is-severe {
     background: linear-gradient(135deg, rgba(248, 113, 113, 0.14), rgba(248, 113, 113, 0.04));
     border-color: rgba(248, 113, 113, 0.5);
     color: #FCA5A5;
   }
-  .disruption-banner.is-warn .disruption-banner-pill {
+  :root:not([data-theme]) .disruption-banner.is-warn .disruption-banner-pill {
     background: rgba(252, 211, 77, 0.18);
     color: #FCD34D;
   }
-  .disruption-banner.is-severe .disruption-banner-pill {
+  :root:not([data-theme]) .disruption-banner.is-severe .disruption-banner-pill {
     background: rgba(248, 113, 113, 0.18);
     color: #FCA5A5;
   }
-  .disruption-banner.is-warn .disruption-banner-more,
-  .disruption-banner.is-warn .disruption-banner-hint,
-  .disruption-banner.is-warn .disruption-banner-until { color: #FCD34D; }
-  .disruption-banner.is-severe .disruption-banner-more,
-  .disruption-banner.is-severe .disruption-banner-hint,
-  .disruption-banner.is-severe .disruption-banner-until { color: #FCA5A5; }
-  .disruption-banner-panel { border-top-color: rgba(148, 163, 184, 0.2); }
-  .disruption-banner.is-warn .disruption-banner-panel { border-top-color: rgba(252, 211, 77, 0.32); }
-  .disruption-banner.is-severe .disruption-banner-panel { border-top-color: rgba(248, 113, 113, 0.32); }
-  .disruption-banner-toggle:hover,
-  .disruption-banner-toggle:focus-visible { background: rgba(148, 163, 184, 0.14); }
+  :root:not([data-theme]) .disruption-banner.is-warn .disruption-banner-more,
+  :root:not([data-theme]) .disruption-banner.is-warn .disruption-banner-hint,
+  :root:not([data-theme]) .disruption-banner.is-warn .disruption-banner-until { color: #FCD34D; }
+  :root:not([data-theme]) .disruption-banner.is-severe .disruption-banner-more,
+  :root:not([data-theme]) .disruption-banner.is-severe .disruption-banner-hint,
+  :root:not([data-theme]) .disruption-banner.is-severe .disruption-banner-until { color: #FCA5A5; }
+  :root:not([data-theme]) .disruption-banner-panel { border-top-color: rgba(148, 163, 184, 0.2); }
+  :root:not([data-theme]) .disruption-banner.is-warn .disruption-banner-panel { border-top-color: rgba(252, 211, 77, 0.32); }
+  :root:not([data-theme]) .disruption-banner.is-severe .disruption-banner-panel { border-top-color: rgba(248, 113, 113, 0.32); }
+  :root:not([data-theme]) .disruption-banner-toggle:hover,
+  :root:not([data-theme]) .disruption-banner-toggle:focus-visible { background: rgba(148, 163, 184, 0.14); }
+}
+:root[data-theme="dark"] .disruption-banner {
+  background: linear-gradient(135deg, rgba(148, 163, 184, 0.10), rgba(148, 163, 184, 0.04));
+  border-color: rgba(148, 163, 184, 0.28);
+  color: var(--ink);
+}
+:root[data-theme="dark"] .disruption-banner.is-warn {
+  background: linear-gradient(135deg, rgba(252, 211, 77, 0.14), rgba(252, 211, 77, 0.04));
+  border-color: rgba(252, 211, 77, 0.45);
+  color: #FCD34D;
+  --warn-2: #FBBF24;
+}
+:root[data-theme="dark"] .disruption-banner.is-severe {
+  background: linear-gradient(135deg, rgba(248, 113, 113, 0.14), rgba(248, 113, 113, 0.04));
+  border-color: rgba(248, 113, 113, 0.5);
+  color: #FCA5A5;
+}
+:root[data-theme="dark"] .disruption-banner.is-warn .disruption-banner-pill {
+  background: rgba(252, 211, 77, 0.18);
+  color: #FCD34D;
+}
+:root[data-theme="dark"] .disruption-banner.is-severe .disruption-banner-pill {
+  background: rgba(248, 113, 113, 0.18);
+  color: #FCA5A5;
+}
+:root[data-theme="dark"] .disruption-banner.is-warn .disruption-banner-more,
+:root[data-theme="dark"] .disruption-banner.is-warn .disruption-banner-hint,
+:root[data-theme="dark"] .disruption-banner.is-warn .disruption-banner-until { color: #FCD34D; }
+:root[data-theme="dark"] .disruption-banner.is-severe .disruption-banner-more,
+:root[data-theme="dark"] .disruption-banner.is-severe .disruption-banner-hint,
+:root[data-theme="dark"] .disruption-banner.is-severe .disruption-banner-until { color: #FCA5A5; }
+:root[data-theme="dark"] .disruption-banner-panel { border-top-color: rgba(148, 163, 184, 0.2); }
+:root[data-theme="dark"] .disruption-banner.is-warn .disruption-banner-panel { border-top-color: rgba(252, 211, 77, 0.32); }
+:root[data-theme="dark"] .disruption-banner.is-severe .disruption-banner-panel { border-top-color: rgba(248, 113, 113, 0.32); }
+:root[data-theme="dark"] .disruption-banner-toggle:hover,
+:root[data-theme="dark"] .disruption-banner-toggle:focus-visible { background: rgba(148, 163, 184, 0.14); }
+
+/* ----------------------------------------------------------------------
+ * Home empty-state hero
+ *
+ * Rendered only when savedRoutes, savedStops AND recent are all empty.
+ * Visually replaces the operators strip + saved/recent sections with a
+ * single friendly card that offers the three primary entry points:
+ * search, location, popular routes. All colours come from CSS variables
+ * so it adapts to the active theme (light / dark / system).
+ * ---------------------------------------------------------------------- */
+.home-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 18px;
+  padding: 28px 18px 24px;
+  margin: 0 0 16px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-sm);
+}
+.home-empty-title {
+  margin: 0;
+  font-size: 19px;
+  line-height: 1.35;
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: 0.01em;
+  max-width: 28ch;
+}
+
+/* Pure-CSS bus + arrows illustration. The "bus" is a rounded body with
+ * two windows, a door and two wheels. Three small chevron-style arrows
+ * drift off to the right, hinting "go discover routes". All colours come
+ * from theme tokens; the arrows use accent-soft so they're visible in
+ * both light and dark themes without being shouty. */
+.home-empty-illustration {
+  position: relative;
+  width: 132px;
+  height: 64px;
+  margin-top: 4px;
+}
+.home-empty-bus {
+  position: absolute;
+  inset: 8px auto auto 6px;
+  width: 86px;
+  height: 48px;
+}
+.home-empty-bus-body {
+  position: relative;
+  width: 100%;
+  height: 36px;
+  background: var(--accent);
+  border-radius: 10px 10px 6px 6px;
+  box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--accent-2) 55%, transparent);
+}
+.home-empty-bus-win {
+  position: absolute;
+  top: 6px;
+  width: 22px;
+  height: 14px;
+  background: var(--accent-soft);
+  border-radius: 3px;
+}
+.home-empty-bus-win:nth-of-type(1) { left: 8px; }
+.home-empty-bus-win:nth-of-type(2) { left: 34px; }
+.home-empty-bus-door {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  width: 12px;
+  height: 24px;
+  background: color-mix(in srgb, var(--accent-2) 50%, transparent);
+  border-radius: 2px 2px 4px 4px;
+}
+.home-empty-bus-light {
+  position: absolute;
+  top: 2px;
+  left: -4px;
+  width: 6px;
+  height: 6px;
+  background: var(--warn, #F59E0B);
+  border-radius: 50%;
+  box-shadow: 0 0 6px color-mix(in srgb, var(--warn, #F59E0B) 60%, transparent);
+}
+.home-empty-bus-wheel {
+  position: absolute;
+  bottom: 0;
+  width: 12px;
+  height: 12px;
+  background: var(--ink-2);
+  border-radius: 50%;
+  border: 2px solid var(--card);
+}
+.home-empty-bus-wheel:nth-of-type(2) { left: 0; }
+.home-empty-bus-wheel:nth-of-type(3) { right: 0; }
+.home-empty-arrow {
+  position: absolute;
+  width: 22px;
+  height: 10px;
+  border-top: 2px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  border-right: 2px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  transform: rotate(45deg);
+  opacity: 0.7;
+}
+.home-empty-arrow--a { top: 14px; right: 4px;  animation: homeEmptyDrift 2.4s ease-in-out infinite; }
+.home-empty-arrow--b { top: 30px; right: 14px; animation: homeEmptyDrift 2.4s ease-in-out infinite 0.3s; opacity: 0.5; }
+.home-empty-arrow--c { top: 46px; right: 0;   animation: homeEmptyDrift 2.4s ease-in-out infinite 0.6s; opacity: 0.35; }
+@keyframes homeEmptyDrift {
+  0%, 100% { transform: rotate(45deg) translate(0, 0); opacity: 0.55; }
+  50%      { transform: rotate(45deg) translate(3px, -3px); opacity: 0.9; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-empty-arrow--a,
+  .home-empty-arrow--b,
+  .home-empty-arrow--c { animation: none; }
+}
+
+/* CTA stack. Primary (search) is filled accent; secondary (locate / hot)
+ * are tinted fills so the user reads the search route as the headline action.
+ * All three stretch to the card width on narrow screens and line up side-
+ * by-side from ~480px upward. */
+.home-empty-ctas {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 320px;
+}
+.home-empty-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 16px;
+  border-radius: var(--r-pill);
+  font-size: 15px;
+  font-weight: 600;
+  font-family: inherit;
+  line-height: 1;
+  cursor: pointer;
+  text-decoration: none;
+  border: 1px solid transparent;
+  transition: background 0.15s ease, transform 0.12s ease, box-shadow 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.home-empty-cta-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+}
+.home-empty-cta--primary {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: var(--shadow-sm);
+}
+.home-empty-cta--primary:hover,
+.home-empty-cta--primary:focus-visible {
+  background: var(--accent-2);
+  outline: none;
+}
+.home-empty-cta--primary:active { transform: translateY(1px); }
+.home-empty-cta--secondary {
+  background: var(--accent-soft);
+  color: var(--accent-2);
+  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+}
+.home-empty-cta--secondary:hover,
+.home-empty-cta--secondary:focus-visible {
+  background: color-mix(in srgb, var(--accent) 18%, var(--accent-soft));
+  outline: none;
+}
+.home-empty-cta--secondary:active { transform: translateY(1px); }
+.home-empty-cta:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.home-empty-tip {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+.home-empty-tip-tag {
+  display: inline-block;
+  padding: 1px 6px;
+  margin-right: 4px;
+  border-radius: 6px;
+  background: var(--bg-soft);
+  color: var(--ink-2);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  font-size: 11px;
+}
+
+/* Dark-theme overrides — the parallel worker is wiring data-theme="dark"
+ * via :root[data-theme="dark"] selectors. The variables above already flip
+ * correctly between light/dark, but a couple of component-specific values
+ * (the bus body's inset shadow, the door tint, the secondary CTA hover)
+ * read more cleanly with explicit dark-mode overrides. Also applied when
+ * the system reports prefers-color-scheme: dark and the user has no
+ * explicit data-theme override, so first-time dark visitors see the
+ * same polish. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .home-empty {
+    background: color-mix(in srgb, var(--bg-soft) 80%, var(--card));
+    border-color: color-mix(in srgb, var(--line) 60%, transparent);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  }
+  :root:not([data-theme]) .home-empty-bus-body {
+    background: var(--accent-2);
+    box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--accent) 55%, transparent);
+  }
+  :root:not([data-theme]) .home-empty-cta--secondary {
+    background: color-mix(in srgb, var(--accent) 22%, transparent);
+    color: var(--accent-soft);
+    border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  }
+  :root:not([data-theme]) .home-empty-cta--secondary:hover,
+  :root:not([data-theme]) .home-empty-cta--secondary:focus-visible {
+    background: color-mix(in srgb, var(--accent) 32%, transparent);
+  }
+}
+:root[data-theme="dark"] .home-empty {
+  background: color-mix(in srgb, var(--bg-soft) 80%, var(--card));
+  border-color: color-mix(in srgb, var(--line) 60%, transparent);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+:root[data-theme="dark"] .home-empty-bus-body {
+  background: var(--accent-2);
+  box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--accent) 55%, transparent);
+}
+:root[data-theme="dark"] .home-empty-cta--secondary {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  color: var(--accent-soft);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+:root[data-theme="dark"] .home-empty-cta--secondary:hover,
+:root[data-theme="dark"] .home-empty-cta--secondary:focus-visible {
+  background: color-mix(in srgb, var(--accent) 32%, transparent);
+}
+
+/* Wider viewports — lay the three CTAs side-by-side instead of stacking.
+ * The hero card itself stays full-width with comfortable horizontal
+ * padding, mirroring the rest of the home view's content rhythm. */
+@media (min-width: 520px) {
+  .home-empty { padding: 36px 28px 28px; }
+  .home-empty-title { font-size: 21px; }
+  .home-empty-ctas {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 520px;
+  }
+  .home-empty-cta { flex: 1 1 140px; min-width: 140px; }
 }

@@ -35,6 +35,12 @@
       emptyRoutes: '未有收藏路線。',
       emptyStops: '未有收藏車站。',
       emptyRecent: '未有最近查過嘅路線。',
+      homeEmptyTitle: '探索附近路線，計劃你嘅行程',
+      homeEmptySearch: '搜尋路線',
+      homeEmptyLocate: '啟用定位',
+      homeEmptyLocateUpdate: '更新定位',
+      homeEmptyHot: '熱門路線',
+      homeEmptyTip: '提示：長按路線即可加入收藏',
       footerAttribution: '資料來源：運輸署資料一線通。到站時間來自九巴、龍運、城巴、專線小巴及港鐵（包括輕鐵）；車費來自公共交通路線及收費資料。預計時間約每分鐘更新，只供參考。',
       searchPlaceholder: '路線、地點、車站或港鐵站',
       filterAll: '全部',
@@ -215,6 +221,13 @@
       disruptionSeverityWarn: '班次可能受影響',
       disruptionSeveritySevere: '服務暫停或嚴重受阻',
       disruptionSeverityInfo: '服務調整',
+      boundSwap: '對調方向',
+      boundSwapHint: '撳一下去睇反方向嘅班次',
+      boundSwapAria: '對調去程同回程',
+      themeLight: '淺色',
+      themeDark: '深色',
+      themeSystem: '跟系統',
+      themeToggleAria: '切換主題',
     },
     'en': {
       brandSub: 'Hong Kong Bus',
@@ -231,6 +244,12 @@
       emptyRoutes: 'No saved routes yet.',
       emptyStops: 'No saved stops yet.',
       emptyRecent: 'No recent searches.',
+      homeEmptyTitle: 'Discover routes near you and plan your trip',
+      homeEmptySearch: 'Search routes',
+      homeEmptyLocate: 'Use my location',
+      homeEmptyLocateUpdate: 'Update location',
+      homeEmptyHot: 'Popular routes',
+      homeEmptyTip: 'Tip: long-press a route to save it',
       footerAttribution: 'Data source: Transport Department Data One. Arrivals from KMB, LWB, Citybus, Green Minibus and MTR (including Light Rail); fares from public transport data. ETAs refresh about every minute, for reference only.',
       searchPlaceholder: 'Route, place, stop or MTR station',
       filterAll: 'All',
@@ -411,6 +430,13 @@
       disruptionSeverityWarn: 'Service may be affected',
       disruptionSeveritySevere: 'Service suspended or severely affected',
       disruptionSeverityInfo: 'Service adjustment',
+      boundSwap: 'Swap direction',
+      boundSwapHint: 'Tap to view the opposite direction',
+      boundSwapAria: 'Swap inbound and outbound',
+      themeLight: 'Light',
+      themeDark: 'Dark',
+      themeSystem: 'System',
+      themeToggleAria: 'Toggle theme',
     },
     'zh-Hans': {
       brandSub: '香港巴士',
@@ -427,6 +453,12 @@
       emptyRoutes: '未有收藏路线。',
       emptyStops: '未有收藏车站。',
       emptyRecent: '未有最近查过嘅路线。',
+      homeEmptyTitle: '探索附近路线，计划你嘅行程',
+      homeEmptySearch: '搜寻路线',
+      homeEmptyLocate: '启用定位',
+      homeEmptyLocateUpdate: '更新定位',
+      homeEmptyHot: '热门路线',
+      homeEmptyTip: '提示：长按路线即可加入收藏',
       footerAttribution: '资料来源：运输署资料一线通。到站时间嚟自九巴、龙运、城巴、专线小巴及港铁（包括轻铁）；车费嚟自公共交通路线及收费资料。预计时间约每分钟更新，只供参考。',
       searchPlaceholder: '路线、地点、车站或港铁站',
       filterAll: '全部',
@@ -596,6 +628,13 @@
       disruptionSeverityWarn: '班次可能受影响',
       disruptionSeveritySevere: '服务暂停或严重受阻',
       disruptionSeverityInfo: '服务调整',
+      boundSwap: '对调方向',
+      boundSwapHint: '揫一下去睇反方向嘅班次',
+      boundSwapAria: '对调去程同回程',
+      themeLight: '浅色',
+      themeDark: '深色',
+      themeSystem: '跟系统',
+      themeToggleAria: '切换主题',
     },
   };
 
@@ -616,6 +655,7 @@
 
   const STORAGE_KEYS = {
     LANG: 'buseta.lang',
+    THEME: 'buseta.theme',
     ROUTES: 'buseta.saved.routes',
     STOPS: 'buseta.saved.stops',
     RECENT: 'buseta.recent',
@@ -629,6 +669,67 @@
     CONFIG: 'assets/config.json',
     META: 'buseta.meta',
   };
+
+  // ------------------------------------------------------------------
+  // Theme
+  // ------------------------------------------------------------------
+  // Allowed stored values: 'dark' | 'light' | 'system'. Anything else
+  // (including legacy null) is treated as 'system' so the user's OS
+  // preference drives first paint.
+  const VALID_THEMES = new Set(['dark', 'light', 'system']);
+  const systemPrefersLight = () => {
+    try {
+      return window.matchMedia('(prefers-color-scheme: light)').matches;
+    } catch { return false; }
+  };
+  // Resolve a stored preference to the effective on-the-wire theme
+  // ('dark' or 'light'). 'system' falls through to matchMedia.
+  function effectiveTheme(stored) {
+    const t = VALID_THEMES.has(stored) ? stored : 'system';
+    if (t === 'system') return systemPrefersLight() ? 'light' : 'dark';
+    return t;
+  }
+  // Apply a stored preference. With 'system', we leave the data-theme
+  // attribute unset so the CSS media query takes over; with an explicit
+  // choice, we set data-theme directly. The inline loader in index.html
+  // mirrors this so first paint never flashes the wrong palette.
+  function setTheme(stored) {
+    const t = VALID_THEMES.has(stored) ? stored : 'system';
+    if (t === 'system') {
+      document.documentElement.removeAttribute('data-theme');
+    } else {
+      document.documentElement.setAttribute('data-theme', t);
+    }
+    // Reflect the *stored* choice (not the resolved colour) on the
+    // toggle so the icon shows whether the user is on auto vs explicit.
+    const btn = document.getElementById('themeToggle');
+    if (btn) btn.setAttribute('data-mode', t);
+    // The <meta name="theme-color"> tags already branch by
+    // prefers-color-scheme for the browser chrome, so we don't need to
+    // touch them here.
+  }
+  // Cycle: dark → light → system → dark. Persists to localStorage.
+  function cycleTheme() {
+    const cur = (() => {
+      try {
+        const v = localStorage.getItem(STORAGE_KEYS.THEME);
+        return VALID_THEMES.has(v) ? v : 'system';
+      } catch { return 'system'; }
+    })();
+    const next = cur === 'dark' ? 'light' : cur === 'light' ? 'system' : 'dark';
+    try { localStorage.setItem(STORAGE_KEYS.THEME, next); } catch {}
+    setTheme(next);
+  }
+  function loadThemePreference() {
+    let stored;
+    try {
+      stored = localStorage.getItem(STORAGE_KEYS.THEME);
+    } catch { stored = null; }
+    // Normalise legacy / missing values to 'system' so the CSS media
+    // query handles the visual choice on first load.
+    const t = VALID_THEMES.has(stored) ? stored : 'system';
+    setTheme(t);
+  }
 
   // Bump this whenever the on-disk shape of the index changes, so old
   // cached snapshots get discarded and rebuilt against the live APIs.
@@ -1891,6 +1992,144 @@
   // ------------------------------------------------------------------
   // Home
   // ------------------------------------------------------------------
+
+  // First-run / empty-state hero. Shown only when the user has no saved
+  // routes, no saved stops and no recent activity. The 3 CTAs cover the
+  // three "ways in" the app exposes on first visit: textual search,
+  // location-driven nearby stops, and browsing popular routes. Once any
+  // of savedRoutes / savedStops / recent gains an entry this helper is
+  // not called and the standard populated renderHome path runs.
+  //
+  // CSS lives in `.home-empty*` selectors at the bottom of style.css and
+  // uses only theme variables — safe for `data-theme="light"` switching.
+  function buildHomeEmptyState() {
+    const wrap = el('section', {
+      class: 'home-empty',
+      role: 'region',
+      'aria-label': t_str('homeEmptyTitle'),
+    });
+
+    // Pure-CSS illustration: a stylised bus + two arrows hinting "go
+    // discover routes". No raster, no SVG markup — just nested divs
+    // styled with `.home-empty-illustration*` rules.
+    const illo = el('div', { class: 'home-empty-illustration', 'aria-hidden': 'true' });
+    const bus = el('div', { class: 'home-empty-bus' });
+    const busBody = el('div', { class: 'home-empty-bus-body' });
+    const busWin1 = el('div', { class: 'home-empty-bus-win' });
+    const busWin2 = el('div', { class: 'home-empty-bus-win' });
+    const busDoor = el('div', { class: 'home-empty-bus-door' });
+    const busWheelL = el('div', { class: 'home-empty-bus-wheel' });
+    const busWheelR = el('div', { class: 'home-empty-bus-wheel' });
+    const busLight = el('div', { class: 'home-empty-bus-light' });
+    bus.appendChild(busBody);
+    busBody.appendChild(busWin1);
+    busBody.appendChild(busWin2);
+    busBody.appendChild(busDoor);
+    busBody.appendChild(busLight);
+    bus.appendChild(busWheelL);
+    bus.appendChild(busWheelR);
+    illo.appendChild(bus);
+    illo.appendChild(el('div', { class: 'home-empty-arrow home-empty-arrow--a' }));
+    illo.appendChild(el('div', { class: 'home-empty-arrow home-empty-arrow--b' }));
+    illo.appendChild(el('div', { class: 'home-empty-arrow home-empty-arrow--c' }));
+    wrap.appendChild(illo);
+
+    // Hero title — i18n-driven.
+    wrap.appendChild(el('h2', { class: 'home-empty-title', 'data-i18n': 'homeEmptyTitle' }));
+
+    // Three CTAs in a clear vertical stack. The "locate" CTA's label and
+    // handler change based on whether the user has already granted
+    // location: idle → requestLocation(); granted → retryLocation() so
+    // they can refresh the fix. All three navigate with the standard
+    // hash scheme — no full-page reload.
+    const ctas = el('div', { class: 'home-empty-ctas' });
+
+    const hasLoc = !!state.userLoc;
+    const locateLabel = hasLoc ? 'homeEmptyLocateUpdate' : 'homeEmptyLocate';
+    const locateHandler = hasLoc
+      ? () => { retryLocation(); }
+      : () => { requestLocation(); };
+
+    const ctaSearch = el('a', {
+      class: 'home-empty-cta home-empty-cta--primary',
+      href: '#/search',
+    });
+    ctaSearch.appendChild(el('span', { class: 'home-empty-cta-icon', 'aria-hidden': 'true' }));
+    const ctaSearchIcon = ctaSearch.firstChild;
+    const searchSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    searchSvg.setAttribute('viewBox', '0 0 24 24');
+    searchSvg.setAttribute('width', '18');
+    searchSvg.setAttribute('height', '18');
+    searchSvg.setAttribute('aria-hidden', 'true');
+    const sCirc = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    sCirc.setAttribute('cx', '11'); sCirc.setAttribute('cy', '11'); sCirc.setAttribute('r', '7');
+    sCirc.setAttribute('fill', 'none'); sCirc.setAttribute('stroke', 'currentColor');
+    sCirc.setAttribute('stroke-width', '1.8');
+    const sLine = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    sLine.setAttribute('d', 'M20 20l-3.5-3.5');
+    sLine.setAttribute('fill', 'none'); sLine.setAttribute('stroke', 'currentColor');
+    sLine.setAttribute('stroke-width', '1.8'); sLine.setAttribute('stroke-linecap', 'round');
+    searchSvg.appendChild(sCirc);
+    searchSvg.appendChild(sLine);
+    ctaSearchIcon.appendChild(searchSvg);
+    ctaSearch.appendChild(el('span', { 'data-i18n': 'homeEmptySearch' }));
+    ctas.appendChild(ctaSearch);
+
+    const ctaLocate = el('button', {
+      class: 'home-empty-cta home-empty-cta--secondary',
+      type: 'button',
+      onclick: locateHandler,
+    });
+    const ctaLocateIcon = el('span', { class: 'home-empty-cta-icon', 'aria-hidden': 'true' });
+    const pinSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    pinSvg.setAttribute('viewBox', '0 0 24 24');
+    pinSvg.setAttribute('width', '18');
+    pinSvg.setAttribute('height', '18');
+    pinSvg.setAttribute('aria-hidden', 'true');
+    const pinPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    pinPath.setAttribute('fill', 'currentColor');
+    pinPath.setAttribute('d',
+      'M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z');
+    pinSvg.appendChild(pinPath);
+    ctaLocateIcon.appendChild(pinSvg);
+    ctaLocate.appendChild(ctaLocateIcon);
+    ctaLocate.appendChild(el('span', { 'data-i18n': locateLabel }));
+    ctas.appendChild(ctaLocate);
+
+    const ctaHot = el('a', {
+      class: 'home-empty-cta home-empty-cta--secondary',
+      href: '#/search',
+    });
+    const ctaHotIcon = el('span', { class: 'home-empty-cta-icon', 'aria-hidden': 'true' });
+    const hotSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    hotSvg.setAttribute('viewBox', '0 0 24 24');
+    hotSvg.setAttribute('width', '18');
+    hotSvg.setAttribute('height', '18');
+    hotSvg.setAttribute('aria-hidden', 'true');
+    const hotPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    // Flame / star — generic "popular" glyph
+    hotPath.setAttribute('fill', 'currentColor');
+    hotPath.setAttribute('d',
+      'M12 2c.5 3 2.5 4 2.5 7a2.5 2.5 0 0 1-5 0c0-1 .5-1.5.5-2.5C8 7 6 9 6 12a6 6 0 1 0 12 0c0-4-3-6-6-10z');
+    hotSvg.appendChild(hotPath);
+    ctaHotIcon.appendChild(hotSvg);
+    ctaHot.appendChild(ctaHotIcon);
+    ctaHot.appendChild(el('span', { 'data-i18n': 'homeEmptyHot' }));
+    ctas.appendChild(ctaHot);
+
+    wrap.appendChild(ctas);
+
+    // Footer tip — the "long-press to save" hint mirrors how saved routes
+    // are added elsewhere in the app (routeRow long-press handler).
+    const tip = el('p', { class: 'home-empty-tip' });
+    tip.appendChild(el('span', { class: 'home-empty-tip-tag' }, 'Tip'));
+    tip.appendChild(document.createTextNode(' '));
+    tip.appendChild(el('span', { 'data-i18n': 'homeEmptyTip' }));
+    wrap.appendChild(tip);
+
+    return wrap;
+  }
+
   function renderHome() {
     showView('view-home');
     const view = renderInto('home', 'home');
@@ -1916,6 +2155,43 @@
       if (existing) existing.remove();
       cur.insertBefore(banner, cur.firstChild);
     }).catch(() => { /* fetchDisruptions already swallows — defensive */ });
+
+    // First-run / empty-state hero: when the user has nothing saved or
+    // recent, replace the operators strip + saved/recent sections with a
+    // single friendly hero that offers the three primary entry points.
+    // The empty state has its own inline location CTA so we skip the
+    // standard geo banner / nearest-stop pill in this branch — once the
+    // user has any saved or recent activity the populated renderHome
+    // path runs and these zones reappear.
+    if (state.savedRoutes.length === 0
+        && state.savedStops.length === 0
+        && state.recent.length === 0) {
+      // Strip the cloned template's saved/recent scaffolding so the
+      // empty-state hero doesn't sit next to three "未有收藏…" placeholders.
+      ['.operators-strip',
+       '[data-bind="savedRoutes"]',
+       '[data-bind="savedStops"]',
+       '[data-bind="recent"]']
+        .forEach((sel) => {
+          $$(sel, container).forEach((n) => {
+            const h = n.previousElementSibling;
+            // Remove a sibling section-title <h2> immediately above, if
+            // it's a heading that belongs to this empty block (saved
+            // routes / stops / recent). Operators strip keeps its own
+            // <h2>, but the whole strip is removed wholesale below.
+            if (h && /^H\d$/.test(h.tagName)
+                && (h.dataset.i18n === 'savedRoutes'
+                    || h.dataset.i18n === 'savedStops'
+                    || h.dataset.i18n === 'recentSearches')) {
+              h.remove();
+            }
+            n.remove();
+          });
+        });
+      container.insertBefore(buildHomeEmptyState(), container.firstChild);
+      applyI18n(view);
+      return;
+    }
 
     // Pre-fill / banner zone: at the top of the home view we either show
     // the in-page location permission banner (no permission yet) OR the
@@ -3179,11 +3455,14 @@
     // Build direction pills: same route, other bound(s) — and service-type
     // sub-tabs (主線 / 特別班 2 / 3 / 4) within the current bound, justarrived-
     // style. When only 1 bound + 1 service exists, neither is rendered.
-    const { boundPills, servicePills } = buildDirectionPills(r.co, r.route, r.dir, r.service);
+    // swapTarget is also extracted so the bound-swap button can offer an
+    // in-place O ↔ I flip without going back to search.
+    const dirPills = buildDirectionPills(r.co, r.route, r.dir, r.service);
+    const { boundPills, servicePills, swapTarget } = dirPills;
     header.appendChild(buildRouteHeader({
       co: r.co, route: r.route, dir: r.dir, service: r.service,
       dest, orig, origEn, dirLabel, fare: meta && meta.fares && meta.fares[0],
-      boundPills, servicePills, currentDirKey: key,
+      boundPills, servicePills, swapTarget, currentDirKey: key,
       // fareMin/fareMax are filled in once the fare fetch resolves —
       // `null`/`null` (i.e. absent) preserves the legacy "head fare"
       // behaviour when the upstream returns no fare data.
@@ -3463,7 +3742,7 @@
             co: r.co, route: r.route, dir: r.dir, service: r.service,
             dest, orig, origEn, dirLabel,
             fare: (fareRangeInfo.min === fareRangeInfo.max) ? fareRangeInfo.max : null,
-            boundPills, servicePills, currentDirKey: key,
+            boundPills, servicePills, swapTarget, currentDirKey: key,
             fareMin: fareRangeInfo.min, fareMax: fareRangeInfo.max,
           }).childNodes);
         } catch (e) { /* leave the initial header */ }
@@ -3687,11 +3966,12 @@
     const stopsForDir = meta._stops || [];
     const dirLabel = meta.dir === '1' ? t_str('dirUp') : t_str('dirDown');
 
+    const lrtDirPills = buildDirectionPills('LRT', r.route, meta.dir || '1', '');
     header.appendChild(buildRouteHeader({
       co: 'LRT', route: r.route, dir: meta.dir || '1', service: '',
       dest: pickFirst(meta.destTc, meta.destEn), orig: pickFirst(meta.origTc, meta.origEn),
       origEn: meta.destEn || '', dirLabel, fare: null,
-      ...buildDirectionPills('LRT', r.route, meta.dir || '1', ''),
+      ...lrtDirPills,
       currentDirKey: `LRT|${r.route}|${meta.dir || '1'}|`,
       fareMin: null, fareMax: null,
     }));
@@ -3732,7 +4012,7 @@
               dest: pickFirst(meta.destTc, meta.destEn), orig: pickFirst(meta.origTc, meta.origEn),
               origEn: meta.destEn || '', dirLabel,
               fare: (lrtFareRange.min === lrtFareRange.max) ? lrtFareRange.max : null,
-              ...buildDirectionPills('LRT', r.route, meta.dir || '1', ''),
+              ...lrtDirPills,
               currentDirKey: `LRT|${r.route}|${meta.dir || '1'}|`,
               fareMin: lrtFareRange.min, fareMax: lrtFareRange.max,
             }).childNodes);
@@ -3827,12 +4107,13 @@
 
     const meta = state.index.routes.get(makeRouteKey('GMB', r.route, r.dir, r.service));
     const displayRoute = (meta && meta._region && meta._code) ? `${meta._code} (${meta._region})` : r.route;
+    const gmbDirPills = buildDirectionPills('GMB', r.route, r.dir || '1', r.service);
     if (!meta || !meta._routeId) {
       body.replaceChildren(el('p', { class: 'muted' }, t_str('loadingRoutes')));
       header.appendChild(buildRouteHeader({
         co: 'GMB', route: displayRoute, dir: r.dir || '1', service: r.service,
         dest: r.route, orig: '', origEn: '', dirLabel: '',
-        ...buildDirectionPills('GMB', r.route, r.dir || '1', r.service),
+        ...gmbDirPills,
         currentDirKey: makeRouteKey('GMB', r.route, r.dir || '1', r.service),
       }));
       if (r._region && r._code) {
@@ -3848,7 +4129,7 @@
       co: 'GMB', route: displayRoute, dir: r.dir, service: r.service,
       dest: pickFirst(meta.destTc, meta.destEn), orig: pickFirst(meta.origTc, meta.origEn),
       origEn: meta.origEn || '', dirLabel: '', fare: null,
-      ...buildDirectionPills('GMB', r.route, r.dir, r.service),
+      ...gmbDirPills,
       currentDirKey: makeRouteKey('GMB', r.route, r.dir, r.service),
       fareMin: null, fareMax: null,
     }));
@@ -3896,7 +4177,7 @@
               dest: pickFirst(meta.destTc, meta.destEn), orig: pickFirst(meta.origTc, meta.origEn),
               origEn: meta.origEn || '', dirLabel: '',
               fare: (gmbFareRange.min === gmbFareRange.max) ? gmbFareRange.max : null,
-              ...buildDirectionPills('GMB', r.route, r.dir, r.service),
+              ...gmbDirPills,
               currentDirKey: makeRouteKey('GMB', r.route, r.dir, r.service),
               fareMin: gmbFareRange.min, fareMax: gmbFareRange.max,
             }).childNodes);
@@ -4022,7 +4303,7 @@
   //   3) Nothing — the header omits the fare line entirely.
   function buildRouteHeader(opts) {
     const { co, route, dir, service, dest, orig, origEn, dirLabel, fare,
-            boundPills = [], servicePills = [], currentKey, currentDirKey, isMapRoute = false,
+            boundPills = [], servicePills = [], swapTarget = null, currentKey, currentDirKey, isMapRoute = false,
             fareMin, fareMax } = opts;
     const head = el('div', { class: 'route-header' });
 
@@ -4124,6 +4405,37 @@
       head.appendChild(pills);
     }
 
+    // ---- in-place bound swap button ----
+    // Rendered when the opposite bound exists for this route. Unlike the
+    // bound pills above (which navigate via hash), this button re-renders
+    // the current view with the opposite dir in-place — same route, same
+    // service (falling back to service=1 when the opposite bound doesn't
+    // carry the user's current service_type), no scroll jump, no flash of
+    // search. Hidden for one-way routes (swapTarget === null) and for
+    // non-bound pseudo-views (MTR LINE / STATION).
+    if (swapTarget && swapTarget.co && swapTarget.dir) {
+      const swapWrap = el('div', { class: 'bound-swap-row' });
+      const swapBtn = el('button', {
+        type: 'button',
+        class: 'bound-swap-btn',
+        'aria-label': t_str('boundSwapAria'),
+        title: t_str('boundSwapHint'),
+        onclick: (ev) => {
+          ev.preventDefault();
+          ev.stopPropagation();
+          swapRouteBound();
+        },
+      });
+      // ↔ glyph + label of the OPPOSITE direction (so the user knows what
+      // they're flipping to — "↔ Inbound", "↔ 將軍澳", etc.). Falls back to
+      // a direction word when the index doesn't carry a destination label.
+      swapBtn.appendChild(boundSwapArrowSVG());
+      const swapLabel = el('span', { class: 'bound-swap-label' }, swapTarget.label || '');
+      swapBtn.appendChild(swapLabel);
+      swapWrap.appendChild(swapBtn);
+      head.appendChild(swapWrap);
+    }
+
     // ---- service-type tabs (主線 / 特別班 2/3/4) within the current bound ----
     // justarrived-style: pills in a single row, active filled, others outlined.
     // Only render when the current bound has 2+ service-type variants.
@@ -4213,7 +4525,7 @@
   }
 
   // Build the list of direction pills for a route header. Scans the index
-  // Returns two parallel lists for the route header:
+  // Returns three pieces for the route header:
   //   - boundPills:    [{co, route, dir, service, label, key}]
   //                    one entry per bound (uses service=1 as the canonical
   //                    destination for that bound, so user can flip bound)
@@ -4221,10 +4533,17 @@
   //                    all service-type variants of the CURRENT bound —
   //                    labeled "主線" / "Main" for service=1 and
   //                    "特別班 N" / "Special N" for service=2..9.
+  //   - swapTarget:    a single pill-shaped entry pointing at the route with
+  //                    the OPPOSITE bound, if such a route exists in the
+  //                    index. `null` for one-way routes (e.g. MTR line /
+  //                    station) or when the user is already on the only
+  //                    bound. Used by the in-place bound-swap button so the
+  //                    user can flip O ↔ I without going back to search.
   // We scan the operator's routes map (KMB / LWB / CTB / NWFB / GMB / LRT) for
   // every (co, route) variant. The caller decides which set to render:
   //   boundPills    → only if >1 bound exists
   //   servicePills  → only if >1 service_type exists for the current bound
+  //   swapTarget    → only if a valid opposite bound exists
   // This mirrors justarrived's 主線 / 特別班 2 / 特別班 3 / 特別班 4 row.
   function buildDirectionPills(co, route, currentDir, currentService) {
     const all = [];
@@ -4234,7 +4553,10 @@
       const sKey = String(entry.service);
       const key = `${entry.co}|${entry.route}|${dKey}|${sKey}`;
       const label = pickFirst(entry.destTc, entry.destEn) || entry.origTc || '';
-      all.push({ co: entry.co, route: entry.route, dir: dKey, service: sKey, label, key });
+      all.push({
+        co: entry.co, route: entry.route, dir: dKey, service: sKey, label, key,
+        destTc: entry.destTc || '', destEn: entry.destEn || '',
+      });
     };
 
     if (state.index) {
@@ -4280,7 +4602,44 @@
       e.label = n === 1 ? t_str('serviceMain') : t_str('serviceSpecialN', n);
     });
 
-    return { boundPills, servicePills: serviceList };
+    // swapTarget: a pill-shaped entry pointing at the OPPOSITE bound. The
+    // dispatch here covers the operators that use a binary bound code:
+    //   O ↔ I  → KMB / LWB / CTB / NWFB / GMB
+    //   1 ↔ 2  → LRT (上行 / 下行)
+    //   UP ↔ DOWN → kept for completeness, though no current caller uses it
+    // For non-binary dir codes (MTR 'LINE', 'STATION', etc.) the swap is
+    // meaningless and we return null so the button stays hidden.
+    const OPPOSITE = { O: 'I', I: 'O', '1': '2', '2': '1', UP: 'DOWN', DOWN: 'UP' };
+    const cur = String(currentDir);
+    const opp = OPPOSITE[cur];
+    let swapTarget = null;
+    if (opp) {
+      // Prefer the same service_type as the current view so the swap keeps
+      // the user on, e.g., 特別班 3 in both directions. Fall back to the
+      // canonical service=1 (主線) if the opposite bound doesn't have that
+      // service_type — matches the bound-pill click behaviour.
+      const curSvc = String(currentService);
+      const candidate = all.find((e) => e.dir === opp && e.service === curSvc)
+        || all.find((e) => e.dir === opp && e.service === '1')
+        || all.find((e) => e.dir === opp);
+      if (candidate) {
+        swapTarget = {
+          co: candidate.co,
+          route: candidate.route,
+          dir: candidate.dir,
+          service: candidate.service,
+          // Use the destination label so the button reads "↔ 將軍澳"
+          // rather than the bare direction word. Falls back to the bound
+          // direction's i18n label (Inbound / Outbound) when we don't have
+          // a destination — the user still sees what they're swapping to.
+          label: pickFirst(candidate.destTc, candidate.destEn)
+            || (candidate.dir === 'I' ? t_str('inbound') : t_str('outbound')),
+          key: candidate.key,
+        };
+      }
+    }
+
+    return { boundPills, servicePills: serviceList, swapTarget };
   }
 
   function toggleSaveRoute(r) {
@@ -5399,10 +5758,30 @@
   async function boot() {
     loadState();
     applyLang();
+    loadThemePreference();
+    // Re-apply theme if the OS-level preference flips while the app is
+    // open and the user is on 'system'. Cheap: only flips when the user
+    // hasn't made an explicit choice.
+    try {
+      const mql = window.matchMedia('(prefers-color-scheme: light)');
+      if (mql && typeof mql.addEventListener === 'function') {
+        mql.addEventListener('change', () => {
+          let stored;
+          try { stored = localStorage.getItem(STORAGE_KEYS.THEME); }
+          catch { stored = null; }
+          if (!(VALID_THEMES.has(stored) && stored !== 'system')) {
+            // Either genuinely unpressed, or on 'system' — re-resolve.
+            setTheme('system');
+          }
+        });
+      }
+    } catch { /* matchMedia unavailable */ }
     updateClock();
     setInterval(updateClock, 30_000);
 
     document.getElementById('langToggle').addEventListener('click', toggleLang);
+    const themeBtn = document.getElementById('themeToggle');
+    if (themeBtn) themeBtn.addEventListener('click', cycleTheme);
     window.addEventListener('hashchange', onHashChange);
 
     // Best-effort: load any site-wide config (e.g. the Google Maps API key)
