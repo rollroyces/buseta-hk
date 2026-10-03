@@ -128,6 +128,10 @@
       updatedJust: '剛剛更新',
       updatedMeta: '到站時間每分鐘更新',
       refresh: '更新',
+      shareLink: '分享',
+      shareLinkAria: '分享連結',
+      linkCopied: '已複製連結',
+      qrFailed: '載入 QR Code 失敗',
       ctbNoEtaHint: '請打開個別路線嘅詳情睇實時到站。',
       tabLive: '即時',
       tabLiveEn: 'Live',
@@ -312,6 +316,10 @@
       updatedJust: 'Just updated',
       updatedMeta: 'Live arrivals refresh every minute',
       refresh: 'Refresh',
+      shareLink: 'Share',
+      shareLinkAria: 'Share link',
+      linkCopied: 'Link copied',
+      qrFailed: 'Could not load QR code',
       ctbNoEtaHint: 'Open a route to see live arrivals for this stop.',
       tabLive: 'Live',
       tabLiveEn: '即時',
@@ -471,6 +479,10 @@
       updatedJust: '啁啁更新',
       updatedMeta: '到站时间每分钟更新',
       refresh: '更新',
+      shareLink: '分享',
+      shareLinkAria: '分享链接',
+      linkCopied: '已复制链接',
+      qrFailed: '载入 QR Code 失败',
       ctbNoEtaHint: '请打开个别路线嘅详情睇实时到站。',
       tabLive: '实时',
       tabLiveEn: 'Live',
@@ -3915,7 +3927,19 @@
       'aria-label': t_str('refresh'),
       onclick: () => { if (typeof state._refreshRoute === 'function') state._refreshRoute(); else location.reload(); },
     }, refreshIconSVG());
+    const shareBtn = el('button', {
+      type: 'button',
+      class: 'share-btn route-share',
+      'aria-label': t_str('shareLinkAria'),
+      title: t_str('shareLink'),
+      onclick: (ev) => {
+        ev.stopPropagation();
+        const url = location.origin + location.pathname + `#/route/${encodeURIComponent(co)}/${encodeURIComponent(route)}/${encodeURIComponent(dir)}/${encodeURIComponent(service)}`;
+        copyShareLink(url, t_str('shareLinkAria'));
+      },
+    }, shareIconSVG());
     updated.appendChild(refreshBtn);
+    updated.appendChild(shareBtn);
     head.appendChild(updated);
 
     return head;
@@ -4715,7 +4739,19 @@
         }
       },
     }, refreshIconSVG());
+    const shareBtn = el('button', {
+      type: 'button',
+      class: 'share-btn stop-share',
+      'aria-label': t_str('shareLinkAria'),
+      title: t_str('shareLink'),
+      onclick: (ev) => {
+        ev.stopPropagation();
+        const url = location.origin + location.pathname + `#/stop/${encodeURIComponent(stopId)}`;
+        copyShareLink(url, t_str('shareLinkAria'));
+      },
+    }, shareIconSVG());
     meta.appendChild(refreshBtn);
+    meta.appendChild(shareBtn);
     head.appendChild(meta);
 
     return head;
@@ -4890,6 +4926,212 @@
     requestAnimationFrame(() => node.classList.add('is-on'));
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => node.classList.remove('is-on'), 1800);
+  }
+
+  // ------------------------------------------------------------------
+  // Share (copy clean URL + inline QR)
+  //
+  // `url` is a fully-qualified URL (location.origin + the clean hash path)
+  // that we want the recipient to be able to load offline-friendly. The
+  // clean URL has no query string — just the same hash path the current
+  // view was reached from (e.g. `#/stop/ST905` or `#/route/KMB/272A/O/1`).
+  // ------------------------------------------------------------------
+  let qrModalNode = null;       // cached DOM node, recreated on demand
+  let qrModalTimer = null;       // auto-close timer for the QR popover
+  let qrLibPromise = null;       // one-shot lazy-load of assets/qrcode.js
+
+  // Lazy-load the vendored QR generator (assets/qrcode.js) the first time
+  // we need to draw a QR. After the first success we cache the promise so
+  // subsequent share clicks reuse the same module.
+  function ensureQrLib() {
+    if (typeof qrToSvg === 'function') return Promise.resolve();
+    if (qrLibPromise) return qrLibPromise;
+    qrLibPromise = new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      // Cache-buster matches the project's convention. We only bump this
+      // locally for now; the SW owns its own version.
+      s.src = 'assets/qrcode.js?v=1';
+      s.async = true;
+      s.onload = () => resolve();
+      s.onerror = () => {
+        // Reset so the next tap can retry.
+        qrLibPromise = null;
+        reject(new Error('qrcode.js failed to load'));
+      };
+      document.head.appendChild(s);
+    });
+    return qrLibPromise;
+  }
+
+  // Build the share URL we want the recipient to see — same origin + the
+  // current hash path. Strip any query string to keep the link clean.
+  function buildCleanUrl() {
+    const { origin } = location;
+    let hash = location.hash || '';
+    // Strip anything after a '?' in the hash (defensive — no production
+    // route builds one, but a tampered URL shouldn't leak through).
+    const qIdx = hash.indexOf('?');
+    if (qIdx >= 0) hash = hash.slice(0, qIdx);
+    if (!hash.startsWith('#')) hash = '#' + (hash ? '/' + hash.replace(/^#?\/?/, '') : '/');
+    return origin + hash;
+  }
+
+  // Copy `url` to the clipboard, falling back to a hidden textarea when
+  // navigator.clipboard is unavailable (older browsers, insecure context).
+  // Resolves true on success, false on failure.
+  async function copyToClipboard(url) {
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(url);
+        return true;
+      }
+    } catch (_) { /* fall through to legacy path */ }
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = url;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      ta.style.pointerEvents = 'none';
+      document.body.appendChild(ta);
+      ta.select();
+      const res = document.execCommand('copy');
+      document.body.removeChild(ta);
+      return res;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  // Public helper used by the share buttons. Copies the clean URL, shows
+  // the existing toast, and pops the inline QR modal. `label` is an
+  // aria-label hint (the language-specific button name).
+  async function copyShareLink(url, label) {
+    const finalUrl = url || buildCleanUrl();
+    // Run copy and library load in parallel — the modal only opens after
+    // both settle, but the toast fires as soon as copy resolves so the
+    // user gets instant feedback even if the QR library is slow.
+    const copyPromise = copyToClipboard(finalUrl);
+    copyShareLink._lastUrl = finalUrl;
+    try {
+      const ok = await copyPromise;
+      toast(ok ? t_str('linkCopied') : t_str('shareLink'));
+      if (!ok) return;
+    } catch (_) {
+      toast(t_str('shareLink'));
+      return;
+    }
+    renderQrModal(finalUrl, label);
+  }
+
+  // Show a small inline modal anchored to the share button containing the
+  // QR code for `url`. Auto-closes after ~6s, on outside tap, or when the
+  // user taps the close button. Recreates the node each time so the QR
+  // is always fresh for the current URL.
+  function renderQrModal(url, label) {
+    closeQrModal();
+    const wrap = el('div', {
+      class: 'qr-modal',
+      role: 'dialog',
+      'aria-label': label || t_str('shareLinkAria'),
+      'aria-live': 'polite',
+    });
+    const card = el('div', { class: 'qr-modal-card' });
+    const close = el('button', {
+      type: 'button',
+      class: 'qr-modal-close',
+      'aria-label': t_str('back'),
+    }, '×');
+    close.addEventListener('click', closeQrModal);
+    const title = el('p', { class: 'qr-modal-title' }, t_str('shareLink'));
+    const imgWrap = el('div', { class: 'qr-modal-img' });
+    // Reserve the size so the modal doesn't jump while the library loads.
+    imgWrap.style.width = '120px';
+    imgWrap.style.height = '120px';
+    const urlP = el('p', { class: 'qr-modal-url' }, url);
+    card.appendChild(close);
+    card.appendChild(title);
+    card.appendChild(imgWrap);
+    card.appendChild(urlP);
+    wrap.appendChild(card);
+    document.body.appendChild(wrap);
+    qrModalNode = wrap;
+    // Outside-tap dismiss
+    wrap.addEventListener('click', (ev) => {
+      if (ev.target === wrap) closeQrModal();
+    });
+    // Escape key dismiss
+    const onKey = (ev) => {
+      if (ev.key === 'Escape') closeQrModal();
+    };
+    wrap.addEventListener('keydown', onKey);
+    wrap._onKey = onKey;
+    // Animate in
+    requestAnimationFrame(() => wrap.classList.add('is-on'));
+    // Auto-close after 8s
+    clearTimeout(qrModalTimer);
+    qrModalTimer = setTimeout(closeQrModal, 8000);
+    // Lazy-load the QR lib and draw
+    ensureQrLib().then(() => {
+      if (!qrModalNode || qrModalNode !== wrap) return;
+      try {
+        const svg = qrToSvg(url, 120);
+        imgWrap.innerHTML = svg;
+      } catch (err) {
+        console.warn('qr render failed', err);
+        imgWrap.textContent = t_str('qrFailed');
+      }
+    }).catch((err) => {
+      console.warn('qr lib load failed', err);
+      if (imgWrap) imgWrap.textContent = t_str('qrFailed');
+    });
+  }
+
+  function closeQrModal() {
+    clearTimeout(qrModalTimer);
+    qrModalTimer = null;
+    if (qrModalNode) {
+      const node = qrModalNode;
+      node.classList.remove('is-on');
+      // Drop from the DOM after the fade-out
+      setTimeout(() => { if (node.parentNode) node.parentNode.removeChild(node); }, 180);
+      qrModalNode = null;
+    }
+  }
+
+  // Small inline SVG: link / chain glyph used by the share buttons.
+  function shareIconSVG() {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('width', '18');
+    svg.setAttribute('height', '18');
+    svg.setAttribute('aria-hidden', 'true');
+    // Two interlocking chain links — Material-style.
+    const p1 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    p1.setAttribute('d', 'M10.59 13.41a1 1 0 0 1 0-1.41l3-3a1 1 0 1 1 1.41 1.41l-3 3a1 1 0 0 1-1.41 0z');
+    p1.setAttribute('fill', 'none');
+    p1.setAttribute('stroke', 'currentColor');
+    p1.setAttribute('stroke-width', '1.8');
+    p1.setAttribute('stroke-linecap', 'round');
+    p1.setAttribute('stroke-linejoin', 'round');
+    const p2 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    p2.setAttribute('d', 'M9 7a3 3 0 0 1 4.24 0l1.76 1.76a3 3 0 0 1 0 4.24l-1 1');
+    p2.setAttribute('fill', 'none');
+    p2.setAttribute('stroke', 'currentColor');
+    p2.setAttribute('stroke-width', '1.8');
+    p2.setAttribute('stroke-linecap', 'round');
+    p2.setAttribute('stroke-linejoin', 'round');
+    const p3 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    p3.setAttribute('d', 'M15 17a3 3 0 0 1-4.24 0l-1.76-1.76a3 3 0 0 1 0-4.24l1-1');
+    p3.setAttribute('fill', 'none');
+    p3.setAttribute('stroke', 'currentColor');
+    p3.setAttribute('stroke-width', '1.8');
+    p3.setAttribute('stroke-linecap', 'round');
+    p3.setAttribute('stroke-linejoin', 'round');
+    svg.appendChild(p1);
+    svg.appendChild(p2);
+    svg.appendChild(p3);
+    return svg;
   }
 
   // ------------------------------------------------------------------

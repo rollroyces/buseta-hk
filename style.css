@@ -1978,3 +1978,120 @@ h1, h2, h3 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
     background: rgba(248, 113, 113, 0.10);
   }
 }
+/* ----------------------------------------------------------------------
+ * Share button + inline QR modal
+ *
+ * Shared by both the stop view and the route view. The icon button is
+ * visually identical to the existing `.route-refresh` / `.stop-refresh`
+ * icons (same size, same pill background) so the action bar reads as one
+ * coherent group. The QR modal is a tiny overlay (~160px wide, 120px QR)
+ * with a fade-in animation and outside-tap dismiss.
+ * ---------------------------------------------------------------------- */
+.share-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--danger);
+  cursor: pointer;
+  margin-left: 8px;
+  /* Visual parity with the existing refresh button. */
+}
+.share-btn:active {
+  background: rgba(220, 38, 38, 0.10);
+}
+.route-share,
+.stop-share {
+  /* The stop-meta / route-updated flex containers arrange siblings
+   * left-to-right with default gap; the margin-left above keeps a
+   * consistent 8px gap between the refresh and share icons. */
+}
+
+/* ---- QR Modal ---- */
+.qr-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+  opacity: 0;
+  transition: opacity 0.18s ease;
+  padding: 16px;
+}
+.qr-modal.is-on {
+  opacity: 1;
+}
+.qr-modal-card {
+  position: relative;
+  background: var(--card);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 18px 16px 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  min-width: 168px;
+  max-width: 88vw;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+.qr-modal-close {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+.qr-modal-close:hover,
+.qr-modal-close:active {
+  color: var(--text);
+  background: var(--bg-soft);
+}
+.qr-modal-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+}
+.qr-modal-img {
+  width: 120px;
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  border-radius: 6px;
+  /* The library inserts an inline <svg>; pad so the dark modules are
+   * centred against the white background. */
+  padding: 4px;
+  box-sizing: border-box;
+}
+.qr-modal-img svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.qr-modal-url {
+  margin: 0;
+  font-size: 11px;
+  color: var(--muted);
+  word-break: break-all;
+  text-align: center;
+  max-width: 200px;
+  line-height: 1.3;
+}
