@@ -68,14 +68,19 @@ h1,h2,h3{margin:0;font-weight:700;letter-spacing:-0.01em}
 </style>
 <!-- Main stylesheet. The original style.css is what we ship today — a
      hand-rolled minifier produced a broken style.min.css earlier, so we
-     load the unminified bundle directly. v=26 forces cached browsers
-     to refetch after Batch 3 of the v13 feature push — local
-     notifications for ETA thresholds (Web Notification API while
-     the page is open), real-time vehicle positions on the route
-     detail (placeholder pseudo-positions until a public GPS feed
-     exists), and offline mode (runtime caches for /assets/*.json
-     and ETA APIs, plus an offline banner on the home view). -->
-<link rel="stylesheet" href="style.css?v=26" />
+     load the unminified bundle directly. v=27 forces cached browsers
+     to refetch after two hotfixes:
+       - SW registration path was `/sw.js` (resolved to the GitHub
+         Pages SITE root → 404). Now `./sw.js` (relative) so the SW
+         actually registers under the /buseta-hk/ scope. Without
+         this, the offline-mode runtime caches I shipped in v13–v15
+         were never reachable from a real browser.
+       - renderBusRoute's `.catch()` was silently swallowing
+         exceptions and overwriting the body with "搵唔到呢條路線"
+         — masking any real error in the route render chain. Now
+         logs the underlying error to console before replacing the
+         body, so future debugging isn't a guessing game. -->
+<link rel="stylesheet" href="style.css?v=27" />
 <script>
 /* Theme loader — runs synchronously in <head> so :root[data-theme] is set
    BEFORE the body paints. Mirrors the loadThemePreference() logic in app.js
@@ -415,11 +420,19 @@ window.__buseta = {
   },
 };
 </script>
-<script defer src="app.js?v=26"></script>
+<script defer src="app.js?v=27"></script>
 <script>
+  // SW path must be RELATIVE — GitHub Pages serves this site under
+  // /buseta-hk/ but a leading `/sw.js` would resolve to the site root
+  // (https://rollroyces.github.io/sw.js, which 404s). `./sw.js` keeps
+  // the registration scoped to wherever the page is hosted, so the
+  // same build works on GitHub Pages project sites AND root domains
+  // AND localhost previews. `updateViaCache: 'none'` forces the
+  // browser to re-fetch sw.js on each update check so cache-buster
+  // bumps take effect within one navigation.
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js').catch((err) => {
+      navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).catch((err) => {
         console.warn('Service worker registration failed:', err);
       });
     });

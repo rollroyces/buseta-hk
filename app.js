@@ -4336,7 +4336,12 @@
           } catch {}
         });
       }
-    }).catch(() => {
+    }).catch((err) => {
+      // Log the underlying error so debugging isn't a guessing game.
+      // Previously this catch silently swallowed everything — which
+      // masked real bugs (e.g. vehicle-map crashes that wiped a
+      // perfectly-good stop list and replaced it with "搵唔到呢條路線").
+      console.error('renderBusRoute failed:', err);
       body.replaceChildren(el('p', { class: 'empty' }, t_str('routeNotFound')));
     });
 
