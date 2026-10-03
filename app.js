@@ -2888,30 +2888,15 @@
       // even if the user is parked at a stop with its own upcoming service.
       const alerts = detectRouteAlerts(etaByStop, affectedStops);
       const routeKey = `${r.co}/${r.route}/${r.dir}/${r.service}`;
-      // TD live-traffic banner: list of incidents matching any road this
-      // route runs along. Sits ABOVE the existing alert. Built from
-      // orig/dest + every stop name so the match is scoped to the user's
-      // actual line, not every active incident in HK.
-      const trafficCtx = {
-        origTc: meta ? meta.origTc : '',
-        destTc: meta ? meta.destTc : '',
-        origEn: meta ? meta.origEn : '',
-        destEn: meta ? meta.destEn : '',
-        stops: stops.map((s) => {
-          const f = nameByStop.get(s.stop);
-          return { nameTc: f ? f.nameTc : s.nameTc, nameEn: f ? f.nameEn : s.nameEn };
-        }),
-      };
       const alertEl = (!state.dismissedAlerts.has(`${routeKey}|${alerts[0] && alerts[0].key}`) && alerts.length)
         ? renderRouteAlert(alerts[0], routeKey)
         : null;
 
       const heading = el('h2', { class: 'section-title' }, t_str('showingStop', stops.length));
-      // Order: traffic banner → alert → polyline map → stop list heading.
-      // The traffic banner goes ABOVE the route alert per spec.
+      // Order: optional alert → polyline map → stop list heading → rows.
+      // The polyline sits between the route header (above) and the stop
+      // list (below), matching the justarrived.grok.me aesthetic.
       const children = [];
-      const trafficBanner = tdBanner(tdMatch(trafficCtx));
-      if (trafficBanner) children.push(trafficBanner);
       if (alertEl) children.push(alertEl);
       if (polylineEl) children.push(polylineEl);
       children.push(heading, list);
