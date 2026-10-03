@@ -64,12 +64,11 @@ h1,h2,h3{margin:0;font-weight:700;letter-spacing:-0.01em}
 .nav-rule{position:absolute;left:50%;bottom:8px;width:24px;height:2px;border-radius:2px;background:var(--accent);transform:translateX(-50%) scaleX(0);transform-origin:center;transition:transform 0.18s ease}
 .nav-item.is-active .nav-rule{transform:translateX(-50%) scaleX(1)}
 </style>
-<!-- Non-critical styles load async via the media="print" swap trick.
-     style.min.css covers home/search/route/stop/error views.
-     planner.min.css is loaded on-demand by app.js when the planner view
-     is first opened (see `windowPlanner.loadPlannerCss`). -->
-<link rel="stylesheet" href="style.min.css?v=14" media="print" onload="this.media='all'" />
-<noscript><link rel="stylesheet" href="style.css" /></noscript>
+<!-- Main stylesheet. The original style.css is what we ship today — a
+     hand-rolled minifier produced a broken style.min.css earlier, so we
+     load the unminified bundle directly. v=16 forces cached browsers
+     to refetch after the splash-freeze hotfix. -->
+<link rel="stylesheet" href="style.css?v=16" />
 </head>
 <body>
 <a class="skip-link" href="#main">Skip to content</a>
@@ -362,7 +361,7 @@ window.__buseta = {
   },
 };
 </script>
-<script defer src="app.min.js?v=15"></script>
+<script defer src="app.js?v=16"></script>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {

@@ -169,6 +169,28 @@
       plannerError: '規劃時出咗啲問題，再試一次啦。',
       plannerRecent: '最近嘅行程',
       plannerRecentEmpty: '未有最近嘅行程。',
+      trafficTitle: '路面實時情況',
+      trafficSub: '道路事故、改道或封路資訊',
+      trafficIncident: '交通意外',
+      trafficRoadwork: '道路工程',
+      trafficLaneClosed: '行車線封閉',
+      trafficDiversion: '改道路線',
+      trafficCheckCctv: '附近 CCTV 實時影像',
+      trafficLastUpdated: (h) => `最後更新：${h}`,
+      serviceOperatingHours: '運行時間',
+      serviceOperatingHoursEn: 'Operating hours',
+      serviceDaily: '每日服務',
+      serviceDailyEn: 'Daily service',
+      serviceMonFri: '服務只限於星期一至五（公眾假期除外）',
+      serviceMonFriEn: 'Mon–Fri only (except public holidays)',
+      serviceSatSun: '服務只限於星期六、日及公眾假期',
+      serviceSatSunEn: 'Sat, Sun & public holidays only',
+      serviceSpecial: '特別班次',
+      serviceSpecialEn: 'Special service',
+      serviceNoRunning: '暫無班次',
+      serviceNoRunningEn: 'No service running now',
+      serviceDayHint: '請留意日子',
+      serviceDayHintEn: 'Check the day before travelling',
     },
     'en': {
       brandSub: 'Hong Kong Bus',
@@ -319,6 +341,28 @@
       plannerError: 'Something went wrong. Please try again.',
       plannerRecent: 'Recent trips',
       plannerRecentEmpty: 'No recent trips yet.',
+      trafficTitle: 'Live traffic',
+      trafficSub: 'Incidents, road closures and diversions',
+      trafficIncident: 'Road incident',
+      trafficRoadwork: 'Road works',
+      trafficLaneClosed: 'Lane closed',
+      trafficDiversion: 'Diversion',
+      trafficCheckCctv: 'Nearby CCTV snapshots',
+      trafficLastUpdated: (h) => `Last updated: ${h}`,
+      serviceOperatingHours: 'Operating hours',
+      serviceOperatingHoursEn: '營運時間',
+      serviceDaily: 'Daily service',
+      serviceDailyEn: '每日服務',
+      serviceMonFri: 'Mon–Fri only (except public holidays)',
+      serviceMonFriEn: '服務只限於星期一至五（公眾假期除外）',
+      serviceSatSun: 'Sat, Sun & public holidays only',
+      serviceSatSunEn: '服務只限於星期六、日及公眾假期',
+      serviceSpecial: 'Special service',
+      serviceSpecialEn: '特別班次',
+      serviceNoRunning: 'No service running now',
+      serviceNoRunningEn: '暫無班次',
+      serviceDayHint: 'Check the day before travelling',
+      serviceDayHintEn: '請留意日子',
     },
     'zh-Hans': {
       brandSub: '香港巴士',
@@ -458,6 +502,28 @@
       plannerError: '规划时出咗啲问题，再试一次啦。',
       plannerRecent: '最近嘅行程',
       plannerRecentEmpty: '未有最近嘅行程。',
+      trafficTitle: '路面实时情况',
+      trafficSub: '道路事故、改道或封路资讯',
+      trafficIncident: '交通意外',
+      trafficRoadwork: '道路工程',
+      trafficLaneClosed: '行车线封闭',
+      trafficDiversion: '改道路线',
+      trafficCheckCctv: '附近 CCTV 实时影像',
+      trafficLastUpdated: (h) => `最后更新：${h}`,
+      serviceOperatingHours: '运行时间',
+      serviceOperatingHoursEn: 'Operating hours',
+      serviceDaily: '每日服务',
+      serviceDailyEn: 'Daily service',
+      serviceMonFri: '服务只限于星期一至五（公众假期除外）',
+      serviceMonFriEn: 'Mon–Fri only (except public holidays)',
+      serviceSatSun: '服务只限于星期六、日及公众假期',
+      serviceSatSunEn: 'Sat, Sun & public holidays only',
+      serviceSpecial: '特别班次',
+      serviceSpecialEn: 'Special service',
+      serviceNoRunning: '暂无班次',
+      serviceNoRunningEn: 'No service running now',
+      serviceDayHint: '请留意日子',
+      serviceDayHintEn: 'Check the day before travelling',
     },
   };
 
@@ -509,6 +575,13 @@
   // Per-stop schedule cache. The schedule view reuses these so re-visits
   // are instant without re-hitting the operator APIs.
   const scheduleCache = new Map();
+
+  // Per-route fare cache. Keyed by `${co}/${route}/${dir}/${service}` so
+  // re-renders within a session don't re-hit the operator fare endpoints.
+  // Value is `Map<seq, fare>` (front_board fare per stop seq) or `null`
+  // when the operator doesn't expose per-stop fares / the fetch failed —
+  // the per-stop pill then hides rather than ship an empty placeholder.
+  const routeFareCache = new Map();
 
   // ------------------------------------------------------------------
   // State
@@ -932,6 +1005,26 @@
     fetchJSON(`${API.KMB}/stop/${encodeURIComponent(stopId)}`);
   const fetchKmbStopEta = (stopId) =>
     fetchJSON(`${API.KMB}/stop-eta/${encodeURIComponent(stopId)}`);
+  // Per-stop section fares for KMB / LWB (same endpoint). Returns a
+  // Map<seq, fare> or null on failure. Each row's `front_board` is the
+  // fare a passenger pays when boarding at that stop and riding to the
+  // route terminus — the value we render in the per-stop fare pill.
+  const fetchKmbRouteFare = async (route, dir, service) => {
+    const dirSeg = dir === 'I' ? 'inbound' : 'outbound';
+    const resp = await fetchJSON(`${API.KMB}/route-fare/${encodeURIComponent(route)}/${dirSeg}/${encodeURIComponent(service)}`);
+    const arr = (resp && Array.isArray(resp.data)) ? resp.data : [];
+    if (arr.length === 0) return null;
+    const m = new Map();
+    for (const it of arr) {
+      const seq = parseInt(it.seq, 10);
+      if (!Number.isFinite(seq)) continue;
+      // Prefer front_board; fall back to rear_board when upstream is sparse.
+      const fare = (it.front_board != null && it.front_board !== '') ? it.front_board
+        : ((it.rear_board != null && it.rear_board !== '') ? it.rear_board : null);
+      if (fare != null) m.set(seq, fare);
+    }
+    return m.size > 0 ? m : null;
+  };
 
   // Citybus + NWFB (CTB uses 6-digit numeric stop IDs)
   const fetchCitybusRouteStop = (route, dir) =>
@@ -2795,15 +2888,30 @@
       // even if the user is parked at a stop with its own upcoming service.
       const alerts = detectRouteAlerts(etaByStop, affectedStops);
       const routeKey = `${r.co}/${r.route}/${r.dir}/${r.service}`;
+      // TD live-traffic banner: list of incidents matching any road this
+      // route runs along. Sits ABOVE the existing alert. Built from
+      // orig/dest + every stop name so the match is scoped to the user's
+      // actual line, not every active incident in HK.
+      const trafficCtx = {
+        origTc: meta ? meta.origTc : '',
+        destTc: meta ? meta.destTc : '',
+        origEn: meta ? meta.origEn : '',
+        destEn: meta ? meta.destEn : '',
+        stops: stops.map((s) => {
+          const f = nameByStop.get(s.stop);
+          return { nameTc: f ? f.nameTc : s.nameTc, nameEn: f ? f.nameEn : s.nameEn };
+        }),
+      };
       const alertEl = (!state.dismissedAlerts.has(`${routeKey}|${alerts[0] && alerts[0].key}`) && alerts.length)
         ? renderRouteAlert(alerts[0], routeKey)
         : null;
 
       const heading = el('h2', { class: 'section-title' }, t_str('showingStop', stops.length));
-      // Order: optional alert → polyline map → stop list heading → rows.
-      // The polyline sits between the route header (above) and the stop
-      // list (below), matching the justarrived.grok.me aesthetic.
+      // Order: traffic banner → alert → polyline map → stop list heading.
+      // The traffic banner goes ABOVE the route alert per spec.
       const children = [];
+      const trafficBanner = tdBanner(tdMatch(trafficCtx));
+      if (trafficBanner) children.push(trafficBanner);
       if (alertEl) children.push(alertEl);
       if (polylineEl) children.push(polylineEl);
       children.push(heading, list);

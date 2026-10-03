@@ -1181,6 +1181,73 @@ h1, h2, h3 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 .route-alert-dismiss:hover { opacity: 1; background: rgba(0, 0, 0, 0.06); }
 .route-alert-dismiss:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
 
+/* ------------------------------ route service-day-type banner ------------------------------ */
+/* Sits above the existing route-alert and below the route header. Three
+   states mirror the alert banner but use distinct colours so a user can
+   tell "scheduled service" apart from "service disrupted":
+     .route-service-info              — default info style (daily service)
+     .route-service-info.is-warning   — amber; runs only on certain days
+     .route-service-info.is-critical  — red; no service is running right now
+   The banner does NOT dismiss — it's a static summary of what the route
+   actually does. It is built per render so a day rollover (Mon-Fri route
+   loaded on Sunday) re-fires the warning automatically. */
+.route-service-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  margin: 16px 0 8px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line);
+  background: var(--card);
+  font-size: 14px;
+  line-height: 1.4;
+  font-weight: 600;
+  color: var(--ink);
+  box-shadow: var(--shadow-sm);
+}
+.route-service-info.is-info {
+  background: #E0F2FE;               /* sky-100 */
+  border-color: #7DD3FC;             /* sky-300 */
+  color: #0C4A6E;                    /* sky-900 */
+}
+.route-service-info.is-warning {
+  background: #FEF3C7;               /* amber-100 */
+  border-color: #FCD34D;             /* amber-300 */
+  color: #78350F;                    /* amber-900 */
+}
+.route-service-info.is-critical {
+  background: #FEE2E2;               /* red-100 */
+  border-color: #FCA5A5;             /* red-300 */
+  color: #7F1D1D;                    /* red-900 */
+}
+.route-service-info-icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 1px;
+}
+.route-service-info.is-info .route-service-info-icon { color: #0369A1; }      /* sky-700 */
+.route-service-info.is-warning .route-service-info-icon { color: #B45309; }  /* amber-700 */
+.route-service-info.is-critical .route-service-info-icon { color: #B91C1C; } /* red-700 */
+.route-service-info-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.route-service-info-primary {
+  font-weight: 700;
+  font-size: 14px;
+}
+.route-service-info-secondary {
+  font-weight: 500;
+  font-size: 12px;
+  opacity: 0.85;
+}
+
 /* ------------------------------ back link ------------------------------ */
 .back-link {
   display: inline-flex; align-items: center; gap: 4px;
@@ -1303,6 +1370,16 @@ h1, h2, h3 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
   font-size: 13px;
   color: var(--ink-2);
   line-height: 1.45;
+}
+/* Secondary "what to do" hint, used after a denied state. Smaller and
+   more muted than the primary .geo-banner-text so the user reads the
+   main message first but can scan the hint for an actionable next
+   step (i.e. reset the browser's block before retrying). */
+.geo-banner-hint {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.45;
+  margin-top: 4px;
 }
 .geo-banner-cta {
   flex: 0 0 auto;
@@ -1583,4 +1660,204 @@ h1, h2, h3 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
   outline: 2px solid var(--accent);
   outline-offset: 2px;
   border-radius: var(--r-sm);
+}
+
+/* ------------------------------ traffic feed ------------------------------ */
+/* Real-time road incident + CCTV overlays from HK TD open data. Renders:
+     .traffic-banner       — list of incidents matching the route, above the
+                              route-alert banner on the route detail page.
+     .traffic-incident     — single incident card with severity icon.
+     .traffic-cctv         — 3-up grid of nearby CCTV snapshots above the
+                              Google Maps iframe on the stop detail page.
+     .traffic-leg-dot / .traffic-leg-warn
+                            — planner leg decorations (read by the
+                              MutationObserver in app.js). */
+.traffic-banner {
+  margin: 16px 0 8px;
+  padding: 14px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-left: 4px solid #B91C1C;          /* red-700: live traffic is hot */
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-sm);
+}
+.traffic-banner-title {
+  margin: 0 0 10px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+.traffic-banner-meta {
+  margin: 8px 0 0;
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 500;
+}
+.traffic-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.traffic-incident {
+  display: flex;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--line);
+  background: var(--bg-soft);
+  font-size: 14px;
+  line-height: 1.4;
+}
+.traffic-incident.is-critical {
+  background: #FEF2F2;                      /* red-50 */
+  border-color: #FCA5A5;                    /* red-300 */
+}
+.traffic-incident.is-warning {
+  background: #FFFBEB;                      /* amber-50 */
+  border-color: #FCD34D;                    /* amber-300 */
+}
+.traffic-incident.is-info {
+  background: var(--bg-soft);
+  border-color: var(--line);
+  opacity: 0.85;
+}
+.traffic-incident.is-critical .traffic-incident-icon { color: #B91C1C; }
+.traffic-incident.is-warning .traffic-incident-icon { color: #B45309; }
+.traffic-incident.is-info    .traffic-incident-icon { color: var(--muted); }
+.traffic-incident-icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: 2px;
+}
+.traffic-incident-body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.traffic-incident-title {
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 2px;
+  font-size: 14px;
+}
+.traffic-incident-loc {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+.traffic-incident-body-text {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ink-2);
+  /* Two-line clamp with ellipsis — long TD body text otherwise overwhelms
+     the banner. Tap-through to the full TD XML for everything. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  line-clamp: 2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ------------------------------ CCTV snapshots ------------------------------ */
+.traffic-cctv {
+  margin: 16px 0 8px;
+  padding: 14px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-sm);
+}
+.traffic-cctv-title {
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+.traffic-cctv-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+@media (max-width: 520px) {
+  /* Two-up on narrow phones — three 320×240 thumbs side-by-side is too
+     cramped below 360 px. */
+  .traffic-cctv-grid { grid-template-columns: repeat(2, 1fr); }
+}
+.traffic-cctv-card {
+  display: flex;
+  flex-direction: column;
+  text-decoration: none;
+  color: var(--ink);
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: var(--bg-soft);
+  transition: border-color 0.15s ease;
+}
+.traffic-cctv-card:hover,
+.traffic-cctv-card:active { border-color: var(--accent); }
+.traffic-cctv-img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  background: #1F2A44;                       /* placeholder sky */
+}
+.traffic-cctv-meta {
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.traffic-cctv-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.traffic-cctv-sub {
+  font-size: 10px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------ planner leg decorations ------------------------------ */
+.traffic-leg-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #DC2626;                       /* red-600 */
+  margin-left: 6px;
+  flex: 0 0 auto;
+  box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.18);
+}
+.planner-leg.is-traffic-affected {
+  border-color: #FCA5A5;
+  background: #FEF2F2;
+}
+.traffic-leg-warn {
+  flex-basis: 100%;
+  font-size: 11px;
+  font-weight: 600;
+  color: #B91C1C;
+  margin-top: 4px;
+  letter-spacing: 0.01em;
+}
+@media (prefers-color-scheme: dark) {
+  .traffic-banner { border-left-color: #F87171; }
+  .traffic-incident.is-critical { background: rgba(248, 113, 113, 0.10); border-color: #7F1D1D; }
+  .traffic-incident.is-warning  { background: rgba(252, 211, 77, 0.10); border-color: #92400E; }
+  .planner-leg.is-traffic-affected {
+    border-color: #7F1D1D;
+    background: rgba(248, 113, 113, 0.10);
+  }
 }

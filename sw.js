@@ -4,13 +4,12 @@
  * upstream API calls. Static JSON in /assets/ is cached lazily on first
  * fetch via the same code path.
  *
- * CACHE bumped to v3: v2 served the geolocation fix (correct
- * PERMISSION_DENIED check + visible state transitions) but did not yet
- * probe the Permissions API to surface browser-level blocks. Bumping
- * forces the new SW's `install` handler to re-fetch and re-cache the
- * shell from the network so existing clients get the probe at boot.
+ * CACHE bumped to v4: v3 was active when index.html was changed to load
+ * non-existent app.min.js / style.min.css, so users got a frozen splash.
+ * Bumping forces re-fetch of index.html (now correctly referencing
+ * app.js + style.css), a fresh app.js + style.css, and clean state.
  */
-const CACHE = 'buseta-v3';
+const CACHE = 'buseta-v4';
 const SHELL = [
   '/',
   '/index.html',
