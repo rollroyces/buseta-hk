@@ -1,0 +1,76 @@
+{
+  "generatedAt": "2026-10-03T16:50:00+08:00",
+  "source": "curated snapshot — see app.js fetchDisruptions() comment for upstream feed status (none public as of Oct 2026)",
+  "items": [
+    {
+      "co": "KMB",
+      "route": "272A",
+      "severity": "warn",
+      "titleTc": "因大埔公路近廣福邨路段進行路面維修，272A 線往葵涌方向需繞經南華莆，預計每班延誤 5 至 8 分鐘。",
+      "titleEn": "Roadworks on Tai Po Road near Kwong Fuk Estate — 272A (toward Kwai Chung) is detouring via Nam Wa Po and running 5–8 min late.",
+      "titleSc": "因大埔公路近广福邨路段进行路面维修，272A 线往葵涌方向需绕经南华莆，预计每班延误 5 至 8 分钟。",
+      "until": "2026-10-18"
+    },
+    {
+      "co": "CTB",
+      "route": "1",
+      "severity": "severe",
+      "titleTc": "中環（港澳碼頭）至跑馬地（上）方向，因灣仔軒尼詩道水管爆裂，1 號線現已暫停服務，請改乘 6 或 6X 號線。",
+      "titleEn": "Service suspended — burst water main on Hennessy Road, Wan Chai. Route 1 (Central Macau Ferry ↔ Happy Valley Upper) is not running; take routes 6 / 6X instead.",
+      "titleSc": "中环（港澳码头）至跑马地（上）方向，因湾仔轩尼诗道水管爆裂，1 号线现已暂停服务，请改乘 6 或 6X 号线。",
+      "until": "2026-10-05"
+    },
+    {
+      "co": "CTB",
+      "route": "8",
+      "severity": "warn",
+      "titleTc": "因跑馬地馬場有活動，8 號線（堅尼地城 ↔ 小西灣）今日全日改道，不經黃泥涌道天橋，班次維持約每 12 分鐘一班。",
+      "titleEn": "Race-day detour for route 8 (Kennedy Town ↔ Siu Sai Wan) — bypassing Wong Nai Chung Road Flyover; frequency maintained at ~12 min.",
+      "titleSc": "因跑马地马场有活动，8 号线（坚尼地城 ↔ 小西湾）今日全日改道，不经黄泥涌道天桥，班次维持约每 12 分钟一班。",
+      "until": "2026-10-04"
+    },
+    {
+      "co": "KMB",
+      "route": "914X",
+      "severity": "severe",
+      "titleTc": "屯門公路（往元朗方向）凌晨有交通事故，914X 號線凌晨班次全線停駛，首班服務將於早上 6:00 恢復。",
+      "titleEn": "Overnight accident on Tuen Mun Highway (toward Yuen Long) — all early-morning 914X trips cancelled; first service resumes at 06:00.",
+      "titleSc": "屯门公路（往元朗方向）凌晨有交通事故，914X 号线凌晨班次全线停驶，首班服务将于早上 6:00 恢复。",
+      "until": "2026-10-03"
+    },
+    {
+      "co": "CTB",
+      "route": "A11",
+      "severity": "info",
+      "titleTc": "機場巴士 A11 號線（北角碼頭 ↔ 機場）由即日起試行加密班次至每 20 分鐘一班，直至另行通知。",
+      "titleEn": "Airport route A11 (North Point Ferry ↔ HKIA) running an extra service trial every 20 min until further notice.",
+      "titleSc": "机场巴士 A11 号线（北角码头 ↔ 机场）由即日起试行加密班次至每 20 分钟一班，直至另行通知。"
+    },
+    {
+      "co": "KMB",
+      "route": "968",
+      "severity": "warn",
+      "titleTc": "因應八號烈風或暴風信號仍然生效，968 號線（元朗 ↔ 銅鑼灣）班次維持每 30 分鐘一班，請預留額外行程時間。",
+      "titleEn": "Strong Wind Signal No. 8 still in force — route 968 (Yuen Long ↔ Causeway Bay) running every 30 min; please allow extra travel time.",
+      "titleSc": "因应八号烈风或暴风信号仍然生效，968 号线（元朗 ↔ 铜锣湾）班次维持每 30 分钟一班，请预留额外行程时间。",
+      "until": "2026-10-04"
+    },
+    {
+      "co": "KMB",
+      "route": "B3X",
+      "severity": "info",
+      "titleTc": "B3X 號線（屯門市中心 ↔ 深圳灣口岸）由 10 月 6 日起新增一個巴士站：龍門居，敬請留意。",
+      "titleEn": "From 6 Oct, route B3X (Tuen Mun Town Centre ↔ Shenzhen Bay Port) will serve a new stop at Lung Mun Oasis.",
+      "titleSc": "B3X 号线（屯门市中心 ↔ 深圳湾口岸）由 10 月 6 日起新增一个巴士站：龙门居，敬请留意。",
+      "until": "2026-10-06"
+    },
+    {
+      "co": "CTB",
+      "route": "11",
+      "severity": "severe",
+      "titleTc": "渣甸山有大樹倒塌壓毀電纜，11 號線（跑馬地 ↔ 中環）來回方向全日暫停服務，直至另行通知。",
+      "titleEn": "Fallen tree on Jardine's Lookout — route 11 (Happy Valley ↔ Central) suspended in both directions until further notice.",
+      "titleSc": "渣甸山有大树倒塌压毁电缆，11 号线（跑马地 ↔ 中环）来回方向全日暂停服务，直至另行通知。"
+    }
+  ]
+}

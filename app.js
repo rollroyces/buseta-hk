@@ -207,6 +207,14 @@
       fareLoading: '讀取車費中…',
       fareUnavailable: '車費暫時未能提供',
       fareOrigin: '起點',
+      disruptionBanner: '服務通知',
+      disruptionForRoute: (route) => `路線 ${route}`,
+      disruptionUntil: (until) => `至 ${until}`,
+      disruptionExpand: '顯示詳情',
+      disruptionCollapse: '收起',
+      disruptionSeverityWarn: '班次可能受影響',
+      disruptionSeveritySevere: '服務暫停或嚴重受阻',
+      disruptionSeverityInfo: '服務調整',
     },
     'en': {
       brandSub: 'Hong Kong Bus',
@@ -395,6 +403,14 @@
       fareLoading: 'Loading fares…',
       fareUnavailable: 'Fares temporarily unavailable',
       fareOrigin: 'Origin',
+      disruptionBanner: 'Service alert',
+      disruptionForRoute: (route) => `Route ${route}`,
+      disruptionUntil: (until) => `Until ${until}`,
+      disruptionExpand: 'Show details',
+      disruptionCollapse: 'Hide details',
+      disruptionSeverityWarn: 'Service may be affected',
+      disruptionSeveritySevere: 'Service suspended or severely affected',
+      disruptionSeverityInfo: 'Service adjustment',
     },
     'zh-Hans': {
       brandSub: '香港巴士',
@@ -572,6 +588,14 @@
       fareLoading: '读取车费中…',
       fareUnavailable: '车费暂时未能提供',
       fareOrigin: '起点',
+      disruptionBanner: '服务通知',
+      disruptionForRoute: (route) => `路线 ${route}`,
+      disruptionUntil: (until) => `至 ${until}`,
+      disruptionExpand: '显示详情',
+      disruptionCollapse: '收起',
+      disruptionSeverityWarn: '班次可能受影响',
+      disruptionSeveritySevere: '服务暂停或严重受阻',
+      disruptionSeverityInfo: '服务调整',
     },
   };
 
@@ -1872,6 +1896,27 @@
     const view = renderInto('home', 'home');
     const container = view.querySelector('.container') || view;
 
+    // Service-disruption banner: inserted at the very top of the home
+    // view, ABOVE the geo banner / nearest-stop pill / operators strip.
+    // The snapshot is fetched asynchronously; on each render we keep the
+    // banner insertion idempotent — a fresh fetch result re-renders the
+    // top element rather than stacking duplicates. While the fetch is
+    // still in flight on the very first render the banner simply isn't
+    // there (typical round-trip is sub-100ms once the SW has the file).
+    fetchDisruptions().then((all) => {
+      const matched = disruptionsForUserRoutes(all);
+      if (matched.length === 0) return;
+      const banner = renderDisruptionBanner(matched);
+      if (!banner) return;
+      const view = document.getElementById('view-home');
+      if (!view || view.hidden) return;
+      const cur = view.querySelector('.container') || view;
+      // Drop any prior banner so re-renders don't pile up.
+      const existing = cur.querySelector('.disruption-banner');
+      if (existing) existing.remove();
+      cur.insertBefore(banner, cur.firstChild);
+    }).catch(() => { /* fetchDisruptions already swallows — defensive */ });
+
     // Pre-fill / banner zone: at the top of the home view we either show
     // the in-page location permission banner (no permission yet) OR the
     // nearest-stop pill (permission granted). Hidden on denial.
@@ -2385,6 +2430,189 @@
     row.appendChild(el('span', { class: 'nearest-stop-dist nearby-dist' }, formatDistance(top.d)));
     row.appendChild(makeChev());
     return row;
+  }
+
+  // ------------------------------------------------------------------
+  // Service-disruption banner
+  // ------------------------------------------------------------------
+  // KMB / Citybus do not publish a structured disruption feed on their
+  // open-data endpoints (verified Oct 2026: every plausible path under
+  // data.etabus.gov.hk/v1/transport/kmb/{notice,disruption,alert,alerts,
+  // service-update,roadworkNotice,...}/ returns HTTP 422 "Invalid/Missing
+  // parameter(s)" — the same shape every unknown route sub-path produces
+  // — and rt.data.gov.hk/v2/transport/citybus/{...} 404s). Same for the
+  // opendata.mtr.com.hk / data.etagmb.gov.hk roots. KMB's HTML site also
+  // 302-redirects /notice.html etc. to a missing page. We therefore load
+  // a curated snapshot from assets/disruptions.json (committable, easy to
+  // refresh on the next cache-buster bump) and treat a future live feed
+  // as a swap-in for fetchDisruptions() — the rest of the pipeline only
+  // cares about the returned array shape.
+  let disruptionsCache = null;
+
+  // Loads (and caches) the curated disruption snapshot. Returns
+  // Array<{route, co?, severity, titleTc, titleEn, titleSc, until?}>; an
+  // empty array on any failure (network, parse, missing file).
+  async function fetchDisruptions() {
+    if (disruptionsCache) return disruptionsCache;
+    const p = (async () => {
+      try {
+        const data = await fetchJSON('assets/disruptions.json');
+        return (data && Array.isArray(data.items)) ? data.items : [];
+      } catch (_) {
+        return [];
+      }
+    })();
+    disruptionsCache = p;
+    return p;
+  }
+
+  // Pick the localised title for a disruption item in the current UI
+  // language, with a sensible fallback chain (lang → tc → en).
+  function disruptionTitleFor(it) {
+    if (!it) return '';
+    if (state.lang === 'en') return it.titleEn || it.titleTc || it.titleSc || '';
+    if (state.lang === 'zh-Hans') return it.titleSc || it.titleTc || it.titleEn || '';
+    return it.titleTc || it.titleSc || it.titleEn || '';
+  }
+
+  // Build the disruption banner DOM. Returns null when `items` is empty
+  // so the caller can skip the insert. The banner collapses by default
+  // and expands on tap to reveal per-route titles + an "until" hint when
+  // the disruption has an end timestamp.
+  function renderDisruptionBanner(items) {
+    if (!items || items.length === 0) return null;
+
+    // Sort highest severity first so the banner's tint always reflects
+    // the worst active alert for the user's routes.
+    const sevRank = (s) => s === 'severe' ? 2 : s === 'warn' ? 1 : 0;
+    const sorted = items.slice().sort((a, b) => sevRank(b.severity) - sevRank(a.severity));
+    const top = sorted[0];
+    const sevClass = top.severity === 'severe' ? 'is-severe'
+      : top.severity === 'warn' ? 'is-warn' : 'is-info';
+
+    const wrap = el('div', {
+      class: `disruption-banner ${sevClass}`,
+      role: 'region',
+      'aria-label': t_str('disruptionBanner'),
+    });
+
+    // Severity icon — a small filled triangle that picks up the banner's
+    // currentColor so it visually maps to the severity tint.
+    const iconWrap = el('div', { class: 'disruption-banner-icon', 'aria-hidden': 'true' });
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('width', '20');
+    svg.setAttribute('height', '20');
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('fill', 'currentColor');
+    path.setAttribute('d',
+      'M12 2 L22 20 H2 Z M12 9 a1.2 1.2 0 0 1 1.2 1.2 v4.6 a1.2 1.2 0 0 1 -2.4 0 v-4.6 A1.2 1.2 0 0 1 12 9 Z M12 16.4 a1.4 1.4 0 1 0 0 2.8 a1.4 1.4 0 0 0 0 -2.8 Z');
+    svg.appendChild(path);
+    iconWrap.appendChild(svg);
+    wrap.appendChild(iconWrap);
+
+    const body = el('div', { class: 'disruption-banner-body' });
+
+    // Header line: "Service alert · 路線 272A"  (label + worst route pill).
+    const head = el('div', { class: 'disruption-banner-head' });
+    head.appendChild(el('span', { class: 'disruption-banner-label' }, t_str('disruptionBanner')));
+    head.appendChild(document.createTextNode(' · '));
+    head.appendChild(el('span', { class: 'disruption-banner-pill' }, t_str('disruptionForRoute', top.route)));
+    if (sorted.length > 1) {
+      head.appendChild(document.createTextNode(' '));
+      head.appendChild(el('span', { class: 'disruption-banner-more' }, `+${sorted.length - 1}`));
+    }
+    body.appendChild(head);
+
+    // Severity hint line — gives the user a one-line summary of how bad
+    // the worst alert is, without forcing them to expand.
+    body.appendChild(el('div', { class: 'disruption-banner-hint' },
+      top.severity === 'severe' ? t_str('disruptionSeveritySevere')
+        : top.severity === 'warn' ? t_str('disruptionSeverityWarn')
+        : t_str('disruptionSeverityInfo')));
+    wrap.appendChild(body);
+
+    // Chevron toggle on the right — click toggles the expanded panel.
+    const toggle = el('button', {
+      class: 'disruption-banner-toggle',
+      type: 'button',
+      'aria-expanded': 'false',
+      'aria-label': t_str('disruptionExpand'),
+    });
+    const chev = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    chev.setAttribute('viewBox', '0 0 24 24');
+    chev.setAttribute('width', '18');
+    chev.setAttribute('height', '18');
+    chev.setAttribute('aria-hidden', 'true');
+    const cpath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    cpath.setAttribute('fill', 'none');
+    cpath.setAttribute('stroke', 'currentColor');
+    cpath.setAttribute('stroke-width', '2');
+    cpath.setAttribute('stroke-linecap', 'round');
+    cpath.setAttribute('stroke-linejoin', 'round');
+    cpath.setAttribute('d', 'M6 9l6 6 6-6');
+    chev.appendChild(cpath);
+    toggle.appendChild(chev);
+    wrap.appendChild(toggle);
+
+    // Expanded panel — hidden by default; lists each affected route with
+    // its localised title and an "until" hint when present.
+    const panel = el('div', { class: 'disruption-banner-panel', hidden: true });
+    const list = el('ul', { class: 'disruption-banner-list' });
+    sorted.forEach((it) => {
+      const li = el('li', { class: 'disruption-banner-item' });
+      li.appendChild(el('span', { class: 'disruption-banner-pill' }, t_str('disruptionForRoute', it.route)));
+      const txt = el('span', { class: 'disruption-banner-text' }, disruptionTitleFor(it));
+      li.appendChild(txt);
+      if (it.until) {
+        li.appendChild(el('span', { class: 'disruption-banner-until' }, t_str('disruptionUntil', it.until)));
+      }
+      list.appendChild(li);
+    });
+    panel.appendChild(list);
+    wrap.appendChild(panel);
+
+    // Toggle handler — single tap expands, second tap collapses. We also
+    // update aria-expanded + the button's label so screen readers track
+    // the state.
+    const setExpanded = (next) => {
+      panel.hidden = !next;
+      toggle.setAttribute('aria-expanded', String(next));
+      toggle.setAttribute('aria-label', next ? t_str('disruptionCollapse') : t_str('disruptionExpand'));
+      wrap.classList.toggle('is-open', next);
+    };
+    toggle.addEventListener('click', () => {
+      setExpanded(panel.hidden);
+    });
+    // Whole banner header is tappable too — quicker hit target on mobile.
+    head.addEventListener('click', () => {
+      setExpanded(panel.hidden);
+    });
+
+    return wrap;
+  }
+
+  // Filter the curated disruption list down to entries that apply to at
+  // least one route in `state.savedRoutes` or the route-shaped entries of
+  // `state.recent`. Stops-only recent entries are ignored. When an item
+  // declares an operator `co`, it matches only that operator; otherwise
+  // any operator carrying that route number matches.
+  function disruptionsForUserRoutes(items) {
+    if (!Array.isArray(items) || items.length === 0) return [];
+    const wanted = new Map();
+    const pushKey = (co, route) => {
+      if (co == null || route == null) return;
+      wanted.set(`${co}\t${route}`, true);
+      wanted.set(`\t${route}`, true);
+    };
+    (state.savedRoutes || []).forEach((r) => pushKey(r.co, r.route));
+    (state.recent || []).forEach((r) => { if (r.route) pushKey(r.co, r.route); });
+
+    return items.filter((it) => {
+      if (!it || !it.route) return false;
+      if (it.co) return wanted.has(`${it.co}\t${it.route}`);
+      return wanted.has(`\t${it.route}`);
+    });
   }
 
   // Populate the [data-bind="nearbyStops"|"nearbyRoutes"|"nearbyStations"]
