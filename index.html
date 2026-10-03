@@ -289,6 +289,13 @@ h1,h2,h3{margin:0;font-weight:700;letter-spacing:-0.01em}
     <h2 class="section-title" data-i18n="recentSearches">最近查過</h2>
     <div data-bind="recent"></div>
 
+    <!-- Local-notification settings card mount point. Populated by
+         renderNotifSettings() in app.js (every home render refreshes the
+         localized toggle + threshold pills). Kept without inline i18n
+         strings so the card wording stays consistent with the rest of
+         the app STRINGS object. -->
+    <div data-bind="notifSettings"></div>
+
     <footer class="page-footer">
       <p data-i18n-html="footerAttribution">
         資料來源：運輸署資料一線通。到站時間來自九巴、龍運、城巴、專線小巴及港鐵（包括輕鐵）；車費來自公共交通路線及收費資料。預計時間約每分鐘更新，只供參考。

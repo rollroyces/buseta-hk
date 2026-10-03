@@ -228,6 +228,21 @@
       themeDark: '深色',
       themeSystem: '跟系統',
       themeToggleAria: '切換主題',
+      notifEnable: '啟用即時到站通知',
+      notifThreshold: '提前通知時間',
+      notifThreshold3: '3 分鐘前',
+      notifThreshold5: '5 分鐘前',
+      notifThreshold10: '10 分鐘前',
+      notifMinutesAway: (n) => `仲有 ${n} 分鐘`,
+      notifPermissionDenied: '通知已被瀏覽器封鎖。請喺瀏覽器設定允許通知，再重新整理此頁。',
+      offlineMode: '離線模式',
+      offlineShowingLastKnown: '顯示最後已知資料',
+      vehicleMap: '實時車輛位置',
+      vehicleLive: '實時 GPS 位置',
+      vehicleNoData: '目前未有實時車輛位置資料。以下係根據時間表嘅預估位置。',
+      vehiclePosition: '車輛位置',
+      vehiclePlaceholder: '預估',
+      vehicleRefreshing: '更新緊…',
     },
     'en': {
       brandSub: 'Hong Kong Bus',
@@ -437,6 +452,21 @@
       themeDark: 'Dark',
       themeSystem: 'System',
       themeToggleAria: 'Toggle theme',
+      notifEnable: 'Enable arrival alerts',
+      notifThreshold: 'Alert me',
+      notifThreshold3: '3 min before',
+      notifThreshold5: '5 min before',
+      notifThreshold10: '10 min before',
+      notifMinutesAway: (n) => `${n} min away`,
+      notifPermissionDenied: 'Notifications are blocked. Please allow them in your browser settings and reload.',
+      offlineMode: 'Offline',
+      offlineShowingLastKnown: 'showing last known data',
+      vehicleMap: 'Live vehicle positions',
+      vehicleLive: 'Live GPS positions',
+      vehicleNoData: 'No live GPS data available right now. Showing estimated positions based on the timetable.',
+      vehiclePosition: 'Vehicle position',
+      vehiclePlaceholder: 'Estimated',
+      vehicleRefreshing: 'Refreshing…',
     },
     'zh-Hans': {
       brandSub: '香港巴士',
@@ -635,6 +665,21 @@
       themeDark: '深色',
       themeSystem: '跟系统',
       themeToggleAria: '切换主题',
+      notifEnable: '启用实时到站通知',
+      notifThreshold: '提前通知时间',
+      notifThreshold3: '3 分钟前',
+      notifThreshold5: '5 分钟前',
+      notifThreshold10: '10 分钟前',
+      notifMinutesAway: (n) => `仲有 ${n} 分钟`,
+      notifPermissionDenied: '通知已被浏览器封锁。请喺浏览器设定允许通知，再重新整理此页。',
+      offlineMode: '离线模式',
+      offlineShowingLastKnown: '显示最后已知资料',
+      vehicleMap: '实时车辆位置',
+      vehicleLive: '实时 GPS 位置',
+      vehicleNoData: '目前未有实时车辆位置资料。以下系根据时间表嘅预估位置。',
+      vehiclePosition: '车辆位置',
+      vehiclePlaceholder: '预估',
+      vehicleRefreshing: '更新紧…',
     },
   };
 
@@ -668,6 +713,9 @@
     GMAPS_KEY: 'buseta.gmapsKey',
     CONFIG: 'assets/config.json',
     META: 'buseta.meta',
+    OFFLINE: 'buseta.offline',
+    NOTIF_ENABLED: 'buseta.notif.enabled',
+    NOTIF_THRESHOLD: 'buseta.notif.threshold',
   };
 
   // ------------------------------------------------------------------
@@ -743,6 +791,38 @@
   const GMB_INDEX_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
   // ------------------------------------------------------------------
+  // Offline state
+  //   Mirrors `navigator.onLine` but persists across reloads via
+  //   localStorage so a user who closed the tab offline and reopens
+  //   it offline still sees the banner without a one-frame flicker.
+  //   Held in a module-local closure (NOT on `state`) to avoid
+  //   widening the shared state shape that the planner reads.
+  // ------------------------------------------------------------------
+  let isOffline = false;
+  function readOfflineFlag() {
+    try { return localStorage.getItem(STORAGE_KEYS.OFFLINE) === '1'; }
+    catch { return false; }
+  }
+  function writeOfflineFlag(next) {
+    try {
+      if (next) localStorage.setItem(STORAGE_KEYS.OFFLINE, '1');
+      else localStorage.removeItem(STORAGE_KEYS.OFFLINE);
+    } catch { /* private mode etc. */ }
+  }
+  function setOffline(next) {
+    const flag = !!next;
+    if (isOffline === flag) return;
+    isOffline = flag;
+    writeOfflineFlag(flag);
+    // Re-render the home view only when it's the active screen.
+    try {
+      if (typeof currentRoute === 'function' && currentRoute() === 'home') {
+        renderHome();
+      }
+    } catch { /* currentRoute / renderHome may not be defined yet */ }
+  }
+
+  // ------------------------------------------------------------------
   // Module-level caches
   // ------------------------------------------------------------------
   // Per-stop schedule cache. The schedule view reuses these so re-visits
@@ -781,6 +861,25 @@
     // tracked independently. Cleared on full page reload (intentional —
     // spec says dismissals do not persist across visits).
     dismissedAlerts: new Set(),
+    // Vehicle-map auto-refresh timer + the AbortController for any
+    // in-flight upstream position fetch. Both cleared when the user
+    // navigates away from the route detail (see stopVehicleRefresh).
+    vehicleTimer: null,
+    vehicleAbort: null,
+    // Local-notification system (Web Notification API — fires while the
+    // tab is open, since the static GitHub Pages site has no backend to
+    // push via VAPID). Persistence is in localStorage; the rest of the
+    // state here is in-memory only.
+    notifEnabled: false,
+    notifThresholdMin: 5,
+    notifTimer: null,
+    notifInFlight: false,
+    // Edge-detection map: per (stopId, co, route, dir, serviceType) we
+    // remember whether the soonest ETA was above ('above') or at/below
+    // ('below') the threshold on the last poll. A notification only
+    // fires on the above → below transition, so we never spam the user
+    // on every 20s tick even when the ETA stays under threshold.
+    notifEdge: new Map(),
   };
 
   // ------------------------------------------------------------------
@@ -892,6 +991,17 @@
     state.savedRoutes = storage.get(STORAGE_KEYS.ROUTES, []);
     state.savedStops = storage.get(STORAGE_KEYS.STOPS, []);
     state.recent = storage.get(STORAGE_KEYS.RECENT, []);
+    const thresh = storage.get(STORAGE_KEYS.NOTIF_THRESHOLD, 5);
+    state.notifThresholdMin = [3, 5, 10].includes(Number(thresh)) ? Number(thresh) : 5;
+    // Only mark notifications enabled when the API exists AND the
+    // browser still has the user-granted permission. If the user
+    // revoked permission since the last visit, drop the stale flag so
+    // the settings UI flips back to the disabled state and we don't try
+    // to fire on `permission === 'denied'` (which throws).
+    const wantsNotif = storage.get(STORAGE_KEYS.NOTIF_ENABLED, false);
+    state.notifEnabled = !!wantsNotif
+      && typeof Notification !== 'undefined'
+      && Notification.permission === 'granted';
   }
   function persist() {
     storage.set(STORAGE_KEYS.LANG, state.lang);
@@ -1615,6 +1725,352 @@
   }
 
   // ------------------------------------------------------------------
+  // Vehicle positions (live GPS) — small SVG map of the route polyline
+  // with bus icons at their current positions.
+  //
+  // Architecture (separate from renderRouteMap, which embeds Google Maps):
+  //   - assets/vehicle-positions.js (BusEtaVehicles.fetchPositions) probes
+  //     the operator feeds and resolves to a list of `{co, lat, lng, ...}`
+  //     or `null` if no feed is enabled.
+  //   - renderVehicleMap() is a self-contained pure-SVG renderer that
+  //     projects lat/lng → SVG viewBox via a simple equirectangular
+  //     projection (fine for HK scale, no Leaflet/Mapbox/Google needed).
+  //   - placeholderVehiclePositions() builds pseudo-positions from the
+  //     ETA pattern when no live feed is available — buses are spread
+  //     evenly along the polyline so the user sees something move-like
+  //     instead of an empty box. The map header surfaces the "estimated"
+  //     tag so it's obvious to the user that this is not live data.
+  //   - startVehicleRefresh() / stopVehicleRefresh() are paired with the
+  //     existing eta refresh so the map's auto-refresh stops on view
+  //     switch, matching the existing pattern (startEtaRefresh /
+  //     stopEtaRefresh).
+  // ------------------------------------------------------------------
+
+  // Operator → colour used for the bus icon + polyline stroke. Falls back
+  // to the route's accent when we don't recognise the operator. Kept in
+  // sync with the operator-strip chip colours used elsewhere.
+  const VEHICLE_OP_COLOR = {
+    KMB: '#E11D48',      // crimson (KMB brand red)
+    LWB: '#B45309',      // amber (LWB brand gold-ish)
+    CTB: '#0284C2',      // CTB blue
+    NWFB: '#0EA5E9',     // NWFB sky-blue
+    GMB: '#16A34A',      // green for minibus
+    MTR: '#7C3AED',      // MTR purple
+    LRT: '#F59E0B',      // LRT yellow-orange
+  };
+
+  // Promise-cached lazy-load of the vehicle-positions helper. Mirrors
+  // __buseta.loadPlannerScript in spirit: a single <script> tag, cached
+  // at module level so subsequent vehicle-map renders don't refetch.
+  let _vehicleHelperLoad = null;
+  function loadVehicleHelper() {
+    if (window.BusEtaVehicles && typeof window.BusEtaVehicles.fetchPositions === 'function') {
+      return Promise.resolve(window.BusEtaVehicles);
+    }
+    if (_vehicleHelperLoad) return _vehicleHelperLoad;
+    _vehicleHelperLoad = new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = 'assets/vehicle-positions.js';
+      s.async = false; // preserve execution order with the next dependent call
+      s.onload = () => {
+        if (window.BusEtaVehicles) resolve(window.BusEtaVehicles);
+        else reject(new Error('vehicle-positions.js did not register BusEtaVehicles'));
+      };
+      s.onerror = () => reject(new Error('vehicle-positions.js failed to load'));
+      document.head.appendChild(s);
+    }).catch((e) => {
+      // Reset on failure so a later retry has a chance.
+      _vehicleHelperLoad = null;
+      throw e;
+    });
+    return _vehicleHelperLoad;
+  }
+
+  // Build placeholder pseudo-positions when no live GPS feed is
+  // available. We use the upcoming-ETA `diff` value (minutes from now)
+  // to interpolate each bus somewhere along the polyline: a bus with
+  // `diff` ≤ 2 sits near the destination, `diff` ≥ 15 sits near the
+  // origin. With no ETAs at all, fall back to N evenly-distributed
+  // positions (3 buses by default — matches a typical KMB frequency).
+  //
+  // Returns `{ positions: [{co, lat, lng, id}], placeholder: true }`.
+  // `placeholder: true` lets the header flag the section as "estimated"
+  // so the user knows the icons aren't real.
+  function placeholderVehiclePositions(stops, coordByStop, etasByStop, op) {
+    const routePoints = [];
+    stops.forEach((s) => {
+      const c = coordByStop.get(s.stop);
+      if (c) routePoints.push(c);
+    });
+    if (routePoints.length < 2) return { positions: [], placeholder: true };
+
+    // Find the longest available ETA tail (the leading arrival per stop)
+    // and use it as a progress signal.
+    const etas = [];
+    if (etasByStop && etasByStop.size) {
+      for (const s of stops) {
+        const arr = etasByStop.get(s.stop);
+        if (arr && arr.length) {
+          let m = null;
+          if (typeof arr[0].diff !== 'undefined') m = parseInt(arr[0].diff, 10);
+          else if (arr[0].eta) m = minutesUntil(arr[0].eta);
+          if (Number.isFinite(m)) etas.push(m);
+        }
+      }
+    }
+
+    // Map "minutes away" → fractional position along polyline [0..1].
+    // Heuristic: 1 min ≈ 95% to destination, 15 min ≈ 5% (near origin),
+    // clamped so the bus never goes past either endpoint.
+    const etaToFrac = (m) => {
+      if (!Number.isFinite(m)) return 0.5;
+      // Asymptotic mapping: 0 min → 1.0, ∞ min → 0.0.
+      const f = 1 / (1 + m * 0.5);
+      return Math.max(0, Math.min(1, f));
+    };
+
+    const positions = [];
+    if (etas.length > 0) {
+      etas.forEach((m, i) => {
+        const f = etaToFrac(m);
+        positions.push({ co: op || 'KMB', lat: 0, lng: 0, id: `eta-${i}`, _frac: f });
+      });
+    } else {
+      // No ETAs → 3 evenly-spaced placeholder buses.
+      [0.2, 0.5, 0.8].forEach((f, i) => {
+        positions.push({ co: op || 'KMB', lat: 0, lng: 0, id: `ph-${i}`, _frac: f });
+      });
+    }
+
+    // Project each placeholder's fractional progress to a real lat/lng
+    // by interpolating along the polyline.
+    positions.forEach((p) => {
+      const f = Number.isFinite(p._frac) ? p._frac : 0.5;
+      const idx = f * (routePoints.length - 1);
+      const lo = Math.floor(idx);
+      const hi = Math.min(routePoints.length - 1, lo + 1);
+      const t = idx - lo;
+      const a = routePoints[lo];
+      const b = routePoints[hi];
+      p.lat = a.lat + (b.lat - a.lat) * t;
+      p.lng = a.lng + (b.lng - a.lng) * t;
+      delete p._frac;
+    });
+
+    return { positions, placeholder: true };
+  }
+
+  // Project a single lat/lng into the SVG viewBox using a simple
+  // equirectangular projection scaled to the route's bounding box.
+  // `bounds` is `{minLat, maxLat, minLng, maxLng}` (degrees).
+  // `view` is `{width, height, padX, padY}` in user units.
+  function projectLatLng(lat, lng, bounds, view) {
+    const { minLat, maxLat, minLng, maxLng } = bounds;
+    const spanLat = Math.max(1e-6, maxLat - minLat);
+    const spanLng = Math.max(1e-6, maxLng - minLng);
+    // Equirectangular: x ∝ lng, y ∝ -lat (SVG y is downward).
+    const fx = (lng - minLng) / spanLng;
+    const fy = (lat - minLat) / spanLat;
+    return {
+      x: view.padX + fx * (view.width - 2 * view.padX),
+      y: view.padY + (1 - fy) * (view.height - 2 * view.padY),
+    };
+  }
+
+  // Pure-SVG vehicle map. Returns a <section> Node with a route polyline,
+  // stop dots, and bus icons (color-coded by operator). When `positions`
+  // is null / empty, falls back to placeholder pseudo-positions and
+  // marks the section header accordingly. Returns `null` when fewer than
+  // two stops have usable coordinates (so the caller can safely drop the
+  // node from the page rather than rendering an empty box).
+  function renderVehicleMap(stops, coordByStop, positions, opts) {
+    const o = opts || {};
+    const isPlaceholder = !positions || !positions.length;
+    const op = o.op || (stops && stops[0] && stops[0].co) || 'KMB';
+    const color = VEHICLE_OP_COLOR[op] || 'var(--accent)';
+
+    // Collect the route polyline coordinates (must have ≥ 2 points).
+    const routePts = [];
+    stops.forEach((s) => {
+      const c = coordByStop.get(s.stop);
+      if (c && Number.isFinite(c.lat) && Number.isFinite(c.lng)) {
+        routePts.push({ lat: c.lat, lng: c.lng });
+      }
+    });
+    if (routePts.length < 2) return null;
+
+    // Also include live bus positions (if any) when computing the bounding
+    // box, so an off-route bus doesn't get clipped at the edge.
+    const allPts = routePts.slice();
+    if (!isPlaceholder) {
+      positions.forEach((p) => {
+        if (Number.isFinite(p.lat) && Number.isFinite(p.lng)) {
+          allPts.push({ lat: p.lat, lng: p.lng });
+        }
+      });
+    }
+    let minLat = allPts[0].lat, maxLat = allPts[0].lat;
+    let minLng = allPts[0].lng, maxLng = allPts[0].lng;
+    for (const p of allPts) {
+      if (p.lat < minLat) minLat = p.lat;
+      if (p.lat > maxLat) maxLat = p.lat;
+      if (p.lng < minLng) minLng = p.lng;
+      if (p.lng > maxLng) maxLng = p.lng;
+    }
+    // Pad the bbox so dots/buses don't sit on the frame edge.
+    const padLat = (maxLat - minLat) * 0.12 || 0.005;
+    const padLng = (maxLng - minLng) * 0.12 || 0.005;
+    minLat -= padLat; maxLat += padLat;
+    minLng -= padLng; maxLng += padLng;
+    const bounds = { minLat, maxLat, minLng, maxLng };
+    const view = { width: 320, height: 200, padX: 18, padY: 18 };
+
+    // Build the <svg> root.
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', `0 0 ${view.width} ${view.height}`);
+    svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+    svg.setAttribute('class', 'vehicle-map-svg');
+    svg.setAttribute('role', 'img');
+    svg.setAttribute('aria-label', t_str('vehicleMap'));
+
+    // ---- route polyline ----
+    const polyPts = routePts.map((p) => projectLatLng(p.lat, p.lng, bounds, view));
+    const linePath = polyPts.map((pt, i) => `${i === 0 ? 'M' : 'L'} ${pt.x.toFixed(2)} ${pt.y.toFixed(2)}`).join(' ');
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', linePath);
+    path.setAttribute('class', 'vehicle-route-line');
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke', color);
+    path.setAttribute('stroke-width', '3');
+    path.setAttribute('stroke-linecap', 'round');
+    path.setAttribute('stroke-linejoin', 'round');
+    svg.appendChild(path);
+
+    // ---- stop dots ----
+    stops.forEach((s, idx) => {
+      const c = coordByStop.get(s.stop);
+      if (!c) return;
+      const pt = projectLatLng(c.lat, c.lng, bounds, view);
+      const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      dot.setAttribute('cx', pt.x.toFixed(2));
+      dot.setAttribute('cy', pt.y.toFixed(2));
+      dot.setAttribute('r', idx === 0 ? '5' : '3.5');
+      dot.setAttribute('class', 'vehicle-stop-dot' + (idx === 0 ? ' is-origin' : ''));
+      dot.setAttribute('fill', 'var(--card)');
+      dot.setAttribute('stroke', color);
+      dot.setAttribute('stroke-width', '2');
+      svg.appendChild(dot);
+    });
+
+    // ---- bus icons ----
+    const buses = (isPlaceholder ? placeholderVehiclePositions(stops, coordByStop, o.etasByStop, op).positions : positions);
+    buses.forEach((b, i) => {
+      if (!Number.isFinite(b.lat) || !Number.isFinite(b.lng)) return;
+      const pt = projectLatLng(b.lat, b.lng, bounds, view);
+      // Tiny circle (the bus body) + a small "bus" glyph dot on top.
+      const body = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      body.setAttribute('cx', pt.x.toFixed(2));
+      body.setAttribute('cy', pt.y.toFixed(2));
+      body.setAttribute('r', '7');
+      body.setAttribute('class', 'vehicle-icon' + (isPlaceholder ? ' is-placeholder' : ''));
+      body.setAttribute('fill', color);
+      body.setAttribute('stroke', 'var(--card)');
+      body.setAttribute('stroke-width', '2');
+      // Brief inline title so hovering reveals the operator + status.
+      const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+      title.textContent = isPlaceholder
+        ? `${t_str('vehiclePlaceholder')} · ${op}`
+        : `${t_str('vehiclePosition')} · ${op}`;
+      body.appendChild(title);
+      svg.appendChild(body);
+      // White "bus" stripe across the middle so the icon reads as a bus.
+      const stripe = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      const sx = pt.x - 4.5;
+      const sy = pt.y - 1.5;
+      stripe.setAttribute('x', sx.toFixed(2));
+      stripe.setAttribute('y', sy.toFixed(2));
+      stripe.setAttribute('width', '9');
+      stripe.setAttribute('height', '3');
+      stripe.setAttribute('rx', '0.8');
+      stripe.setAttribute('fill', 'var(--card)');
+      svg.appendChild(stripe);
+    });
+
+    // ---- section wrapper ----
+    const section = el('section', {
+      class: 'vehicle-map' + (isPlaceholder ? ' is-placeholder' : ' is-live'),
+      'aria-label': t_str('vehicleMap'),
+    });
+    const head = el('div', { class: 'vehicle-map-head' });
+    head.appendChild(el('span', { class: 'vehicle-map-title' }, t_str('vehicleMap')));
+    const badge = el('span', {
+      class: 'vehicle-map-badge' + (isPlaceholder ? ' is-placeholder' : ' is-live'),
+    }, isPlaceholder ? t_str('vehiclePlaceholder') : t_str('vehicleLive'));
+    head.appendChild(badge);
+    section.appendChild(head);
+    const frame = el('div', { class: 'vehicle-map-frame' });
+    frame.appendChild(svg);
+    section.appendChild(frame);
+    if (isPlaceholder) {
+      const hint = el('p', { class: 'vehicle-map-hint' }, t_str('vehicleNoData'));
+      section.appendChild(hint);
+    }
+    return section;
+  }
+
+  // Try to get live positions for the current route. Returns a Promise
+  // that resolves to either an array of `{co, lat, lng, ...}` objects
+  // (when the upstream exposes GPS) or `null` (when it doesn't — the
+  // caller should fall back to placeholder mode). Never throws; failures
+  // degrade silently into `null`.
+  async function tryFetchLivePositions(co, route, dir, service, signal) {
+    if (!window.BusEtaVehicles) {
+      try {
+        await loadVehicleHelper();
+      } catch (e) {
+        return null;
+      }
+    }
+    if (!window.BusEtaVehicles || typeof window.BusEtaVehicles.fetchPositions !== 'function') {
+      return null;
+    }
+    try {
+      const result = await window.BusEtaVehicles.fetchPositions(co, route, dir, service, { signal });
+      return Array.isArray(result) && result.length > 0 ? result : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // ------------------------------------------------------------------
+  // Vehicle-map auto-refresh
+  //
+  // We refresh every 30s (faster than the ETA refresh's 60s) so a real
+  // GPS icon, when one becomes available, surfaces quickly. The map
+  // holds its own timer (state.vehicleTimer) so it can be paused
+  // independently when the user navigates away from the route view.
+  // ------------------------------------------------------------------
+  const VEHICLE_REFRESH_MS = 30_000;
+
+  function startVehicleRefresh(refreshFn) {
+    stopVehicleRefresh();
+    state.vehicleTimer = setInterval(() => {
+      try { refreshFn(); } catch (e) { /* swallow — visual refresh only */ }
+    }, VEHICLE_REFRESH_MS);
+  }
+
+  function stopVehicleRefresh() {
+    if (state.vehicleTimer) {
+      clearInterval(state.vehicleTimer);
+      state.vehicleTimer = null;
+    }
+    if (state.vehicleAbort) {
+      try { state.vehicleAbort.abort(); } catch (e) { /* noop */ }
+      state.vehicleAbort = null;
+    }
+  }
+
+  // ------------------------------------------------------------------
   // GMB route list (progressive background build)
   // ------------------------------------------------------------------
   function loadGmbList() {
@@ -2135,6 +2591,12 @@
     const view = renderInto('home', 'home');
     const container = view.querySelector('.container') || view;
 
+    // Offline banner: sits ABOVE the .container (and therefore above
+    // any disruption / geo / nearest-stop banner inside it) so the
+    // connectivity state is the most prominent piece of information on
+    // the home view when the user has no network.
+    applyOfflineBanner();
+
     // Service-disruption banner: inserted at the very top of the home
     // view, ABOVE the geo banner / nearest-stop pill / operators strip.
     // The snapshot is fetched asynchronously; on each render we keep the
@@ -2308,6 +2770,14 @@
 
       populateNearbyInto(view);
     }
+
+    // Local-notification settings card. The placeholder div lives in the
+    // template (see index.html, `data-bind="notifSettings"`); we populate
+    // it on every home render so language switches and state toggles
+    // reflect immediately. The renderer is a no-op on browsers without
+    // Notification API support.
+    const notifEl = $('[data-bind="notifSettings"]', view);
+    if (notifEl) renderNotifSettings(notifEl);
   }
 
   // ------------------------------------------------------------------
@@ -2706,6 +3176,74 @@
     row.appendChild(el('span', { class: 'nearest-stop-dist nearby-dist' }, formatDistance(top.d)));
     row.appendChild(makeChev());
     return row;
+  }
+
+  // ------------------------------------------------------------------
+  // Offline banner
+  //   Small, persistent banner that sits at the very top of the home
+  //   view whenever `navigator.onLine === false`. Communicates that the
+  //   app is showing cached / last-known data so the user doesn't think
+  //   the (now stale) ETAs are live. Inserted as a direct child of
+  //   #view-home — above .container — so it doesn't compete with the
+  //   disruption / geo / nearest-stop banners inside the container.
+  // ------------------------------------------------------------------
+
+  // Build the offline banner DOM. Trilingual text is interpolated via
+  // t_str() (not data-i18n) because the banner is mounted after the
+  // template's applyI18n() pass, mirroring how renderDisruptionBanner
+  // is built.
+  function renderOfflineBanner() {
+    const wrap = el('div', {
+      class: 'offline-banner',
+      role: 'status',
+      'aria-live': 'polite',
+    });
+
+    // Compact wifi-off glyph. Inline so the banner stays a single DOM
+    // node and there's no extra request for an icon font.
+    const iconWrap = el('span', { class: 'offline-banner-icon', 'aria-hidden': 'true' });
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('width', '16');
+    svg.setAttribute('height', '16');
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke', 'currentColor');
+    path.setAttribute('stroke-width', '2');
+    path.setAttribute('stroke-linecap', 'round');
+    path.setAttribute('stroke-linejoin', 'round');
+    path.setAttribute('d',
+      'M2 8.5a16 16 0 0 1 20 0 ' +
+      'M5 12.5a11 11 0 0 1 14 0 ' +
+      'M8.5 16.5a6 6 0 0 1 7 0 ' +
+      'M12 20h.01 ' +
+      'M3 3l18 18');
+    svg.appendChild(path);
+    iconWrap.appendChild(svg);
+    wrap.appendChild(iconWrap);
+
+    const body = el('span', { class: 'offline-banner-body' });
+    const mode = el('span', { class: 'offline-banner-title' }, t_str('offlineMode'));
+    body.appendChild(mode);
+    body.appendChild(document.createTextNode(' — '));
+    body.appendChild(document.createTextNode(t_str('offlineShowingLastKnown')));
+    wrap.appendChild(body);
+
+    return wrap;
+  }
+
+  // Mount / unmount the offline banner based on the current offline
+  // flag. Safe to call multiple times — drops any stale banner first so
+  // repeated renderHome() calls don't pile up duplicates.
+  function applyOfflineBanner() {
+    const view = document.getElementById('view-home');
+    if (!view || view.hidden) return;
+    // `:scope > .offline-banner` so we only match direct children,
+    // never a nested banner.
+    const existing = view.querySelector(':scope > .offline-banner');
+    if (existing) existing.remove();
+    if (!isOffline) return;
+    view.insertBefore(renderOfflineBanner(), view.firstChild);
   }
 
   // ------------------------------------------------------------------
@@ -3725,14 +4263,57 @@
         : null;
 
       const heading = el('h2', { class: 'section-title' }, t_str('showingStop', stops.length));
-      // Order: optional alert → polyline map → stop list heading → rows.
-      // The polyline sits between the route header (above) and the stop
-      // list (below), matching the justarrived.grok.me aesthetic.
+      // ---- Vehicle positions (live GPS) ----
+      // Build the small SVG vehicle map now (placeholder mode by default —
+      // buses spread along the polyline based on the ETA pattern) and
+      // kick off a background probe for live positions. When live data
+      // arrives, the timer below swaps the section in-place via
+      // updateVehicleMap() without a full re-render.
+      //
+      // We pass `coordByStop` and `etasByStop` so the placeholder logic
+      // can interpolate positions along the polyline. `op` lets the
+      // marker colour track the operator chip palette.
+      const vehicleSection = renderVehicleMap(stops, coordByStop, null, {
+        op: r.co,
+        etasByStop,
+      });
+      const updateVehicleMap = (positions) => {
+        if (!vehicleSection) return;
+        const next = renderVehicleMap(stops, coordByStop, positions, { op: r.co });
+        if (next && vehicleSection.parentNode) {
+          vehicleSection.parentNode.replaceChild(next, vehicleSection);
+        }
+      };
+      // Order: optional alert → polyline map → vehicle map → stop list
+      // heading → rows. The polyline sits between the route header and
+      // the stop list (justarrived aesthetic); the vehicle map lives
+      // just below it so users see the route, then "where the buses
+      // are right now", then the stop-by-stop ETA list.
       const children = [];
       if (alertEl) children.push(alertEl);
       if (polylineEl) children.push(polylineEl);
+      if (vehicleSection) children.push(vehicleSection);
       children.push(heading, list);
       body.replaceChildren(...children);
+      // Wire the live-GPS probe: try once now, then re-poll every 30s
+      // via startVehicleRefresh. The latest fetch wins — older in-flight
+      // requests are aborted via state.vehicleAbort so a slow first
+      // response can't overwrite a fresher second one.
+      const probeLivePositions = () => {
+        if (state.vehicleAbort) {
+          try { state.vehicleAbort.abort(); } catch (e) { /* noop */ }
+        }
+        const ac = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+        state.vehicleAbort = ac;
+        tryFetchLivePositions(r.co, r.route, r.dir, r.service, ac && ac.signal)
+          .then((positions) => {
+            if (ac && ac.signal && ac.signal.aborted) return;
+            if (positions) updateVehicleMap(positions);
+          })
+          .catch(() => { /* silent — placeholder stays */ });
+      };
+      probeLivePositions();
+      startVehicleRefresh(probeLivePositions);
       // Refresh the header so the fare-range (or single flat fare) shows
       // up under the destination line. Built from the same opts object the
       // initial header was rendered with, but with the new fareMin/fareMax.
@@ -5634,6 +6215,10 @@
   }
   function stopEtaRefresh() {
     if (state.refreshTimer) { clearInterval(state.refreshTimer); state.refreshTimer = null; }
+    // Pause the vehicle-map auto-refresh too so navigating away from
+    // the route detail view drops the 30s polling. startVehicleRefresh
+    // is called by renderBusRoute when the map is first rendered.
+    stopVehicleRefresh();
   }
 
   // ------------------------------------------------------------------
@@ -5870,6 +6455,337 @@
     return svg;
   }
 
+
+  // ------------------------------------------------------------------
+  // Local notifications (Web Notification API)
+  //
+  // Fires `new Notification(...)` when a saved or recently-viewed stop
+  // has an ETA crossing below the user's chosen threshold (3 / 5 / 10
+  // minutes). Only works while the tab is open — this is the static
+  // GitHub Pages site, no backend, no VAPID push. The polling timer
+  // pauses while the page is hidden (`document.visibilityState`) and
+  // restarts when it becomes visible again. Edge-detection
+  // (`state.notifEdge`) ensures we only fire on the above → below
+  // transition; once a notification has been delivered for a given
+  // (stop, route, dir, serviceType) tuple, the same tag suppresses
+  // further notifications until the ETA moves back above threshold.
+  // ------------------------------------------------------------------
+  const NOTIF_POLL_MS = 20_000;
+  const NOTIF_THRESHOLDS = [3, 5, 10];
+
+  function notifSupported() {
+    return typeof Notification !== 'undefined';
+  }
+  // Pull the unique list of stop IDs the user is currently tracking
+  // through either their saved-stops or recent-stops lists. Each entry
+  // includes the cached name so the notification body can read e.g.
+  // "272A 將於 3 分鐘內到達大學站" without a second lookup.
+  function collectNotifStops() {
+    const seen = new Set();
+    const out = [];
+    const push = (s) => {
+      if (!s || !s.stop) return;
+      const id = String(s.stop);
+      if (seen.has(id)) return;
+      seen.add(id);
+      out.push({
+        stop: s.stop,
+        co: s.co || '',
+        nameTc: s.nameTc || '',
+        nameSc: s.nameSc || '',
+        nameEn: s.nameEn || '',
+      });
+    };
+    (state.savedStops || []).forEach(push);
+    (state.recent || []).forEach((r) => { if (r && r.stop) push(r); });
+    return out;
+  }
+
+  function ensureNotifTimer() {
+    if (!notifSupported()) return;
+    if (state.notifTimer) return;
+    state.notifTimer = setInterval(notifTick, NOTIF_POLL_MS);
+  }
+  function stopNotifTimer() {
+    if (state.notifTimer) {
+      clearInterval(state.notifTimer);
+      state.notifTimer = null;
+    }
+  }
+  function refreshNotifTimer() {
+    stopNotifTimer();
+    if (state.notifEnabled && notifSupported()
+        && typeof document !== 'undefined'
+        && document.visibilityState === 'visible') {
+      ensureNotifTimer();
+      // Fire an immediate tick so returning to the tab doesn't wait 20s
+      // before the first edge-crossing notification.
+      notifTick();
+    }
+  }
+
+  // One polling tick. Bails early if the page is hidden, permission has
+  // been revoked, or a tick is already running. For every (stop, route)
+  // with a soonest ETA at-or-below the threshold and whose previous
+  // edge state was 'above', fire `new Notification(...)` once.
+  async function notifTick() {
+    if (state.notifInFlight) return;
+    if (!state.notifEnabled) return;
+    if (!notifSupported() || Notification.permission !== 'granted') return;
+    if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+
+    const stops = collectNotifStops();
+    if (stops.length === 0) {
+      // Even with nothing to monitor, keep the timer alive so newly
+      // saved stops start getting watched on the next tick.
+      return;
+    }
+    state.notifInFlight = true;
+    try {
+      const results = await Promise.all(stops.map(async (s) => {
+        try {
+          const etaResp = await fetchEtaForStopLocal(s.stop);
+          return { stop: s, eta: (etaResp && Array.isArray(etaResp.data)) ? etaResp.data : [] };
+        } catch (e) {
+          return { stop: s, eta: [] };
+        }
+      }));
+
+      // Update the edge map for every observed (stop, co, route, dir,
+      // serviceType). Fire a notification only on the above → below
+      // transition.
+      const seenKeys = new Set();
+      const threshold = Number(state.notifThresholdMin) || 5;
+      for (const r of results) {
+        if (!r.eta || r.eta.length === 0) continue;
+        const stopName = nameFor({
+          nameTc: r.stop.nameTc,
+          nameSc: r.stop.nameSc,
+          nameEn: r.stop.nameEn,
+        }) || String(r.stop.stop);
+        for (const item of r.eta) {
+          if (!item || !item.eta) continue;
+          const minutes = minutesUntil(item.eta);
+          if (minutes == null) continue;
+          const co = (r.stop.co && r.stop.co !== 'STOP')
+            ? r.stop.co
+            : classifyKmbOp(item.route, '', item.dest_tc || '');
+          const serviceType = (item.service_type != null) ? String(item.service_type) : '1';
+          const dir = item.dir || '';
+          const key = `${r.stop.stop}|${co}|${item.route}|${dir}|${serviceType}`;
+          seenKeys.add(key);
+          const above = minutes > threshold;
+          if (above) {
+            state.notifEdge.set(key, 'above');
+            continue;
+          }
+          const prev = state.notifEdge.get(key);
+          if (prev === 'below') continue; // already fired; don't spam.
+          state.notifEdge.set(key, 'below');
+          fireNotif(co, item, minutes, stopName, key);
+        }
+      }
+      // Anything in the edge map we didn't see on this tick is presumed
+      // gone (stops deleted, route retired). Reset it to 'above' so a
+      // future reappearance fires fresh.
+      for (const key of Array.from(state.notifEdge.keys())) {
+        if (!seenKeys.has(key)) state.notifEdge.delete(key);
+      }
+    } finally {
+      state.notifInFlight = false;
+    }
+  }
+
+  // Pick the right ETA endpoint for the stop's operator shape. KMB uses
+  // 16-hex IDs and exposes all routes via `/stop-eta/{id}`. Citybus uses
+  // 6-digit numeric IDs and exposes all routes via the `/batch/stop-eta`
+  // batch feed. GMB / NLB are out of scope for v1 (we don't watch them).
+  function fetchEtaForStopLocal(stopId) {
+    if (typeof stopId !== 'string') return Promise.resolve(null);
+    if (/^[0-9a-fA-F]{16}$/.test(stopId)) return fetchKmbStopEta(stopId);
+    if (/^[0-9]{6}$/.test(stopId)) return fetchCitybusBatchStopEta(stopId);
+    // Best-effort: some KMB-shape operator IDs (rare) still work against
+    // the KMB /stop-eta endpoint. The promise may reject; the caller
+    // swallows the rejection.
+    return fetchKmbStopEta(stopId).catch(() => null);
+  }
+
+  // Fire one OS notification. `key` is the dedupe key built in
+  // notifTick(); we turn it into a tag that's stable across polls and
+  // renotify=true so the same tag can re-fire once the ETA leaves and
+  // re-enters the threshold window.
+  function fireNotif(co, item, minutes, stopName, stopKey) {
+    if (!notifSupported() || Notification.permission !== 'granted') return;
+    const dest = pickFirst(item.dest_tc, item.dest_en) || '';
+    const route = item.route || '';
+    const safeStop = String(stopName || '').replace(/[\r\n]+/g, ' ');
+    const title = dest
+      ? `${route} → ${safeStop}`
+      : `${route} · ${safeStop}`;
+    const body = t_str('notifMinutesAway', minutes);
+    const tag = `eta-threshold:${stopKey}`;
+    try {
+      const n = new Notification(title, {
+        body,
+        icon: 'assets/icon.svg',
+        badge: 'assets/icon.svg',
+        tag,
+        renotify: true,
+        silent: false,
+      });
+      // Clicking the notification focuses the matching stop view if the
+      // tab is in the background.
+      n.onclick = () => {
+        try { window.focus(); } catch (_) {}
+        try { n.close(); } catch (_) {}
+        try {
+          const stopId = String(stopKey.split('|')[0] || '');
+          if (stopId) location.hash = `#/stop/${encodeURIComponent(stopId)}`;
+        } catch (_) {}
+      };
+    } catch (e) {
+      // Notification can throw on insecure contexts or if the user
+      // blocks the channel between permission checks. Fail silently
+      // — the in-page UI keeps working.
+    }
+  }
+
+  // Toggle handler attached by `renderNotifSettings()`. Requests
+  // permission if needed, persists the new state, and starts/stops
+  // the polling timer.
+  async function setNotifEnabled(enabled) {
+    if (!notifSupported()) return;
+    if (!enabled) {
+      state.notifEnabled = false;
+      try { localStorage.setItem(STORAGE_KEYS.NOTIF_ENABLED, '0'); } catch (_) {}
+      stopNotifTimer();
+      return;
+    }
+    // Enabling: make sure the browser still has permission.
+    let permission = Notification.permission;
+    if (permission === 'default') {
+      try {
+        permission = await Notification.requestPermission();
+      } catch (_) {
+        permission = 'denied';
+      }
+    }
+    if (permission !== 'granted') {
+      // Stays disabled — the UI will flip the toggle back and surface a
+      // denied banner on the next render.
+      state.notifEnabled = false;
+      try { localStorage.setItem(STORAGE_KEYS.NOTIF_ENABLED, '0'); } catch (_) {}
+      return;
+    }
+    state.notifEnabled = true;
+    try { localStorage.setItem(STORAGE_KEYS.NOTIF_ENABLED, '1'); } catch (_) {}
+    refreshNotifTimer();
+  }
+  function setNotifThreshold(min) {
+    const n = Number(min);
+    state.notifThresholdMin = NOTIF_THRESHOLDS.includes(n) ? n : 5;
+    try { localStorage.setItem(STORAGE_KEYS.NOTIF_THRESHOLD, String(state.notifThresholdMin)); } catch (_) {}
+    // Threshold changed → reset the edge map so re-firing is possible
+    // even if the previous threshold was a different value.
+    state.notifEdge.clear();
+    if (state.notifEnabled) refreshNotifTimer();
+  }
+
+  // Build the settings card. Always rendered on the home view. Shows
+  // the toggle + threshold pills; if browser permission is denied at
+  // the OS level we instead show a one-line "blocked" hint and hide
+  // the toggle so we don't keep re-requesting.
+  function renderNotifSettings(container) {
+    if (!container) return;
+    container.innerHTML = '';
+    if (!notifSupported()) return; // Browser doesn't support Web Notifications.
+
+    const card = el('section', {
+      class: 'notif-settings',
+      'aria-label': t_str('notifEnable'),
+    });
+    const header = el('div', { class: 'notif-settings-header' });
+    header.appendChild(el('h2', { class: 'section-title' }, t_str('notifEnable')));
+    card.appendChild(header);
+
+    const permission = Notification.permission; // 'granted' | 'denied' | 'default'
+
+    // Always offer the toggle. When permission is 'denied' the OS has
+    // blocked the site — the toggle is visually disabled and we surface
+    // the banner below instead.
+    const row = el('div', { class: 'notif-row' });
+    const labelText = el('span', { class: 'notif-label' }, t_str('notifEnable'));
+    const toggleAttrs = {
+      type: 'button',
+      class: 'notif-toggle' + (state.notifEnabled ? ' is-on' : ''),
+      role: 'switch',
+      'aria-checked': state.notifEnabled ? 'true' : 'false',
+      'aria-label': t_str('notifEnable'),
+    };
+    if (permission === 'denied') toggleAttrs.disabled = 'disabled';
+    const toggle = el('button', toggleAttrs);
+    if (permission !== 'denied') {
+      toggle.addEventListener('click', async () => {
+        const wantOn = !state.notifEnabled;
+        toggle.classList.toggle('is-on', wantOn);
+        toggle.setAttribute('aria-checked', wantOn ? 'true' : 'false');
+        await setNotifEnabled(wantOn);
+        // Re-render in case the toggle needs to snap back (denied) or
+        // the threshold pills just became interactive.
+        renderNotifSettings(container);
+      });
+    }
+    row.appendChild(labelText);
+    row.appendChild(toggle);
+    card.appendChild(row);
+
+    // Threshold pills: 3 / 5 / 10. Only interactive when notifications
+    // are enabled; otherwise dimmed so the user can see what the
+    // default would be.
+    const pills = el('div', { class: 'notif-threshold' });
+    pills.appendChild(el('span', { class: 'notif-threshold-label' }, t_str('notifThreshold')));
+    const pillRow = el('div', { class: 'notif-threshold-pills', role: 'radiogroup', 'aria-label': t_str('notifThreshold') });
+    NOTIF_THRESHOLDS.forEach((m) => {
+      const isOn = state.notifThresholdMin === m;
+      const pill = el('button', {
+        type: 'button',
+        class: 'notif-threshold-pill' + (isOn ? ' is-on' : ''),
+        role: 'radio',
+        'aria-checked': isOn ? 'true' : 'false',
+        disabled: state.notifEnabled ? null : 'disabled',
+        onclick: () => {
+          if (!state.notifEnabled) return;
+          setNotifThreshold(m);
+          renderNotifSettings(container);
+        },
+      }, t_str('notifThreshold' + m));
+      pillRow.appendChild(pill);
+    });
+    pills.appendChild(pillRow);
+    card.appendChild(pills);
+
+    if (permission === 'denied') {
+      const denied = el('p', { class: 'notif-status is-denied' }, t_str('notifPermissionDenied'));
+      card.appendChild(denied);
+    }
+
+    container.appendChild(card);
+  }
+
+  // Wire up at-startup: install the visibility listener so the timer
+  // can pause when the tab is backgrounded. Safe to call multiple
+  // times (the addEventListener call is idempotent because we don't
+  // re-attach — but boot() only calls it once).
+  function setupLocalNotifications() {
+    if (!notifSupported()) return;
+    if (setupLocalNotifications._wired) return;
+    setupLocalNotifications._wired = true;
+    document.addEventListener('visibilitychange', () => {
+      refreshNotifTimer();
+    });
+    if (state.notifEnabled) refreshNotifTimer();
+  }
+
   // ------------------------------------------------------------------
   // Language
   // ------------------------------------------------------------------
@@ -5933,6 +6849,23 @@
     if (themeBtn) themeBtn.addEventListener('click', cycleTheme);
     window.addEventListener('hashchange', onHashChange);
     setupRouteSwipe();
+    setupLocalNotifications();
+
+    // Seed the offline flag from localStorage so a returning user who
+    // closed the tab offline sees the banner immediately on first
+    // paint (no flicker). The browser's `navigator.onLine` is checked
+    // as a tiebreaker for users who never saw the offline event fire
+    // (e.g. cold start while the radio is off).
+    try {
+      const storedOffline = readOfflineFlag();
+      const liveOffline = (typeof navigator !== 'undefined'
+        && navigator.onLine === false);
+      isOffline = storedOffline || liveOffline;
+      if (isOffline) writeOfflineFlag(true);
+    } catch { /* no DOM / no localStorage */ }
+    // React to connectivity changes for the rest of the session.
+    window.addEventListener('online', () => setOffline(false));
+    window.addEventListener('offline', () => setOffline(true));
 
     // Best-effort: load any site-wide config (e.g. the Google Maps API key)
     // before rendering so the embedded map is ready on first visit.
