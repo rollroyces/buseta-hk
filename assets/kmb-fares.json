@@ -1,0 +1,261 @@
+{
+  "_meta": {
+    "source": "KMB / LWB published fare tables at https://app.kmb.hk/app1933/fare_increment/ (KMB official Adult Octopus-card fare increment page; serves route+section fares for the post-2024 KMB fare scale). Head (max) Octopus fare per single ride. KMB upstream /route-fare is dead (HTTP 422 — verified at https://data.etabus.gov.hk/v1/transport/kmb/route-fare/{route}/{dir}/{service_type}), so this JSON is the only source for KMB / LWB fares in this static site. LWB / airport routes (A31, E31, etc.) are not yet covered (KMB does not publish a public LWB fare table). Cross-harbour 100-series (101, 102, ...) are CTB routes, not KMB.",
+    "currency": "HKD",
+    "keyFormat": "OCTOPUS",
+    "note": "Flat fare per route — KMB does publish per-stop (front_board / rear_board) fares upstream, but only on the dead /route-fare endpoint. We hand-curated 50 routes from the post-2024 fare-increment page (covers Kowloon core + NT east + Tuen Mun / Yuen Long + a few popular variants). Keys are route numbers; values include the operator 'KMB'. Routes not in this table render no fare pill.",
+    "scrapedOn": "2026-10-03",
+    "routesCovered": 50,
+    "sourceUrl": "https://app.kmb.hk/app1933/fare_increment/"
+  },
+  "1": {
+    "co": "KMB",
+    "fare": 6.7,
+    "octopus": 6.7
+  },
+  "2": {
+    "co": "KMB",
+    "fare": 5.6,
+    "octopus": 5.6
+  },
+  "3C": {
+    "co": "KMB",
+    "fare": 6.7,
+    "octopus": 6.7
+  },
+  "5": {
+    "co": "KMB",
+    "fare": 6.7,
+    "octopus": 6.7
+  },
+  "6": {
+    "co": "KMB",
+    "fare": 5.8,
+    "octopus": 5.8
+  },
+  "7": {
+    "co": "KMB",
+    "fare": 5.6,
+    "octopus": 5.6
+  },
+  "8": {
+    "co": "KMB",
+    "fare": 5.8,
+    "octopus": 5.8
+  },
+  "9": {
+    "co": "KMB",
+    "fare": 6.7,
+    "octopus": 6.7
+  },
+  "10": {
+    "co": "KMB",
+    "fare": 5.6,
+    "octopus": 5.6
+  },
+  "11": {
+    "co": "KMB",
+    "fare": 5.8,
+    "octopus": 5.8
+  },
+  "12": {
+    "co": "KMB",
+    "fare": 5.6,
+    "octopus": 5.6
+  },
+  "13D": {
+    "co": "KMB",
+    "fare": 7.8,
+    "octopus": 7.8
+  },
+  "14": {
+    "co": "KMB",
+    "fare": 7.8,
+    "octopus": 7.8
+  },
+  "15": {
+    "co": "KMB",
+    "fare": 7.8,
+    "octopus": 7.8
+  },
+  "16": {
+    "co": "KMB",
+    "fare": 7.8,
+    "octopus": 7.8
+  },
+  "17": {
+    "co": "KMB",
+    "fare": 6.7,
+    "octopus": 6.7
+  },
+  "18": {
+    "co": "KMB",
+    "fare": 5.6,
+    "octopus": 5.6
+  },
+  "21": {
+    "co": "KMB",
+    "fare": 5.6,
+    "octopus": 5.6
+  },
+  "26": {
+    "co": "KMB",
+    "fare": 7.8,
+    "octopus": 7.8
+  },
+  "30X": {
+    "co": "KMB",
+    "fare": 10.2,
+    "octopus": 10.2
+  },
+  "33A": {
+    "co": "KMB",
+    "fare": 7.4,
+    "octopus": 7.4
+  },
+  "36": {
+    "co": "KMB",
+    "fare": 5.1,
+    "octopus": 5.1
+  },
+  "38": {
+    "co": "KMB",
+    "fare": 10.0,
+    "octopus": 10.0
+  },
+  "40": {
+    "co": "KMB",
+    "fare": 10.1,
+    "octopus": 10.1
+  },
+  "42": {
+    "co": "KMB",
+    "fare": 9.3,
+    "octopus": 9.3
+  },
+  "43": {
+    "co": "KMB",
+    "fare": 5.4,
+    "octopus": 5.4
+  },
+  "44": {
+    "co": "KMB",
+    "fare": 7.4,
+    "octopus": 7.4
+  },
+  "45": {
+    "co": "KMB",
+    "fare": 7.9,
+    "octopus": 7.9
+  },
+  "46": {
+    "co": "KMB",
+    "fare": 6.7,
+    "octopus": 6.7
+  },
+  "68": {
+    "co": "KMB",
+    "fare": 6.7,
+    "octopus": 6.7
+  },
+  "69": {
+    "co": "KMB",
+    "fare": 5.2,
+    "octopus": 5.2
+  },
+  "261": {
+    "co": "KMB",
+    "fare": 15.4,
+    "octopus": 15.4
+  },
+  "263": {
+    "co": "KMB",
+    "fare": 16.9,
+    "octopus": 16.9
+  },
+  "270": {
+    "co": "KMB",
+    "fare": 4.3,
+    "octopus": 4.3
+  },
+  "276": {
+    "co": "KMB",
+    "fare": 10.5,
+    "octopus": 10.5
+  },
+  "1A": {
+    "co": "KMB",
+    "fare": 8.2,
+    "octopus": 8.2
+  },
+  "2A": {
+    "co": "KMB",
+    "fare": 6.7,
+    "octopus": 6.7
+  },
+  "2X": {
+    "co": "KMB",
+    "fare": 7.8,
+    "octopus": 7.8
+  },
+  "3B": {
+    "co": "KMB",
+    "fare": 5.8,
+    "octopus": 5.8
+  },
+  "5A": {
+    "co": "KMB",
+    "fare": 5.1,
+    "octopus": 5.1
+  },
+  "5C": {
+    "co": "KMB",
+    "fare": 6.7,
+    "octopus": 6.7
+  },
+  "6D": {
+    "co": "KMB",
+    "fare": 6.7,
+    "octopus": 6.7
+  },
+  "6X": {
+    "co": "KMB",
+    "fare": 6.7,
+    "octopus": 6.7
+  },
+  "7B": {
+    "co": "KMB",
+    "fare": 6.7,
+    "octopus": 6.7
+  },
+  "8A": {
+    "co": "KMB",
+    "fare": 5.1,
+    "octopus": 5.1
+  },
+  "11B": {
+    "co": "KMB",
+    "fare": 5.8,
+    "octopus": 5.8
+  },
+  "11X": {
+    "co": "KMB",
+    "fare": 8.6,
+    "octopus": 8.6
+  },
+  "12A": {
+    "co": "KMB",
+    "fare": 5.8,
+    "octopus": 5.8
+  },
+  "13M": {
+    "co": "KMB",
+    "fare": 5.1,
+    "octopus": 5.1
+  },
+  "14B": {
+    "co": "KMB",
+    "fare": 5.8,
+    "octopus": 5.8
+  }
+}

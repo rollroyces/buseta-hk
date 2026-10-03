@@ -1039,24 +1039,53 @@
   const fetchKmbStopEta = (stopId) =>
     fetchJSON(`${API.KMB}/stop-eta/${encodeURIComponent(stopId)}`);
   // Per-stop section fares for KMB / LWB (same endpoint). Returns a
-  // Map<seq, fare> or null on failure. Each row's `front_board` is the
+  // Map<seq, fare>, a flat number, or null on failure. The upstream
+  // /route-fare endpoint returns per-stop seq fares (`front_board` is the
   // fare a passenger pays when boarding at that stop and riding to the
-  // route terminus — the value we render in the per-stop fare pill.
+  // route terminus). When upstream is dead (HTTP 422 — verified Oct 2026),
+  // fall back to the hand-curated assets/kmb-fares.json (50 most-common
+  // KMB routes from the post-2024 fare_increment page). The JSON fallback
+  // returns a flat single-route fare which `expandFareForStops` (in the
+  // route-detail caller) spreads across every seq — same UX as CTB.
   const fetchKmbRouteFare = async (route, dir, service) => {
-    const dirSeg = dir === 'I' ? 'inbound' : 'outbound';
-    const resp = await fetchJSON(`${API.KMB}/route-fare/${encodeURIComponent(route)}/${dirSeg}/${encodeURIComponent(service)}`);
-    const arr = (resp && Array.isArray(resp.data)) ? resp.data : [];
-    if (arr.length === 0) return null;
-    const m = new Map();
-    for (const it of arr) {
-      const seq = parseInt(it.seq, 10);
-      if (!Number.isFinite(seq)) continue;
-      // Prefer front_board; fall back to rear_board when upstream is sparse.
-      const fare = (it.front_board != null && it.front_board !== '') ? it.front_board
-        : ((it.rear_board != null && it.rear_board !== '') ? it.rear_board : null);
-      if (fare != null) m.set(seq, fare);
+    const cacheKey = `KMB/${route}`;
+    if (_fareFlatCache.has(cacheKey)) return _fareFlatCache.get(cacheKey);
+    let map = null;
+    let flat = null;
+    try {
+      const dirSeg = dir === 'I' ? 'inbound' : 'outbound';
+      const resp = await fetchJSON(`${API.KMB}/route-fare/${encodeURIComponent(route)}/${dirSeg}/${encodeURIComponent(service)}`);
+      const arr = (resp && Array.isArray(resp.data)) ? resp.data : [];
+      if (arr.length > 0) {
+        map = new Map();
+        for (const it of arr) {
+          const seq = parseInt(it.seq, 10);
+          if (!Number.isFinite(seq)) continue;
+          // Prefer front_board; fall back to rear_board when upstream is sparse.
+          const fare = (it.front_board != null && it.front_board !== '') ? it.front_board
+            : ((it.rear_board != null && it.rear_board !== '') ? it.rear_board : null);
+          if (fare != null) map.set(seq, fare);
+        }
+        if (map.size === 0) map = null;
+      }
+    } catch (e) { map = null; }
+    if (!map) {
+      // Hardcoded fallback: assets/kmb-fares.json — KMB's official
+      // fare_increment page publishes a flat Octopus fare per route;
+      // the file is keyed by route number with `{co: 'KMB', fare, octopus}`.
+      try {
+        const all = await fetchJSON(`assets/kmb-fares.json`);
+        const entry = (all && all[route]) || null;
+        const f = entry && Number.isFinite(Number(entry.octopus || entry.fare))
+          ? Number(entry.octopus || entry.fare) : null;
+        flat = f;
+      } catch (e) { flat = null; }
     }
-    return m.size > 0 ? m : null;
+    // Cache the result — prefer the per-stop map (upstream), otherwise the
+    // flat number (JSON fallback). `null` means "no data, do not retry".
+    const out = map || flat;
+    _fareFlatCache.set(cacheKey, out);
+    return out;
   };
 
   // ---- Per-route fare fetchers (extending fetchKmbRouteFare) ----
