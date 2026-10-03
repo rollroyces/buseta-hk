@@ -4275,7 +4275,14 @@
       // marker colour track the operator chip palette.
       const vehicleSection = renderVehicleMap(stops, coordByStop, null, {
         op: r.co,
-        etasByStop,
+        etaByStop,  // Map<stopId, etaArray> — declared at app.js:4073
+                    // (was "etasByStop" until this hotfix; that typo
+                    // triggered a ReferenceError in renderVehicleMap's
+                    // placeholder-bus loop, which the silent catch
+                    // swallowed and replaced the body with "搵唔到
+                    // 呢條路線" — masking every successfully-fetched
+                    // route since Batch 3's vehicle-positions feature
+                    // shipped).
       });
       const updateVehicleMap = (positions) => {
         if (!vehicleSection) return;
