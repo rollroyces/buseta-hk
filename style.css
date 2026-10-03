@@ -1452,6 +1452,39 @@ h1, h2, h3 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
   border-color: #FCA5A5;             /* red-300 */
   color: #7F1D1D;                    /* red-900 */
 }
+/* Dark-theme variants — see .route-alert above for rationale. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .route-service-info.is-info {
+    background: rgba(56, 189, 248, 0.14);
+    border-color: rgba(56, 189, 248, 0.45);
+    color: #7DD3FC;
+  }
+  :root:not([data-theme]) .route-service-info.is-warning {
+    background: rgba(252, 211, 77, 0.14);
+    border-color: rgba(252, 211, 77, 0.45);
+    color: #FCD34D;
+  }
+  :root:not([data-theme]) .route-service-info.is-critical {
+    background: rgba(248, 113, 113, 0.14);
+    border-color: rgba(248, 113, 113, 0.5);
+    color: #FCA5A5;
+  }
+}
+:root[data-theme="dark"] .route-service-info.is-info {
+  background: rgba(56, 189, 248, 0.14);
+  border-color: rgba(56, 189, 248, 0.45);
+  color: #7DD3FC;
+}
+:root[data-theme="dark"] .route-service-info.is-warning {
+  background: rgba(252, 211, 77, 0.14);
+  border-color: rgba(252, 211, 77, 0.45);
+  color: #FCD34D;
+}
+:root[data-theme="dark"] .route-service-info.is-critical {
+  background: rgba(248, 113, 113, 0.14);
+  border-color: rgba(248, 113, 113, 0.5);
+  color: #FCA5A5;
+}
 .route-service-info-icon {
   flex: 0 0 auto;
   display: inline-flex;
@@ -2746,4 +2779,59 @@ h1, h2, h3 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
     max-width: 520px;
   }
   .home-empty-cta { flex: 1 1 140px; min-width: 140px; }
+}
+
+/* ===========================================================
+   Bound-swap control on the route detail header
+   ===========================================================
+   A single full-width button placed just under the bound pills row.
+   Tapping it swaps the route direction in-place (no nav, no scroll
+   jump) so the user can flip O ↔ I without going back to search.
+   Only rendered when the index has an entry for the opposite bound;
+   one-way routes / MTR LINE / STATION pseudo-views do not show it. */
+
+.bound-swap-row {
+  display: flex;
+  margin: 8px 0 4px;
+}
+.bound-swap-btn {
+  flex: 1 1 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.12s ease, background 0.12s ease, border-color 0.12s ease;
+}
+.bound-swap-btn:hover { background: var(--bg-soft); }
+.bound-swap-btn:active { transform: scale(0.98); }
+.bound-swap-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.bound-swap-btn svg { flex: 0 0 auto; color: var(--accent); }
+.bound-swap-label {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Subtle swipe hint shown while a horizontal swipe is in progress on
+   the stop list — purely cosmetic feedback so users discover the
+   gesture. Only attaches when the route has both bounds. */
+.bound-swap-gesture {
+  position: relative;
+  overflow-x: hidden;
 }

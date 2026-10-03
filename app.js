@@ -629,7 +629,7 @@
       disruptionSeveritySevere: '服务暂停或严重受阻',
       disruptionSeverityInfo: '服务调整',
       boundSwap: '对调方向',
-      boundSwapHint: '揫一下去睇反方向嘅班次',
+      boundSwapHint: '按一下睇反方向嘅班次',
       boundSwapAria: '对调去程同回程',
       themeLight: '浅色',
       themeDark: '深色',
@@ -4524,6 +4524,155 @@
     return svg;
   }
 
+  // ↔ swap-direction glyph for the bound-swap button. Horizontal arrow with
+  // arrowheads on both ends (matches the "↔" glyph the brief asks for, but
+  // vector so it scales cleanly and stays consistent across themes).
+  function boundSwapArrowSVG() {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('width', '18');
+    svg.setAttribute('height', '18');
+    svg.setAttribute('aria-hidden', 'true');
+    const shaft = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    shaft.setAttribute('d', 'M4 12h16');
+    shaft.setAttribute('fill', 'none');
+    shaft.setAttribute('stroke', 'currentColor');
+    shaft.setAttribute('stroke-width', '1.8');
+    shaft.setAttribute('stroke-linecap', 'round');
+    svg.appendChild(shaft);
+    const leftHead = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    leftHead.setAttribute('d', 'M8 8l-4 4 4 4');
+    leftHead.setAttribute('fill', 'none');
+    leftHead.setAttribute('stroke', 'currentColor');
+    leftHead.setAttribute('stroke-width', '1.8');
+    leftHead.setAttribute('stroke-linecap', 'round');
+    leftHead.setAttribute('stroke-linejoin', 'round');
+    svg.appendChild(leftHead);
+    const rightHead = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    rightHead.setAttribute('d', 'M16 8l4 4-4 4');
+    rightHead.setAttribute('fill', 'none');
+    rightHead.setAttribute('stroke', 'currentColor');
+    rightHead.setAttribute('stroke-width', '1.8');
+    rightHead.setAttribute('stroke-linecap', 'round');
+    rightHead.setAttribute('stroke-linejoin', 'round');
+    svg.appendChild(rightHead);
+    return svg;
+  }
+
+  // Flip the route view to its opposite bound, in-place. Looks up the
+  // current route's swapTarget via buildDirectionPills (single source of
+  // truth for what "opposite bound" means per operator), mutates
+  // state.detailRoute / state.recent, and re-runs renderRoute() — which
+  // dispatches to the right renderer (bus / LRT / GMB / MTR / etc.) using
+  // the new dir. No-op when there's no opposite bound (one-way routes).
+  function swapRouteBound() {
+    const cur = state.detailRoute;
+    if (!cur) return;
+    const pills = buildDirectionPills(cur.co, cur.route, cur.dir, cur.service);
+    const target = pills && pills.swapTarget;
+    if (!target || !target.co) return;
+    const newRoute = {
+      co: target.co,
+      route: target.route,
+      dir: target.dir,
+      service: target.service,
+      // Preserve any stop-anchor / region hints carried on the current view.
+      stopSeq: cur.stopSeq || null,
+      _region: cur._region || undefined,
+      _code: cur._code || undefined,
+    };
+    state.detailRoute = newRoute;
+    // Refresh the recent-entries cache so the new direction surfaces in
+    // 最近查過. pushRecent dedupes on (co, route, dir, service), so the
+    // opposite-bound entry will sit at the top of the list while the
+    // previous-bound entry drops down — same behaviour as a normal visit.
+    pushRecent({ co: newRoute.co, route: newRoute.route, dir: newRoute.dir, service: newRoute.service });
+    // Keep the URL bar in sync without triggering the hashchange handler
+    // (which would otherwise cause a second renderRoute call).
+    try {
+      const newHash = `#/route/${encodeURIComponent(newRoute.co)}/${encodeURIComponent(newRoute.route)}/${encodeURIComponent(newRoute.dir)}/${encodeURIComponent(newRoute.service)}`;
+      if (location.hash !== newHash && typeof history.replaceState === 'function') {
+        history.replaceState(null, '', newHash);
+      }
+    } catch {}
+    renderRoute(newRoute);
+  }
+
+  // Wire up the swipe-to-swap-bound gesture on the route view.
+  // Behaviour:
+  //   - swipe-left on the stop list → O → I / 1 → 2 / UP → DOWN
+  //   - swipe-right on the stop list → I → O / 2 → 1 / DOWN → UP
+  // The mapping follows the bound-swap convention (left = forward) and
+  // is a no-op when the current dir doesn't have an opposite in the
+  // index (one-way routes, MTR LINE / STATION pseudo-views).
+  //
+  // We listen on `document` (single delegation point) rather than per
+  // render. The view is identified by #view-route being visible — if
+  // it's hidden the swipe is silently ignored.
+  function setupRouteSwipe() {
+    if (typeof document === 'undefined') return;
+    // State for the in-flight swipe. Module-scope is fine because only
+    // one swipe can be active at a time and the route view is single-view.
+    let tracking = false;
+    let startX = 0;
+    let startY = 0;
+    const SWIPE_HORIZ_THRESHOLD = 70;   // px — how far the user has to drag
+    const SWIPE_VERT_LIMIT = 50;        // px — max vertical drift allowed
+
+    const shouldIgnore = (target) => {
+      if (!target) return true;
+      // Ignore touches that start on form / button elements anywhere
+      // (the swap button, star, refresh, share, back, etc.) — those have
+      // their own tap handlers and shouldn't double-trigger the swap.
+      if (target.closest('button, input, select, textarea, label, [role="button"]')) return true;
+      // Ignore touches that start on the route-header pills / tabs (bound
+      // pills, service-type tabs) so the user can still tap them to
+      // navigate without the swipe hijacking the gesture.
+      if (target.closest('[data-bind="routeHeader"] [role="tab"]')) return true;
+      return false;
+    };
+
+    document.addEventListener('touchstart', (e) => {
+      const view = document.getElementById('view-route');
+      if (!view || view.hidden) { tracking = false; return; }
+      if (shouldIgnore(e.target)) { tracking = false; return; }
+      if (!e.touches || e.touches.length !== 1) { tracking = false; return; }
+      const t = e.touches[0];
+      startX = t.clientX;
+      startY = t.clientY;
+      tracking = true;
+    }, { passive: true });
+
+    document.addEventListener('touchcancel', () => { tracking = false; }, { passive: true });
+
+    document.addEventListener('touchend', (e) => {
+      if (!tracking) return;
+      tracking = false;
+      const view = document.getElementById('view-route');
+      if (!view || view.hidden) return;
+      const touches = e.changedTouches;
+      if (!touches || touches.length === 0) return;
+      const t = touches[0];
+      const dx = t.clientX - startX;
+      const dy = t.clientY - startY;
+      if (Math.abs(dy) > SWIPE_VERT_LIMIT) return;       // vertical scroll — ignore
+      if (Math.abs(dx) < SWIPE_HORIZ_THRESHOLD) return;  // too short
+      const cur = state.detailRoute;
+      if (!cur) return;
+      // Direction-keyed gating: left = forward, right = backward.
+      // Skip the gesture when the user swiped the wrong way for their
+      // current bound (e.g. already on I, swiping left).
+      const OPPOSITE = { O: 'I', I: 'O', '1': '2', '2': '1', UP: 'DOWN', DOWN: 'UP' };
+      const curDir = String(cur.dir);
+      if (!OPPOSITE[curDir]) return; // one-way or pseudo view
+      const goingLeft = dx < 0;
+      const isForwardDir = (curDir === 'O' || curDir === '1' || curDir === 'UP');
+      if (goingLeft && !isForwardDir) return;
+      if (!goingLeft && isForwardDir) return;
+      swapRouteBound();
+    }, { passive: true });
+  }
+
   // Build the list of direction pills for a route header. Scans the index
   // Returns three pieces for the route header:
   //   - boundPills:    [{co, route, dir, service, label, key}]
@@ -5783,6 +5932,7 @@
     const themeBtn = document.getElementById('themeToggle');
     if (themeBtn) themeBtn.addEventListener('click', cycleTheme);
     window.addEventListener('hashchange', onHashChange);
+    setupRouteSwipe();
 
     // Best-effort: load any site-wide config (e.g. the Google Maps API key)
     // before rendering so the embedded map is ready on first visit.
