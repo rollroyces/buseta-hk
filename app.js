@@ -1425,7 +1425,14 @@
       const ul = el('div', { class: 'list' });
       state.recent.slice(0, 8).forEach((r) => {
         if (r.stop) {
-          ul.appendChild(stopRow({ stop: r.stop, co: r.co }));
+          // Hydrate the recent stop with the actual name metadata from the
+          // index — without it stopRow falls back to slicing the raw 16-hex
+          // operator id down to 12 chars ("0C81107C4ABFCD56" → "0C81107C4ABF").
+          const idxMeta = state.index && state.index.stops.get(r.stop);
+          ul.appendChild(stopRow(idxMeta
+            ? { stop: r.stop, co: r.co || idxMeta.co || 'STOP',
+                nameTc: idxMeta.nameTc, nameSc: idxMeta.nameSc, nameEn: idxMeta.nameEn }
+            : { stop: r.stop, co: r.co }));
         } else if (r.route) {
           // Hydrate the recent item with the current route meta (dest/orig
           // are not stored in localStorage — look them up from the index so
@@ -3826,7 +3833,17 @@
   }
 
   function renderStopDetail() {
-    if (state.detailStop) renderStop(state.detailStop);
+    // Periodic refresh hook. When on Live, repaint just the panel (avoids
+    // rebuilding the whole tab control). When on Schedule, silently warm
+    // the cache so the next explicit click returns the latest data.
+    if (!state.detailStop) return;
+    const stopId = state.detailStop.stop;
+    const isCtb = typeof stopId === 'string' && /^[0-9]{6}$/.test(stopId);
+    if (state._stopViewMode === 'schedule') {
+      fetchStopSchedule(stopId, isCtb).catch(() => {});
+      return;
+    }
+    if (state._refreshStop) state._refreshStop({ mode: 'live' });
   }
 
   // ------------------------------------------------------------------

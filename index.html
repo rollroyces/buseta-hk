@@ -12,6 +12,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <title>BusETA HK · 巴士到站</title>
 <link rel="stylesheet" href="style.css" />
+<link rel="stylesheet" href="planner.css" />
 </head>
 <body>
 <a class="skip-link" href="#main">Skip to content</a>
@@ -78,6 +79,9 @@
 
   <!-- Not found / error view -->
   <section id="view-error" class="view" hidden aria-hidden="true"></section>
+
+  <!-- Planner view (A→B trip planner, owned by planner.js) -->
+  <section id="view-planner" class="view" hidden aria-hidden="true"></section>
 </main>
 
 <nav class="bottom-nav" role="navigation" aria-label="主要選單">
@@ -94,6 +98,13 @@
       <path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M20 20l-3.5-3.5"/>
     </svg>
     <span class="nav-label" data-i18n="navSearch">搜尋</span>
+    <span class="nav-rule" aria-hidden="true"></span>
+  </a>
+  <a class="nav-item" data-route="planner" href="#/planner" aria-label="行程">
+    <svg class="nav-icon" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+      <path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M6 7h12M6 7l3-3M6 7l3 3M18 17H6M18 17l-3 3M18 17l-3-3"/>
+    </svg>
+    <span class="nav-label" data-i18n="navPlanner">行程</span>
     <span class="nav-rule" aria-hidden="true"></span>
   </a>
 </nav>
@@ -257,7 +268,8 @@
   </div>
 </template>
 
-<script src="app.js?v=10"></script>
+<script src="app.js?v=11"></script>
+<script src="planner.js"></script>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
