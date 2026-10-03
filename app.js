@@ -3065,26 +3065,32 @@
         info.appendChild(el('div', { class: 'stop-name-row' }, nameDisplay || s.stop));
         if (enDisplay) info.appendChild(el('div', { class: 'stop-name-en' }, enDisplay));
         // Operator stop code (e.g. "ST905", "PA100") — justarrived-style
-        // small gray text under the English stop name. Hidden when it
-        // duplicates the displayed name (e.g. for hk-stops.json entries
-        // whose `stop` field is already a human-readable ID).
-        if (s.stop && s.stop !== nameDisplay) {
+        // small gray text under the English stop name. We only render it
+        // when it looks like an operator code (short alphanumeric, 2-6
+        // chars) rather than a hash ID — hk-stops.json hashes are 16 hex
+        // chars and would be ugly noise here. KMB upstream already returns
+        // names that include the operator code in parens (e.g. "大學站 (ST905)"),
+        // so the displayed name and the code share context; we skip the
+        // separate code line when it's redundant.
+        if (s.stop && /^[A-Z0-9]{2,6}$/i.test(s.stop) && s.stop !== nameDisplay) {
           info.appendChild(el('div', { class: 'stop-code' }, s.stop));
         }
         // Fare row: pill (or `—` chip) + optional "起點" marker on origin.
         //   - fare known  → `$X.X` (KMB per-stop, or flat-fare CTB/GMB/LRT)
         //   - fare attempted but null → `—` chip in muted style
         //   - fare not yet attempted → nothing (still loading)
+        // 起點 marker is shown on the origin stop regardless of fare status,
+        // so users can always tell where the route starts (justarrived-style).
         const fareRow = el('div', { class: 'stop-fare-row' });
         const stopFare = fareBySeq && fareBySeq.get(seq);
         if (stopFare != null && Number.isFinite(Number(stopFare))) {
           fareRow.appendChild(el('span', { class: 'stop-fare' }, `$${fmtFare(Number(stopFare))}`));
-          if (isOrigin) fareRow.appendChild(el('span', { class: 'stop-origin-marker' }, t_str('fareOrigin')));
         } else if (fareAttempted) {
           const chip = el('span', { class: 'stop-fare is-na' }, '—');
           chip.title = t_str('fareUnavailable');
           fareRow.appendChild(chip);
         }
+        if (isOrigin) fareRow.appendChild(el('span', { class: 'stop-origin-marker' }, t_str('fareOrigin')));
         if (fareRow.children.length > 0) info.appendChild(fareRow);
         row.appendChild(info);
         // ETA column (justarrived-style): big relative + absolute time,
@@ -3449,21 +3455,23 @@
         info.appendChild(el('div', { class: 'stop-name-row' }, nameText));
         if (stopMeta && stopMeta.nameEn) info.appendChild(el('div', { class: 'stop-name-en' }, stopMeta.nameEn));
         // LRT stop code (e.g. "TR01") — small gray text under English name.
-        if (s.stop && s.stop !== nameText) {
+        // Skip if it's a hash ID (16 hex chars) — those are noise.
+        if (s.stop && /^[A-Z0-9]{2,6}$/i.test(s.stop) && s.stop !== nameText) {
           info.appendChild(el('div', { class: 'stop-code' }, s.stop));
         }
         // Per-stop fare pill (LRT: same flat fare on every row, or `—`
-        // when the LRT route isn't in our hardcoded fares table).
+        // when the LRT route isn't in our hardcoded fares table). 起點
+        // marker is always shown on the origin stop, even without fare data.
         const fareRow = el('div', { class: 'stop-fare-row' });
         const stopFare = lrtFareBySeq && lrtFareBySeq.get(idx + 1);
         if (stopFare != null && Number.isFinite(Number(stopFare))) {
           fareRow.appendChild(el('span', { class: 'stop-fare' }, `$${fmtFare(Number(stopFare))}`));
-          if (isOrigin) fareRow.appendChild(el('span', { class: 'stop-origin-marker' }, t_str('fareOrigin')));
         } else {
           const chip = el('span', { class: 'stop-fare is-na' }, '—');
           chip.title = t_str('fareUnavailable');
           fareRow.appendChild(chip);
         }
+        if (isOrigin) fareRow.appendChild(el('span', { class: 'stop-origin-marker' }, t_str('fareOrigin')));
         info.appendChild(fareRow);
         row.appendChild(info);
         const etaBox = el('div', { class: 'stop-eta' });
@@ -3620,21 +3628,23 @@
           info.appendChild(el('div', { class: 'stop-name-row' }, nameText));
           if (s.nameEn) info.appendChild(el('div', { class: 'stop-name-en' }, s.nameEn));
           // GMB stop code (numeric operator stop ID) — small gray under name.
-          if (s.stop && s.stop !== nameText) {
+          // Skip hash IDs (16 hex chars) which are hk-stops.json internals.
+          if (s.stop && /^[A-Z0-9]{2,6}$/i.test(s.stop) && s.stop !== nameText) {
             info.appendChild(el('div', { class: 'stop-code' }, s.stop));
           }
           // Per-stop fare pill (GMB: same flat fare on every row, or `—`
-          // when the GMB route isn't in our hardcoded fares table).
+          // when the GMB route isn't in our hardcoded fares table). 起點
+          // marker is always shown on the origin stop, even without fare data.
           const fareRow = el('div', { class: 'stop-fare-row' });
           const stopFare = gmbFareBySeq && gmbFareBySeq.get(seq);
           if (stopFare != null && Number.isFinite(Number(stopFare))) {
             fareRow.appendChild(el('span', { class: 'stop-fare' }, `$${fmtFare(Number(stopFare))}`));
-            if (isOrigin) fareRow.appendChild(el('span', { class: 'stop-origin-marker' }, t_str('fareOrigin')));
           } else {
             const chip = el('span', { class: 'stop-fare is-na' }, '—');
             chip.title = t_str('fareUnavailable');
             fareRow.appendChild(chip);
           }
+          if (isOrigin) fareRow.appendChild(el('span', { class: 'stop-origin-marker' }, t_str('fareOrigin')));
           info.appendChild(fareRow);
           row.appendChild(info);
           const etaBox = el('div', { class: 'stop-eta' });
