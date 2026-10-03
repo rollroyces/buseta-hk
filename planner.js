@@ -33,7 +33,7 @@
   const ORIGIN_WALK_LIMIT_M    = 1200; // walking from origin to first stop
   const DEST_WALK_LIMIT_M      = 1200;
   const ETA_MAX_MIN            = 120;  // ignore ETAs further out than this
-  const CONCURRENCY            = 6;    // API concurrency cap
+  const CONCURRENCY            = 16;   // API concurrency cap (browsers tolerate 16 per origin)
   const DIRECT_LIMIT           = 5;
   const ONE_TRANSFER_LIMIT     = 5;
   const TWO_TRANSFER_LIMIT     = 3;
@@ -46,14 +46,145 @@
   // index so subsequent 1-/2-hop searches are cheap.
   const _routeStopsCache = new Map();        // routeKey -> [{ stop, seq, lat, lng }]
   const _stopRoutesCache = new Map();        // stopId -> Set(routeKey)  (reverse index)
+  const _routeAccess     = new Map();        // routeKey -> Date.now() of last cache hit/miss
   let   _adjacencyCache  = new WeakMap();    // state.index -> { stops: Map(stopId -> [{ toStop, routeKey, km }]) }
   let   _indexVersion    = 0;
+
+  // ---- Persisted cache (localStorage) ---------------------------------
+  // Persist a compact version of `_routeStopsCache` + `_stopRoutesCache`
+  // so the second visit paints instantly. We use a short, versioned key
+  // so future schema changes can invalidate it by bumping the suffix.
+  const CACHE_KEY        = 'buseta.planner.adj.v1';
+  const CACHE_MAX_ROUTES = 400;        // soft cap; evicts oldest beyond this
+  const CACHE_MAX_BYTES  = 4_500_000;  // ~4.5 MB — under the localStorage limit
+  let   _cacheLoaded     = false;
+  let   _cacheDirty      = false;
+  let   _cacheSaveTimer  = null;
+
+  function loadPersistedCache() {
+    if (_cacheLoaded) return;
+    _cacheLoaded = true;
+    try {
+      const raw = window.localStorage.getItem(CACHE_KEY);
+      if (!raw) return;
+      const obj = JSON.parse(raw);
+      if (!obj || obj.v !== 1) return;
+      if (obj.rs && typeof obj.rs === 'object') {
+        for (const k of Object.keys(obj.rs)) {
+          const arr = obj.rs[k];
+          if (!Array.isArray(arr)) continue;
+          const norm = [];
+          for (const it of arr) {
+            if (!it || typeof it.s !== 'string') continue;
+            norm.push({
+              stop: it.s,
+              seq: Number.isFinite(it.q) ? it.q : 0,
+              lat: Number.isFinite(it.la) ? it.la : null,
+              lng: Number.isFinite(it.ln) ? it.ln : null,
+              nameTc: it.n || '',
+              nameEn: it.e || '',
+            });
+          }
+          if (norm.length > 0) _routeStopsCache.set(k, norm);
+        }
+      }
+      if (obj.sr && typeof obj.sr === 'object') {
+        for (const sid of Object.keys(obj.sr)) {
+          const arr = obj.sr[sid];
+          if (!Array.isArray(arr)) continue;
+          _stopRoutesCache.set(sid, new Set(arr));
+        }
+      }
+    } catch (e) {
+      // Bad JSON or quota exceeded — discard silently.
+    }
+  }
+
+  function schedulePersistCache() {
+    _cacheDirty = true;
+    if (_cacheSaveTimer) return;
+    _cacheSaveTimer = setTimeout(() => {
+      _cacheSaveTimer = null;
+      if (_cacheDirty) persistCacheNow();
+    }, 4000);
+  }
+
+  function persistCacheNow() {
+    _cacheDirty = false;
+    try {
+      // Build the compact payload. Drop oldest entries if we exceed
+      // CACHE_MAX_ROUTES so we stay well under the localStorage cap.
+      const keys = Array.from(_routeStopsCache.keys());
+      let keepKeys = keys;
+      if (keys.length > CACHE_MAX_ROUTES) {
+        const sorted = keys.slice().sort(
+          (a, b) => (_routeAccess.get(a) || 0) - (_routeAccess.get(b) || 0));
+        keepKeys = sorted.slice(sorted.length - CACHE_MAX_ROUTES);
+        // Evict the dropped routes from both caches.
+        for (const k of keys) {
+          if (!keepKeys.includes(k)) _routeStopsCache.delete(k);
+        }
+        // Rebuild reverse index incrementally.
+        const stopRev = new Map();
+        for (const k of keepKeys) {
+          const stops = _routeStopsCache.get(k);
+          if (!stops) continue;
+          for (const s of stops) {
+            if (!stopRev.has(s.stop)) stopRev.set(s.stop, new Set());
+            stopRev.get(s.stop).add(k);
+          }
+        }
+        _stopRoutesCache.clear();
+        for (const [sid, set] of stopRev) _stopRoutesCache.set(sid, set);
+      }
+
+      const rs = {};
+      let bytes = 0;
+      for (const k of keepKeys) {
+        const arr = _routeStopsCache.get(k);
+        if (!arr) continue;
+        const slim = arr.map((it) => ({
+          s: it.stop, q: it.seq,
+          la: Number.isFinite(it.lat) ? it.lat : null,
+          ln: Number.isFinite(it.lng) ? it.lng : null,
+          n: it.nameTc || '', e: it.nameEn || '',
+        }));
+        const json = JSON.stringify(slim);
+        bytes += json.length;
+        if (bytes > CACHE_MAX_BYTES) break;
+        rs[k] = slim;
+      }
+      const sr = {};
+      for (const [sid, set] of _stopRoutesCache) sr[sid] = Array.from(set);
+      const payload = JSON.stringify({ v: 1, rs, sr });
+      window.localStorage.setItem(CACHE_KEY, payload);
+    } catch (e) {
+      // QuotaExceededError etc. — silently drop. The next warm start will
+      // simply re-fetch.
+    }
+  }
+
+  // Best-effort: load before the first renderPlanner so warm-start
+  // searches can use the persisted reverse index immediately.
+  loadPersistedCache();
+
+  // ---- Request counter (for instrumentation) ---------------------------
+  // Reset at the start of every Planner.search() and read inside `search()`
+  // for the timing log. Cheap and process-local.
+  let _reqCounter = 0;
+  function _bumpReq() { _reqCounter++; }
+  function _resetReq() { _reqCounter = 0; }
 
   function invalidateCaches() {
     _routeStopsCache.clear();
     _stopRoutesCache.clear();
+    _routeAccess.clear();
     _adjacencyCache = new WeakMap();
     _indexVersion++;
+    // Drop the persisted snapshot too — the next cold start rebuilds it.
+    try { window.localStorage.removeItem(CACHE_KEY); } catch (e) {}
+    _cacheLoaded = false;
+    _cacheDirty = false;
   }
 
   // Pick the right "stop-route" fetcher for a given operator stop id.
@@ -135,22 +266,29 @@
   }
 
   // Fetch (and cache) the stop list of a route.
-  async function getRouteStops(idx, routeKey) {
-    if (_routeStopsCache.has(routeKey)) return _routeStopsCache.get(routeKey);
+  // Optional `hintMeta` is used when the routeKey isn't in the global
+  // index (e.g. inbound CTB routes, which the index only stores as 'O').
+  async function getRouteStops(idx, routeKey, hintMeta) {
+    if (_routeStopsCache.has(routeKey)) {
+      _routeAccess.set(routeKey, Date.now());
+      return _routeStopsCache.get(routeKey);
+    }
 
-    const meta = idx.routes.get(routeKey) || idx.ctbRoutes.get(routeKey) || null;
+    const meta = idx.routes.get(routeKey) || idx.ctbRoutes.get(routeKey) || hintMeta || null;
     if (!meta) return null;
 
     let rawStops = null;
     try {
       if (meta.co === 'CTB' || meta.co === 'NWFB') {
         const resp = await fetch(`https://rt.data.gov.hk/v2/transport/citybus/route-stop/${encodeURIComponent(meta.co.toLowerCase())}/${encodeURIComponent(meta.route)}/${meta.dir === 'I' ? 'inbound' : 'outbound'}`);
+        _bumpReq();
         if (resp.ok) {
           const j = await resp.json();
           if (Array.isArray(j.data)) rawStops = j.data;
         }
       } else if (meta.co === 'KMB' || meta.co === 'LWB') {
         const resp = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/route-stop/${encodeURIComponent(meta.route)}/${meta.dir === 'I' ? 'inbound' : 'outbound'}/${encodeURIComponent(meta.service)}`);
+        _bumpReq();
         if (resp.ok) {
           const j = await resp.json();
           if (Array.isArray(j.data)) rawStops = j.data;
@@ -185,12 +323,90 @@
         .forEach((x) => stops.push(x));
     }
     _routeStopsCache.set(routeKey, stops);
+    _routeAccess.set(routeKey, Date.now());
+    schedulePersistCache();
     // Reverse index update.
     stops.forEach((s) => {
       if (!_stopRoutesCache.has(s.stop)) _stopRoutesCache.set(s.stop, new Set());
       _stopRoutesCache.get(s.stop).add(routeKey);
     });
     return stops;
+  }
+
+  // ---- Per-stop route list (KMB / CTB shortcut) -----------------------
+  // KMB /stop-eta/{stopId} and CTB /batch/stop-eta/CTB/{stopId} both return
+  // every route serving a given stop in a single call. This is the key
+  // optimization: instead of fanning out one request per route, we ask
+  // "what routes serve stop X?" and get back ~5–15 entries in one HTTP
+  // round-trip. Combined with the cached route-stop list, this drops a
+  // cold-start direct search from ~1100 upstream calls to ~10–30.
+  function classifyStopId(stopId) {
+    const s = String(stopId);
+    if (/^[0-9a-fA-F]{16}$/.test(s)) return 'KMB';
+    if (/^[0-9]{6}$/.test(s))       return 'CTB';
+    if (/^[A-Za-z]{3,4}$/.test(s))  return 'MTR';
+    if (/^[0-9]{1,3}$/.test(s))     return 'LRT';
+    return 'OTHER';
+  }
+
+  async function fetchKmbStopEtaMeta(stopId) {
+    try {
+      const resp = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/stop-eta/${encodeURIComponent(stopId)}`);
+      _bumpReq();
+      if (!resp.ok) return [];
+      const j = await resp.json();
+      const data = Array.isArray(j.data) ? j.data : [];
+      const seen = new Set();
+      const out = [];
+      for (const e of data) {
+        const co = e.co || 'KMB';
+        const route = String(e.route);
+        const dir = String(e.dir);
+        const service = String(e.service_type);
+        const key = `${co}|${route}|${dir}|${service}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        out.push({ co, route, dir, service });
+      }
+      return out;
+    } catch (e) {
+      return [];
+    }
+  }
+
+  async function fetchCtbStopEtaMeta(stopId) {
+    try {
+      const resp = await fetch(`https://rt.data.gov.hk/v1/transport/batch/stop-eta/CTB/${encodeURIComponent(stopId)}`);
+      _bumpReq();
+      if (!resp.ok) return [];
+      const j = await resp.json();
+      const data = Array.isArray(j.data) ? j.data : [];
+      const seen = new Set();
+      const out = [];
+      for (const e of data) {
+        const co = 'CTB';
+        const route = String(e.route);
+        const dir = String(e.dir);
+        const service = '1';
+        const key = `${co}|${route}|${dir}|${service}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        out.push({ co, route, dir, service });
+      }
+      return out;
+    } catch (e) {
+      return [];
+    }
+  }
+
+  // Returns an array of `{ co, route, dir, service }` objects describing
+  // every route serving `stopId`. Empty array for stops whose operator
+  // doesn't expose a per-stop shortcut (MTR / LRT / GMB).
+  async function fetchRoutesServingStop(stopId) {
+    const op = classifyStopId(stopId);
+    if (op === 'KMB') return await fetchKmbStopEtaMeta(stopId);
+    if (op === 'CTB') return await fetchCtbStopEtaMeta(stopId);
+    return [];
   }
 
   // Return all routes that touch a given stop (uses the reverse index).
@@ -310,22 +526,49 @@
   }
 
   // ---- Direct (0-transfer) search -----------------------------------
-  // For every route variant, ask for its stop list and check whether
-  // both stops appear (in correct seq order). Score by total time.
+  // Inverted-lookup strategy: ask "what routes serve origin / dest?"
+  // via the KMB /stop-eta and CTB /batch/stop-eta APIs, then iterate
+  // ONLY that candidate set (~5–30 routes) instead of the full ~1100
+  // variants. Each candidate's stop list is served from the cache when
+  // warm (hydrated from localStorage on script load).
   async function findDirect(idx, origin, dest) {
-    const variants = collapseRouteVariants(idx);
-    const results = await mapWithCap(variants, CONCURRENCY, async (meta) => {
+    // 1. Build candidate set via per-stop shortcuts. Both per-stop calls
+    //    run in parallel — combined RTT is max(orig, dest) rather than sum.
+    const [originRoutes, destRoutes] = await Promise.all([
+      fetchRoutesServingStop(origin.stop),
+      fetchRoutesServingStop(dest.stop),
+    ]);
+
+    const candidateMap = new Map(); // routeKey -> meta (prefer index meta for label fields)
+    const addOne = (m) => {
+      const k = `${m.co}|${m.route}|${m.dir}|${m.service}`;
+      if (candidateMap.has(k)) return;
+      const idxMeta = idx.routes.get(k) || idx.ctbRoutes.get(k);
+      candidateMap.set(k, idxMeta || m);
+    };
+    originRoutes.forEach(addOne);
+    destRoutes.forEach(addOne);
+
+    // 2. Fall back to the legacy variant enumeration only when neither
+    //    stop exposes a per-stop shortcut (MTR / LRT / GMB stops). This
+    //    preserves correctness while keeping the optimised path as the
+    //    fast default.
+    let items;
+    if (candidateMap.size > 0) {
+      items = Array.from(candidateMap.values());
+    } else {
+      items = collapseRouteVariants(idx);
+    }
+
+    const results = await mapWithCap(items, CONCURRENCY, async (meta) => {
       const key = `${meta.co}|${meta.route}|${meta.dir}|${meta.service}`;
-      const stops = await getRouteStops(idx, key);
+      const stops = await getRouteStops(idx, key, meta);
       if (!stops || stops.length === 0) return null;
       const oIdx = stops.findIndex((s) => s.stop === origin.stop);
       const dIdx = stops.findIndex((s) => s.stop === dest.stop);
       if (oIdx < 0 || dIdx < 0 || dIdx <= oIdx) return null;
       const rideKm = routeDistanceKm(stops, oIdx, dIdx);
       const rideMin = rideMinutes(rideKm * 1000);
-      const walkInKm = stopLatLng(idx, origin.stop) && stopLatLng(idx, dest.stop)
-        ? haversine(origin.lat, origin.lng, stopLatLng(idx, origin.stop).lat, stopLatLng(idx, origin.stop).lng)
-        : 0;
       // We charge the walk-in only when the user is NOT physically at the
       // boarding stop. Same for walk-out at the destination.
       const walkOutM = stopLatLng(idx, origin.stop)
@@ -375,8 +618,21 @@
     const originStop = origin.stop;
     const destStop = dest.stop;
 
-    const routesFromOrigin = routesServingStop(originStop);
-    if (routesFromOrigin.length === 0) return [];
+    // First-hop candidates: routes serving origin. Use the reverse index
+    // when it's warm; otherwise fall back to the per-stop shortcut so we
+    // don't iterate all ~1100 routes on cold start.
+    let routesFromOrigin = routesServingStop(originStop);
+    if (routesFromOrigin.length === 0) {
+      const shortcut = await fetchRoutesServingStop(originStop);
+      routesFromOrigin = shortcut.map((m) => `${m.co}|${m.route}|${m.dir}|${m.service}`);
+      // Pre-warm the cache for these candidates so the BFS below can hit
+      // the route-stop lists without redundant fetches.
+      await mapWithCap(shortcut, CONCURRENCY, async (m) => {
+        const k = `${m.co}|${m.route}|${m.dir}|${m.service}`;
+        await getRouteStops(idx, k, m);
+      });
+      if (routesFromOrigin.length === 0) return [];
+    }
 
     // Fetch the stop list of every route that touches origin.
     const enriched = await mapWithCap(routesFromOrigin, CONCURRENCY, async (rk) => {
@@ -486,8 +742,18 @@
   async function findTwoTransfer(idx, origin, dest) {
     const originStop = origin.stop;
     const destStop = dest.stop;
-    const routesFromOrigin = routesServingStop(originStop);
-    if (routesFromOrigin.length === 0) return [];
+    // First-hop candidates via the reverse index, falling back to the
+    // per-stop shortcut (KMB /stop-eta, CTB /batch/stop-eta) on cold start.
+    let routesFromOrigin = routesServingStop(originStop);
+    if (routesFromOrigin.length === 0) {
+      const shortcut = await fetchRoutesServingStop(originStop);
+      routesFromOrigin = shortcut.map((m) => `${m.co}|${m.route}|${m.dir}|${m.service}`);
+      await mapWithCap(shortcut, CONCURRENCY, async (m) => {
+        const k = `${m.co}|${m.route}|${m.dir}|${m.service}`;
+        await getRouteStops(idx, k, m);
+      });
+      if (routesFromOrigin.length === 0) return [];
+    }
 
     // For each R1 from origin, for each alight S1, for each R2 from S1,
     // for each alight S2, for each R3 from S2 that reaches dest, score.
@@ -587,6 +853,9 @@
 
   // ---- Top-level search ----------------------------------------------
   async function search(originStop, destStop) {
+    const t0 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+    _resetReq();
+
     const idx = (window.state && window.state.index) || null;
     if (!idx) {
       return { direct: [], oneTransfer: [], twoTransfer: [], error: 'noIndex' };
@@ -610,14 +879,26 @@
       return { direct: [], oneTransfer: [], twoTransfer: [], sameStop: true };
     }
 
-    // Direct first: this prefills `_routeStopsCache` for every route so
-    // the transfer searches can use the reverse index without firing
-    // another batch of ~600 upstream calls.
+    // Direct first: this prefills `_routeStopsCache` for every candidate
+    // route so the transfer searches can use the reverse index without
+    // firing another batch of upstream calls.
     const direct = await findDirect(idx, origin, dest);
     const [oneTransfer, twoTransfer] = await Promise.all([
       findOneTransfer(idx, origin, dest),
       findTwoTransfer(idx, origin, dest),
     ]);
+
+    const t1 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+    const elapsed = Math.round(t1 - t0);
+    // Single line, easy to grep / spot regressions in DevTools.
+    // Format: planner.search | N requests | Nms | direct=… one=… two=… cache=…
+    try {
+      console.log(
+        `planner.search | req=${_reqCounter} | ${elapsed}ms ` +
+        `| direct=${direct.length} one=${oneTransfer.length} two=${twoTransfer.length} ` +
+        `| cache rs=${_routeStopsCache.size} sr=${_stopRoutesCache.size}`
+      );
+    } catch (e) { /* console may be missing */ }
 
     return { direct, oneTransfer, twoTransfer, origin, dest };
   }
