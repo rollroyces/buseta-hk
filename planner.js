@@ -185,6 +185,9 @@
     try { window.localStorage.removeItem(CACHE_KEY); } catch (e) {}
     _cacheLoaded = false;
     _cacheDirty = false;
+    // Rail graphs are built once per index lifetime; drop them too so a
+    // freshly-rehydrated index rebuilds from the new line/stop data.
+    invalidateRailGraphs();
   }
 
   // Pick the right "stop-route" fetcher for a given operator stop id.
@@ -851,6 +854,383 @@
     return haversine(s1.lat, s1.lng, s2.lat, s2.lng) * 1000;
   }
 
+  // ---- MTR + LRT (Light Rail) routing --------------------------------
+  // Both MTR heavy rail and LRT have their full topology offline
+  // (assets/mtr-lines.json and assets/lrt-routes.json), so routing
+  // between two rail stations is a pure-graph problem: no upstream API
+  // calls, results in <10 ms. This unblocks "金鐘 → 中環"-style queries
+  // that the bus planner cannot answer.
+  const MTR_PER_STATION_MIN = 2.2;        // avg time between consecutive MTR stations
+  const LRT_PER_STATION_MIN = 1.8;        // LRT slightly faster (shorter inter-stop)
+  const RAIL_TRANSFER_MIN   = 5;          // paid-area transfer (walk + wait + board)
+  const LRT_TRANSFER_MIN    = 4;          // LRT paid-area transfer
+  const MTR_LINES_URL       = 'assets/mtr-lines.json?v=15';
+  const LRT_LINES_URL       = 'assets/lrt-routes.json?v=15';
+
+  let _mtrGraphCache   = null;
+  let _lrtGraphCache   = null;
+  let _mtrGraphPromise = null;
+  let _lrtGraphPromise = null;
+
+  function invalidateRailGraphs() {
+    _mtrGraphCache = null;
+    _lrtGraphCache = null;
+    _mtrGraphPromise = null;
+    _lrtGraphPromise = null;
+  }
+
+  async function ensureMtrGraph(idx) {
+    if (_mtrGraphCache) return _mtrGraphCache;
+    if (_mtrGraphPromise) return _mtrGraphPromise;
+    _mtrGraphPromise = (async () => {
+      let rows = null;
+      try {
+        const resp = await fetch(MTR_LINES_URL);
+        if (resp.ok) rows = await resp.json();
+      } catch (e) { rows = null; }
+      return buildMtrGraph(idx, rows);
+    })();
+    try {
+      _mtrGraphCache = await _mtrGraphPromise;
+    } finally {
+      _mtrGraphPromise = null;
+    }
+    return _mtrGraphCache;
+  }
+
+  async function ensureLrtGraph(idx) {
+    if (_lrtGraphCache) return _lrtGraphCache;
+    if (_lrtGraphPromise) return _lrtGraphPromise;
+    _lrtGraphPromise = (async () => {
+      let rows = null;
+      try {
+        const resp = await fetch(LRT_LINES_URL);
+        if (resp.ok) rows = await resp.json();
+      } catch (e) { rows = null; }
+      return buildLrtGraph(idx, rows);
+    })();
+    try {
+      _lrtGraphCache = await _lrtGraphPromise;
+    } finally {
+      _lrtGraphPromise = null;
+    }
+    return _lrtGraphCache;
+  }
+
+  // Build the MTR network: line → ordered stations, station → lines.
+  function buildMtrGraph(idx, rows) {
+    const lines = new Map();
+    if (Array.isArray(rows)) {
+      for (const r of rows) {
+        const lc = r.line;
+        if (!lc || !r.station) continue;
+        if (!lines.has(lc)) lines.set(lc, []);
+        lines.get(lc).push({
+          stop: r.station,
+          // Anchor on the "down-train" (DT) direction. The same station
+          // appears in DT and UT with reversed seq numbers; we need a
+          // single linear order per line, so we always pick DT. Mixing
+          // DT and UT seqs produces an incorrect order where, e.g.,
+          // ADM(seq=12) and CEN(seq=5) swap places.
+          dir: r.dir,
+          seq: Number(r.seq) || 0,
+          zh: r.zh || '',
+          en: r.en || '',
+        });
+      }
+      // Keep only the DT entries so each station appears once per line.
+      for (const [lc, list] of lines) {
+        const map = new Map();
+        for (const it of list) {
+          if (it.dir !== 'DT') continue;
+          map.set(it.stop, it);
+        }
+        const ordered = Array.from(map.values()).sort((a, b) => a.seq - b.seq);
+        lines.set(lc, ordered);
+      }
+    }
+    const stations = new Map();
+    if (idx && idx.mtr) {
+      idx.mtr.forEach((s, code) => {
+        if (s._isLine) return;
+        stations.set(code, {
+          stop: code,
+          nameTc: s.nameTc || '',
+          nameEn: s.nameEn || '',
+          lat: Number.isFinite(s.lat) ? s.lat : null,
+          lng: Number.isFinite(s.lng) ? s.lng : null,
+          lines: Array.isArray(s.lines) ? s.lines.slice() : [],
+        });
+      });
+    }
+    return { lines, stations };
+  }
+
+  // Build the LRT (Light Rail) network: route → ordered stops, stop → routes.
+  function buildLrtGraph(idx, rows) {
+    const routes = new Map();
+    if (Array.isArray(rows)) {
+      for (const r of rows) {
+        const no = String(r.route);
+        if (!no || !r.stop) continue;
+        if (!routes.has(no)) routes.set(no, []);
+        routes.get(no).push({
+          stop: r.stop,
+          dir: String(r.dir || '1'),
+          seq: Number(r.seq) || 0,
+          zh: r.zh || '',
+          en: r.en || '',
+        });
+      }
+      // LRT routes have two directions ('1' and '2') with reversed orders;
+      // pick '1' as the canonical linear order to avoid adjacency breakage.
+      for (const [no, list] of routes) {
+        const map = new Map();
+        for (const it of list) {
+          if (it.dir !== '1') continue;
+          map.set(it.stop, it);
+        }
+        const ordered = Array.from(map.values()).sort((a, b) => a.seq - b.seq);
+        routes.set(no, ordered);
+      }
+    }
+    const stops = new Map();
+    if (idx && idx.lrt && idx.lrt.stops) {
+      idx.lrt.stops.forEach((s, code) => {
+        stops.set(code, {
+          stop: code,
+          nameTc: s.nameTc || '',
+          nameEn: s.nameEn || '',
+          routes: Array.isArray(s._routes) ? s._routes.slice() : [],
+        });
+      });
+    }
+    return { routes, stops };
+  }
+
+  // Generic rail router (Dijkstra). State = (segmentId, stopId).
+  // Returns { direct: [journey], oneTransfer: [journey] } so the result
+  // slots into the same `direct`/`oneTransfer` buckets the bus planner uses.
+  function railRoute(graph, origin, dest, idx, opts) {
+    const { co, perStationMin, transferMin, routeMetaFor } = opts;
+    const segments = co === 'MTR' ? graph.lines : graph.routes;
+    const reverseIdx = co === 'MTR' ? graph.stations : graph.stops;
+    const linesField = co === 'MTR' ? 'lines' : 'routes';
+
+    const segsAt = (stop) => {
+      const m = reverseIdx.get(stop);
+      return m ? (m[linesField] || []) : [];
+    };
+
+    const initialSegs = segsAt(origin.stop);
+    if (initialSegs.length === 0 || segsAt(dest.stop).length === 0) {
+      return { direct: [], oneTransfer: [] };
+    }
+
+    const keyOf = (seg, stop) => seg + '\x00' + stop;
+    const dist = new Map();
+    const prev = new Map();        // state key -> { fromKey, seg, fromStop, toStop, kind }
+    const visited = new Set();
+
+    const queue = [];
+    for (const seg of initialSegs) {
+      const k = keyOf(seg, origin.stop);
+      if (!dist.has(k)) {
+        dist.set(k, 0);
+        prev.set(k, null);
+        queue.push({ seg, stop: origin.stop, cost: 0 });
+      }
+    }
+
+    let bestArrivalKey = null;
+    let bestArrivalCost = Infinity;
+
+    // Lazy pop: find min each iteration. For a 97-station network this is
+    // trivial; if we ever grow this we can swap in a binary heap.
+    while (queue.length > 0) {
+      let minIdx = 0;
+      for (let i = 1; i < queue.length; i++) {
+        if (queue[i].cost < queue[minIdx].cost) minIdx = i;
+      }
+      const cur = queue.splice(minIdx, 1)[0];
+      const k = keyOf(cur.seg, cur.stop);
+      if (visited.has(k)) continue;
+      visited.add(k);
+
+      if (cur.stop === dest.stop && cur.cost < bestArrivalCost) {
+        bestArrivalCost = cur.cost;
+        bestArrivalKey = k;
+        // Don't break: a later state may arrive at dest on a different
+        // line and could be cheaper (transfers vs direct ride).
+        continue;
+      }
+
+      // Ride one station in either direction on the current segment.
+      const segStops = segments.get(cur.seg) || [];
+      const idxOnSeg = segStops.findIndex((s) => s.stop === cur.stop);
+      if (idxOnSeg >= 0) {
+        for (const step of [-1, 1]) {
+          const next = segStops[idxOnSeg + step];
+          if (!next) continue;
+          const nextK = keyOf(cur.seg, next.stop);
+          if (visited.has(nextK)) continue;
+          const newCost = cur.cost + perStationMin;
+          if (!dist.has(nextK) || newCost < dist.get(nextK)) {
+            dist.set(nextK, newCost);
+            prev.set(nextK, { fromKey: k, seg: cur.seg, fromStop: cur.stop, toStop: next.stop, kind: 'ride' });
+            queue.push({ seg: cur.seg, stop: next.stop, cost: newCost });
+          }
+        }
+      }
+
+      // Transfer at this stop to any other segment that touches it.
+      for (const nextSeg of segsAt(cur.stop)) {
+        if (nextSeg === cur.seg) continue;
+        const nextK = keyOf(nextSeg, cur.stop);
+        if (visited.has(nextK)) continue;
+        const newCost = cur.cost + transferMin;
+        if (!dist.has(nextK) || newCost < dist.get(nextK)) {
+          dist.set(nextK, newCost);
+          prev.set(nextK, { fromKey: k, seg: nextSeg, fromStop: cur.stop, toStop: cur.stop, kind: 'walk' });
+          queue.push({ seg: nextSeg, stop: cur.stop, cost: newCost });
+        }
+      }
+    }
+
+    if (!bestArrivalKey) return { direct: [], oneTransfer: [] };
+
+    // Reconstruct the path by walking `prev` backwards from `bestArrivalKey`.
+    const steps = [];
+    let cur = prev.get(bestArrivalKey);
+    while (cur) {
+      steps.push(cur);
+      cur = prev.get(cur.fromKey);
+    }
+    steps.reverse();
+
+    // Convert steps into legs matching the bus-planner shape, merging
+    // consecutive rides on the same segment into a single leg.
+    const legs = [];
+    for (let i = 0; i < steps.length; i++) {
+      const s = steps[i];
+      if (s.kind === 'ride') {
+        legs.push({
+          kind: 'ride',
+          routeKey: co + '|' + s.seg,
+          routeMeta: routeMetaFor(s.seg),
+          from: s.fromStop,
+          to: s.toStop,
+          meters: 0,
+          minutes: perStationMin,
+        });
+      } else {
+        // Transfer leg — annotate with the line/route we're leaving and
+        // boarding so the UI can render "港島綫 → 荃灣綫" instead of a
+        // cryptic same-station ↔.
+        const prevStep = steps[i - 1];
+        const nextStep = steps[i + 1];
+        const fromName = (prevStep && prevStep.kind === 'ride')
+          ? pickLineName(routeMetaFor(prevStep.seg)) : '';
+        const toName = (nextStep && nextStep.kind === 'ride')
+          ? pickLineName(routeMetaFor(nextStep.seg)) : '';
+        legs.push({
+          kind: 'walk',
+          transfer: true,
+          from: s.fromStop,
+          to: s.toStop,
+          meters: 0,
+          minutes: transferMin,
+          _fromLineName: fromName,
+          _toLineName: toName,
+        });
+      }
+    }
+    const merged = [];
+    for (const l of legs) {
+      const tail = merged[merged.length - 1];
+      if (tail && l.kind === 'ride' && tail.kind === 'ride' && tail.routeKey === l.routeKey) {
+        tail.to = l.to;
+        tail.minutes = +(tail.minutes + l.minutes).toFixed(2);
+      } else {
+        merged.push({ ...l });
+      }
+    }
+
+    // Walk-out at origin and walk-in at dest, gated by the same walk
+    // budgets as the bus planner so we don't suggest walks that exceed
+    // the limit (e.g. user typed the station name but is actually far
+    // away — we still offer the MTR route but cap the walk cost).
+    const originLL = stopLatLng(idx, origin.stop);
+    const destLL   = stopLatLng(idx, dest.stop);
+    const walkOutM = (originLL && Number.isFinite(origin.lat) && Number.isFinite(origin.lng))
+      ? haversine(origin.lat, origin.lng, originLL.lat, originLL.lng) * 1000 : 0;
+    const walkInM  = (destLL && Number.isFinite(dest.lat) && Number.isFinite(dest.lng))
+      ? haversine(dest.lat, dest.lng, destLL.lat, destLL.lng) * 1000 : 0;
+    const includeWalkOut = walkOutM > 0 && walkOutM <= ORIGIN_WALK_LIMIT_M;
+    const includeWalkIn  = walkInM > 0  && walkInM  <= DEST_WALK_LIMIT_M;
+
+    const fullLegs = [];
+    if (includeWalkOut) {
+      fullLegs.push({ kind: 'walk', from: 'origin', to: origin.stop, meters: walkOutM, minutes: walkMinutes(walkOutM) });
+    }
+    for (const l of merged) fullLegs.push(l);
+    if (includeWalkIn) {
+      fullLegs.push({ kind: 'walk', from: dest.stop, to: 'dest', meters: walkInM, minutes: walkMinutes(walkInM) });
+    }
+
+    const totalMin = fullLegs.reduce((s, l) => s + l.minutes, 0);
+    const transfers = merged.filter((l) => l.kind === 'walk' && l.transfer).length;
+    const journey = {
+      legs: fullLegs,
+      totalMin,
+      kind: transfers === 0 ? 'direct' : (transfers === 1 ? 'one' : 'two'),
+    };
+
+    const out = { direct: [], oneTransfer: [] };
+    if (journey.kind === 'direct') out.direct.push(journey);
+    else if (journey.kind === 'one') out.oneTransfer.push(journey);
+    // Two-transfer rail routes are vanishingly rare; ignore.
+    return out;
+  }
+
+  async function findMtrRoutes(idx, origin, dest) {
+    if (!idx || !idx.mtr) return { direct: [], oneTransfer: [] };
+    if (!idx.mtr.has(origin.stop) || !idx.mtr.has(dest.stop)) {
+      return { direct: [], oneTransfer: [] };
+    }
+    const graph = await ensureMtrGraph(idx);
+    if (!graph || !graph.lines || graph.lines.size === 0) {
+      return { direct: [], oneTransfer: [] };
+    }
+    const routeMetaFor = (lineCode) => {
+      const m = idx.mtr.get('MTR|' + lineCode);
+      if (m) return { co: 'MTR', route: lineCode, origTc: m.origTc, origEn: m.origEn, destTc: m.destTc, destEn: m.destEn };
+      return { co: 'MTR', route: lineCode };
+    };
+    return railRoute(graph, origin, dest, idx, {
+      co: 'MTR', perStationMin: MTR_PER_STATION_MIN, transferMin: RAIL_TRANSFER_MIN, routeMetaFor,
+    });
+  }
+
+  async function findLrtRoutes(idx, origin, dest) {
+    if (!idx || !idx.lrt || !idx.lrt.stops) return { direct: [], oneTransfer: [] };
+    if (!idx.lrt.stops.has(origin.stop) || !idx.lrt.stops.has(dest.stop)) {
+      return { direct: [], oneTransfer: [] };
+    }
+    const graph = await ensureLrtGraph(idx);
+    if (!graph || !graph.routes || graph.routes.size === 0) {
+      return { direct: [], oneTransfer: [] };
+    }
+    const routeMetaFor = (routeNo) => {
+      const m = idx.lrt.routes.get('LRT|' + routeNo);
+      if (m) return { co: 'LRT', route: routeNo, origTc: m.origTc, origEn: m.origEn, destTc: m.destTc, destEn: m.destEn };
+      return { co: 'LRT', route: routeNo };
+    };
+    return railRoute(graph, origin, dest, idx, {
+      co: 'LRT', perStationMin: LRT_PER_STATION_MIN, transferMin: LRT_TRANSFER_MIN, routeMetaFor,
+    });
+  }
+
   // ---- Top-level search ----------------------------------------------
   async function search(originStop, destStop) {
     const t0 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
@@ -882,11 +1262,36 @@
     // Direct first: this prefills `_routeStopsCache` for every candidate
     // route so the transfer searches can use the reverse index without
     // firing another batch of upstream calls.
-    const direct = await findDirect(idx, origin, dest);
+    let direct = await findDirect(idx, origin, dest);
     const [oneTransfer, twoTransfer] = await Promise.all([
       findOneTransfer(idx, origin, dest),
       findTwoTransfer(idx, origin, dest),
     ]);
+
+    // ---- Rail (MTR / LRT) routes ------------------------------------
+    // The bus planner cannot connect two MTR stations because no bus
+    // route serves both. We run a separate graph router in parallel and
+    // merge the results so MTR↔MTR and LRT↔LRT queries get sensible
+    // answers. Cost is in-memory and bounded (~97 stations / 11 LRT
+    // routes) so this is fast even on cold start.
+    const [mtrRoutes, lrtRoutes] = await Promise.all([
+      findMtrRoutes(idx, origin, dest),
+      findLrtRoutes(idx, origin, dest),
+    ]);
+    if (mtrRoutes.direct.length > 0 || mtrRoutes.oneTransfer.length > 0) {
+      direct = direct.concat(mtrRoutes.direct);
+      oneTransfer.push(...mtrRoutes.oneTransfer);
+    }
+    if (lrtRoutes.direct.length > 0 || lrtRoutes.oneTransfer.length > 0) {
+      direct = direct.concat(lrtRoutes.direct);
+      oneTransfer.push(...lrtRoutes.oneTransfer);
+    }
+    // Re-rank because we appended rail options after the bus search
+    // already sorted. Cap with the same limits the bus planner uses.
+    direct.sort((a, b) => a.totalMin - b.totalMin);
+    oneTransfer.sort((a, b) => a.totalMin - b.totalMin);
+    if (direct.length > DIRECT_LIMIT) direct = direct.slice(0, DIRECT_LIMIT);
+    if (oneTransfer.length > ONE_TRANSFER_LIMIT) oneTransfer.length = ONE_TRANSFER_LIMIT;
 
     const t1 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
     const elapsed = Math.round(t1 - t0);
@@ -896,7 +1301,9 @@
       console.log(
         `planner.search | req=${_reqCounter} | ${elapsed}ms ` +
         `| direct=${direct.length} one=${oneTransfer.length} two=${twoTransfer.length} ` +
-        `| cache rs=${_routeStopsCache.size} sr=${_stopRoutesCache.size}`
+        `| cache rs=${_routeStopsCache.size} sr=${_stopRoutesCache.size} ` +
+        `| rail mtr=${mtrRoutes.direct.length + mtrRoutes.oneTransfer.length} ` +
+        `lrt=${lrtRoutes.direct.length + lrtRoutes.oneTransfer.length}`
       );
     } catch (e) { /* console may be missing */ }
 
@@ -1020,6 +1427,24 @@
         });
       }
     });
+    // Light Rail stops: short numeric IDs, both Traditional Chinese and
+    // English names. They live under `state.index.lrt.stops`.
+    if (idx.lrt && idx.lrt.stops) {
+      idx.lrt.stops.forEach((s, code) => {
+        const text = `${norm(s.nameTc)} ${norm(s.nameEn)}`;
+        let score = 0;
+        if (String(code).toLowerCase() === lower) score += 100;
+        else if (text.toLowerCase().includes(lower)) score += 10;
+        if (text.toLowerCase().startsWith(lower)) score += 20;
+        if (score > 0) {
+          push({
+            co: 'LRT', stop: code,
+            nameTc: s.nameTc, nameEn: s.nameEn, nameSc: '',
+            _score: score,
+          });
+        }
+      });
+    }
     return out.sort((a, b) => b._score - a._score).slice(0, 8);
   }
 
@@ -1038,19 +1463,59 @@
       const text = el('div');
       let label = '';
       if (l.kind === 'walk') {
-        if (l.from === 'origin') label = `${t_str('plannerWalk')} → ${stopNameFromState(l.to)}`;
-        else if (l.to === 'dest') label = `${stopNameFromState(l.from)} → ${t_str('plannerWalk')}`;
-        else label = `${stopNameFromState(l.from)} ↔ ${stopNameFromState(l.to)}`;
+        if (l.from === 'origin') {
+          label = `${t_str('plannerWalk')} → ${stopNameFromState(l.to)}`;
+        } else if (l.to === 'dest') {
+          label = `${stopNameFromState(l.from)} → ${t_str('plannerWalk')}`;
+        } else if (l.transfer && l.from === l.to) {
+          // Rail transfer at the same station — show the line swap so
+          // it's clear what the user is changing onto.
+          const here = stopNameFromState(l.from);
+          const prevLine = l._fromLineName || '';
+          const nextLine = l._toLineName   || '';
+          if (prevLine && nextLine && prevLine !== nextLine) {
+            label = `${here} · ${prevLine} → ${nextLine}`;
+          } else {
+            label = `${here} ↔ ${here}`;
+          }
+        } else {
+          label = `${stopNameFromState(l.from)} ↔ ${stopNameFromState(l.to)}`;
+        }
       } else {
         const rm = l.routeMeta || {};
-        label = `${t_str('plannerBoard')} ${rm.co || ''} ${rm.route || ''}`;
+        const co = rm.co || '';
+        // MTR / LRT legs read better with the line/route name (e.g.
+        // "港島綫 · 金鐘 → 中環") than with the bare operator+code.
+        if (co === 'MTR' || co === 'LRT') {
+          const lineName = pickLineName(rm);
+          const fromName = stopNameFromState(l.from);
+          const toName   = stopNameFromState(l.to);
+          if (lineName) {
+            label = `${lineName} · ${fromName} → ${toName}`;
+          } else {
+            label = `${t_str('plannerBoard')} ${co} ${rm.route || ''} · ${fromName} → ${toName}`;
+          }
+        } else {
+          label = `${t_str('plannerBoard')} ${co} ${rm.route || ''}`;
+        }
       }
       const textEl = el('div', { class: 'leg-text' }, label);
       text.appendChild(textEl);
       if (l.kind === 'walk') {
         text.appendChild(el('div', { class: 'leg-sub' }, fmtDistance(l.meters || 0)));
       } else {
-        text.appendChild(el('div', { class: 'leg-sub' }, `${t_str('plannerRide')} ${fmtDistance(l.meters || 0)}`));
+        const rm = l.routeMeta || {};
+        const co = rm.co || '';
+        // Rail legs have `meters: 0` because we don't compute km. Show
+        // minutes instead of "0 m" so the user understands how long the
+        // ride is at a glance.
+        if (co === 'MTR' || co === 'LRT') {
+          text.appendChild(el('div', { class: 'leg-sub' },
+            `${t_str('plannerRide')} · ${mins(l.minutes)} ${t_str('minShort')}`));
+        } else {
+          text.appendChild(el('div', { class: 'leg-sub' },
+            `${t_str('plannerRide')} ${fmtDistance(l.meters || 0)}`));
+        }
       }
       node.appendChild(text);
       const eta = el('span', { class: 'leg-eta' }, `${mins(l.minutes)} ${t_str('minShort')}`);
@@ -1058,6 +1523,17 @@
       wrap.appendChild(node);
     });
     return wrap;
+  }
+
+  // Pick the best display name for a rail line / route, honouring the
+  // active language. Falls back to the code when nothing's available.
+  function pickLineName(rm) {
+    if (!rm) return '';
+    const lang = (window.state && window.state.lang) || 'zh-Hant';
+    if (lang === 'en') {
+      return rm.origEn || rm.origTc || rm.route || '';
+    }
+    return rm.origTc || rm.origEn || rm.route || '';
   }
 
   function stopNameFromState(stopId) {
@@ -1078,8 +1554,12 @@
     rideLegs.forEach((l, i) => {
       const rm = l.routeMeta || {};
       const co = rm.co || 'BUS';
-      routes.appendChild(el('span', { class: `planner-chip co-${co}` },
-        rm.co === 'GMB' ? (rm.route || '') : (rm.route || '')));
+      const label = rm.route || '';
+      const title = pickLineName(rm) || label;
+      routes.appendChild(el('span', {
+        class: `planner-chip co-${co}`,
+        title: title || label,
+      }, label));
       if (i < rideLegs.length - 1) routes.appendChild(el('span', { class: 'planner-card-arrow' }, '→'));
     });
     head.appendChild(routes);
