@@ -187,6 +187,10 @@
       serviceSatSunEn: 'Sat, Sun & public holidays only',
       serviceSpecial: '特別班次',
       serviceSpecialEn: 'Special service',
+      serviceMain: '主線',
+      serviceMainEn: 'Main',
+      serviceSpecialN: (n) => `特別班 ${n}`,
+      serviceSpecialNEn: (n) => `Special ${n}`,
       serviceNoRunning: '暫無班次',
       serviceNoRunningEn: 'No service running now',
       serviceDayHint: '請留意日子',
@@ -359,6 +363,10 @@
       serviceSatSunEn: '服務只限於星期六、日及公眾假期',
       serviceSpecial: 'Special service',
       serviceSpecialEn: '特別班次',
+      serviceMain: 'Main',
+      serviceMainEn: '主線',
+      serviceSpecialN: (n) => `Special ${n}`,
+      serviceSpecialNEn: (n) => `特別班 ${n}`,
       serviceNoRunning: 'No service running now',
       serviceNoRunningEn: '暫無班次',
       serviceDayHint: 'Check the day before travelling',
@@ -520,6 +528,10 @@
       serviceSatSunEn: 'Sat, Sun & public holidays only',
       serviceSpecial: '特别班次',
       serviceSpecialEn: 'Special service',
+      serviceMain: '主线',
+      serviceMainEn: 'Main',
+      serviceSpecialN: (n) => `特别班 ${n}`,
+      serviceSpecialNEn: (n) => `Special ${n}`,
       serviceNoRunning: '暂无班次',
       serviceNoRunningEn: 'No service running now',
       serviceDayHint: '请留意日子',
@@ -2703,12 +2715,14 @@
     const origEn = meta ? meta.origEn || '' : '';
     const dirLabel = r.dir === 'I' ? t_str('inbound') : t_str('outbound');
 
-    // Build direction pills: same route, other bound(s).
-    const directions = buildDirectionPills(r.co, r.route, r.service, dirLabel);
+    // Build direction pills: same route, other bound(s) — and service-type
+    // sub-tabs (主線 / 特別班 2 / 3 / 4) within the current bound, justarrived-
+    // style. When only 1 bound + 1 service exists, neither is rendered.
+    const { boundPills, servicePills } = buildDirectionPills(r.co, r.route, r.dir, r.service);
     header.appendChild(buildRouteHeader({
       co: r.co, route: r.route, dir: r.dir, service: r.service,
       dest, orig, origEn, dirLabel, fare: meta && meta.fares && meta.fares[0],
-      directions, currentDirKey: key, currentDirKeyDir: r.dir,
+      boundPills, servicePills, currentDirKey: key,
     }));
     body.appendChild(el('p', { class: 'muted' }, t_str('loading')));
 
@@ -3124,7 +3138,7 @@
       co: 'LRT', route: r.route, dir: meta.dir || '1', service: '',
       dest: pickFirst(meta.destTc, meta.destEn), orig: pickFirst(meta.origTc, meta.origEn),
       origEn: meta.destEn || '', dirLabel, fare: null,
-      directions: buildDirectionPills('LRT', r.route, '', dirLabel),
+      ...buildDirectionPills('LRT', r.route, meta.dir || '1', ''),
       currentDirKey: `LRT|${r.route}|${meta.dir || '1'}|`,
     }));
     body.appendChild(el('p', { class: 'muted' }, t_str('loading')));
@@ -3199,7 +3213,7 @@
       header.appendChild(buildRouteHeader({
         co: 'GMB', route: displayRoute, dir: r.dir || '1', service: r.service,
         dest: r.route, orig: '', origEn: '', dirLabel: '',
-        directions: buildDirectionPills('GMB', r.route, r.service, ''),
+        ...buildDirectionPills('GMB', r.route, r.dir || '1', r.service),
         currentDirKey: makeRouteKey('GMB', r.route, r.dir || '1', r.service),
       }));
       if (r._region && r._code) {
@@ -3215,7 +3229,7 @@
       co: 'GMB', route: displayRoute, dir: r.dir, service: r.service,
       dest: pickFirst(meta.destTc, meta.destEn), orig: pickFirst(meta.origTc, meta.origEn),
       origEn: meta.origEn || '', dirLabel: '', fare: null,
-      directions: buildDirectionPills('GMB', r.route, r.service, ''),
+      ...buildDirectionPills('GMB', r.route, r.dir, r.service),
       currentDirKey: makeRouteKey('GMB', r.route, r.dir, r.service),
     }));
     body.appendChild(el('p', { class: 'muted' }, t_str('loading')));
@@ -3308,7 +3322,8 @@
   // and side-by-side direction pills (one filled red, one outlined) so the user
   // can flip inbound/outbound inline.
   function buildRouteHeader(opts) {
-    const { co, route, dir, service, dest, orig, origEn, dirLabel, fare, directions, currentKey, currentDirKey, isMapRoute = false } = opts;
+    const { co, route, dir, service, dest, orig, origEn, dirLabel, fare,
+            boundPills = [], servicePills = [], currentKey, currentDirKey, isMapRoute = false } = opts;
     const head = el('div', { class: 'route-header' });
 
     // ---- top action bar ----
@@ -3385,11 +3400,12 @@
     // English subtitle
     if (origEn) head.appendChild(el('p', { class: 'route-sub-en' }, origEn));
 
-    // ---- direction pills (one filled red, others outlined) ----
-    if (Array.isArray(directions) && directions.length > 1) {
+    // ---- bound pills (outbound / inbound) — only when 2+ bounds exist ----
+    // Each pill flips to a different bound while keeping service=1 (主線).
+    if (Array.isArray(boundPills) && boundPills.length > 1) {
       const pills = el('div', { class: 'route-dir-pills', role: 'tablist' });
-      for (const d of directions) {
-        const isCurrent = (d.key === currentDirKey) || (d.dir === dir && d.service === service);
+      for (const d of boundPills) {
+        const isCurrent = d.dir === String(dir);
         const pill = el('a', {
           class: `route-dir-pill ${isCurrent ? 'is-current' : ''}`,
           href: `#/route/${encodeURIComponent(d.co)}/${encodeURIComponent(d.route)}/${encodeURIComponent(d.dir)}/${encodeURIComponent(d.service)}`,
@@ -3399,6 +3415,24 @@
         pills.appendChild(pill);
       }
       head.appendChild(pills);
+    }
+
+    // ---- service-type tabs (主線 / 特別班 2/3/4) within the current bound ----
+    // justarrived-style: pills in a single row, active filled, others outlined.
+    // Only render when the current bound has 2+ service-type variants.
+    if (Array.isArray(servicePills) && servicePills.length > 1) {
+      const tabs = el('div', { class: 'route-service-tabs', role: 'tablist' });
+      for (const s of servicePills) {
+        const isCurrent = String(s.service) === String(service);
+        const tab = el('a', {
+          class: `route-service-tab ${isCurrent ? 'is-on' : ''}`,
+          href: `#/route/${encodeURIComponent(s.co)}/${encodeURIComponent(s.route)}/${encodeURIComponent(s.dir)}/${encodeURIComponent(s.service)}`,
+          role: 'tab',
+          'aria-selected': String(isCurrent),
+        }, s.label);
+        tabs.appendChild(tab);
+      }
+      head.appendChild(tabs);
     }
 
     // ---- update indicator + manual refresh ----
@@ -3460,51 +3494,74 @@
   }
 
   // Build the list of direction pills for a route header. Scans the index
-  // for every entry of the same operator + route (same bound/code/etc.) and
-  // returns a sorted, de-duped list of { co, route, dir, service, label }.
-  function buildDirectionPills(co, route, service, currentDirLabel) {
-    const seen = new Set();
-    const out = [];
-    const tryAdd = (entry, label) => {
+  // Returns two parallel lists for the route header:
+  //   - boundPills:    [{co, route, dir, service, label, key}]
+  //                    one entry per bound (uses service=1 as the canonical
+  //                    destination for that bound, so user can flip bound)
+  //   - servicePills:  [{co, route, dir, service, label, key}]
+  //                    all service-type variants of the CURRENT bound —
+  //                    labeled "主線" / "Main" for service=1 and
+  //                    "特別班 N" / "Special N" for service=2..9.
+  // We scan the operator's routes map (KMB / LWB / CTB / NWFB / GMB / LRT) for
+  // every (co, route) variant. The caller decides which set to render:
+  //   boundPills    → only if >1 bound exists
+  //   servicePills  → only if >1 service_type exists for the current bound
+  // This mirrors justarrived's 主線 / 特別班 2 / 特別班 3 / 特別班 4 row.
+  function buildDirectionPills(co, route, currentDir, currentService) {
+    const all = [];
+    const add = (entry) => {
       if (!entry) return;
       const dKey = String(entry.dir);
       const sKey = String(entry.service);
       const key = `${entry.co}|${entry.route}|${dKey}|${sKey}`;
-      if (seen.has(key)) return;
-      seen.add(key);
-      out.push({
-        co: entry.co, route: entry.route, dir: dKey, service: sKey,
-        label: label, key,
-      });
+      const label = pickFirst(entry.destTc, entry.destEn) || entry.origTc || '';
+      all.push({ co: entry.co, route: entry.route, dir: dKey, service: sKey, label, key });
     };
 
-    // Search the operator's routes map (KMB / LWB / CTB / NWFB / GMB / LRT).
     if (state.index) {
-      const isMtr = co === 'MTR';
-      state.index.routes.forEach((entry) => {
-        if (entry.co !== co) return;
-        if (String(entry.route) !== String(route)) return;
-        const label = pickFirst(entry.destTc, entry.destEn) || entry.origTc || '';
-        tryAdd(entry, label);
-      });
-      if (state.index.ctbRoutes) {
-        state.index.ctbRoutes.forEach((entry) => {
+      const tryMap = (map) => {
+        if (!map) return;
+        map.forEach((entry) => {
           if (entry.co !== co) return;
           if (String(entry.route) !== String(route)) return;
-          const label = pickFirst(entry.destTc, entry.destEn) || entry.origTc || '';
-          tryAdd(entry, label);
+          add(entry);
         });
-      }
-      if (state.index.lrt && state.index.lrt.routes) {
-        state.index.lrt.routes.forEach((entry) => {
-          if (entry.co !== co) return;
-          if (String(entry.route) !== String(route)) return;
-          const label = pickFirst(entry.destTc, entry.destEn) || '';
-          tryAdd(entry, label);
-        });
-      }
+      };
+      tryMap(state.index.routes);
+      tryMap(state.index.ctbRoutes);
+      if (state.index.lrt && state.index.lrt.routes) tryMap(state.index.lrt.routes);
     }
-    return out;
+
+    // boundPills: dedupe by dir, prefer the regular service (1) as the
+    // canonical row so the bound flip lands the user on the main line.
+    const boundMap = new Map();
+    all.forEach((e) => {
+      const k = `${e.co}|${e.route}|${e.dir}`;
+      const existing = boundMap.get(k);
+      if (!existing || (e.service === '1' && existing.service !== '1')) {
+        boundMap.set(k, e);
+      }
+    });
+    const boundPills = Array.from(boundMap.values());
+
+    // servicePills: filter to current bound, dedupe by service, label by
+    // service_type (主線/特別班 N) rather than destination.
+    const servicePills = all
+      .filter((e) => e.dir === String(currentDir))
+      .reduce((acc, e) => {
+        if (!acc.has(e.service)) acc.set(e.service, e);
+        return acc;
+      }, new Map());
+    const serviceList = Array.from(servicePills.values()).sort((a, b) => {
+      // service=1 first (主線), then 2, 3, 4… numerically
+      return Number(a.service) - Number(b.service);
+    });
+    serviceList.forEach((e) => {
+      const n = Number(e.service);
+      e.label = n === 1 ? t_str('serviceMain') : t_str('serviceSpecialN', n);
+    });
+
+    return { boundPills, servicePills: serviceList };
   }
 
   function toggleSaveRoute(r) {

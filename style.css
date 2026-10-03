@@ -506,6 +506,46 @@ h1, h2, h3 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
   color: #fff;
 }
 .route-dir-pill:active { transform: scale(0.98); }
+
+/* ------------------------------ route service-type tabs (主線 / 特別班 N) ------------------------------ */
+/* justarrived-style: a single inline row of pills above the alert banner,
+   showing every service_type variant of the CURRENT bound. Active tab is
+   filled black; inactive tabs are white-outlined. Below the bound pills,
+   above the polyline. */
+.route-service-tabs {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 6px;
+  margin: 6px 0 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.route-service-tabs::-webkit-scrollbar { display: none; }
+.route-service-tab {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 30px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+.route-service-tab:hover { background: var(--bg-soft); }
+.route-service-tab:active { transform: scale(0.98); }
+.route-service-tab.is-on {
+  background: var(--dark);
+  border-color: var(--dark);
+  color: var(--on-dark);
+}
+.route-service-tab.is-on:hover { background: var(--dark-2); }
 .route-updated {
   display: flex;
   align-items: flex-start;
