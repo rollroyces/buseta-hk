@@ -4,30 +4,25 @@
  * upstream API calls. Static JSON in /assets/ is cached lazily on first
  * fetch via the same code path.
  *
- * CACHE bumped to v13: Batch 3 of the feature push.
- *   - Local notifications: Web Notification API fires an alert when a
- *     saved/recent stop's ETA crosses the user's threshold (3/5/10 min).
- *     Polling is paused while the tab is hidden and re-fires on resume.
- *   - Real-time vehicle positions on the route detail: pure-inline-SVG
- *     map of the route polyline + stops + bus icons. No public GPS
- *     feed exists for any HK operator on the open-data hosts, so the
- *     helper probes every plausible endpoint and falls back to
- *     pseudo-positions derived from the ETA `diff` minutes.
- *   - Offline mode: runtime caches for `/assets/*.json` (cache-first
- *     with background revalidation, ASSET_CACHE = 'buseta-assets-v1')
- *     and the ETA API origins (stale-while-revalidate with a 5-minute
- *     freshness window, ETA_CACHE = 'buseta-eta-v1'). Navigation
- *     requests fall back to `/index.html` when offline so the SPA
- *     shell boots cold-offline. The home view shows an offline banner
- *     while `navigator.onLine === false`. `activate` only drops legacy
- *     `buseta-vN` caches with N < 12; the runtime caches are kept
- *     alongside the SHELL cache so future deploys don't wipe offline
- *     data.
- * v12 was Batch 2 (light theme + empty state + bound swap). The v13
- * bump forces cached clients to refetch the app shell and pick up the
- * three new features plus the new runtime cache buckets.
+ * CACHE bumped to v14: hotfix over v13.
+ *   - etaSWR() was reading the upstream response body via
+ *     timestampedResponse(resp) and then returning the SAME `resp`
+ *     object back to the caller. The Response body is a single-shot
+ *     stream, so the second consumer (the app's `resp.json()`) saw an
+ *     empty body. Effect: every KMB / CTB / GMB route-stop / stop-eta
+ *     fetch the SW intercepted returned an empty data array, which
+ *     `renderBusRoute` translated into "搵唔到呢條路線 / route not
+ *     found" for routes whose upstream worked fine. Fix: clone the
+ *     response before passing it to timestampedResponse so the live
+ *     body handed back to the caller is untouched.
+ *   - Also widens the activate-side legacy-drop filter to N < 14 so
+ *     the v13 SHELL cache is cleaned up when v14 activates.
+ * v13 was Batch 3 (local notifications + vehicle positions + offline
+ * mode runtime caches). v12 was Batch 2 (light theme + empty state +
+ * bound swap). v11 was Batch 1 (service-alerts banner + share/QR +
+ * planner depart-by mode).
  */
-const CACHE = 'buseta-v13';
+const CACHE = 'buseta-v14';
 const SHELL = [
   '/',
   '/index.html',
@@ -78,11 +73,11 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys()
       .then((keys) => Promise.all(
-        // Drop legacy `buseta-vN` for N < 12; keep v12 + runtime
+        // Drop legacy `buseta-vN` for N < 14; keep v14 + runtime
         // caches so existing offline data survives the bump.
         keys.filter((k) => {
           const m = /^buseta-v(\d+)$/.exec(k);
-          if (m) return parseInt(m[1], 10) < 12;
+          if (m) return parseInt(m[1], 10) < 14;
           return k !== CACHE && k !== ASSET_CACHE && k !== ETA_CACHE;
         }).map((k) => caches.delete(k))
       ))
@@ -121,7 +116,13 @@ async function etaSWR(req, cache) {
   const networkFetch = fetch(req).then(async (resp) => {
     if (resp && resp.ok) {
       try {
-        const wrapped = await timestampedResponse(resp);
+        // Clone before reading: `timestampedResponse` consumes the
+        // upstream body via arrayBuffer() so the original `resp`
+        // handed back to the caller must be an untouched clone —
+        // otherwise the app's `resp.json()` reads empty and reports
+        // "搵唔到呢條路線 / route not found" for every fresh network
+        // response the SW intercepts.
+        const wrapped = await timestampedResponse(resp.clone());
         await cache.put(req, wrapped);
       } catch (_) { /* body read failed; skip cache write */ }
     }
