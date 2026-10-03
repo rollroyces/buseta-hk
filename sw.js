@@ -4,30 +4,24 @@
  * upstream API calls. Static JSON in /assets/ is cached lazily on first
  * fetch via the same code path.
  *
- * CACHE bumped to v15: hotfix over v14.
- *   - v14 fixed the etaSWR body-consumption bug (timestampedResponse
- *     was eating the upstream body and returning the consumed resp)
- *     but did NOT invalidate the ETA_CACHE entries that v13 had
- *     already poisoned with empty bodies. Within the 5-minute
- *     freshness window, etaSWR was happily serving those poisoned
- *     cached responses back to the app — so "搵唔到呢條路線" kept
- *     showing even after the SW fix was deployed. The user's browser
- *     still had empty-body cached entries for /route-stop/680/outbound/1
- *     and any other KMB / CTB / GMB / MTR URLs visited during the v13
- *     era.
- *   - Fix: bump ETA_CACHE name from `buseta-eta-v1` to `buseta-eta-v2`
- *     so the poisoned v1 entries are abandoned. Activate handler also
- *     explicitly deletes any leftover `buseta-eta-v1` cache for safety.
- *   - ASSET_CACHE (the same-origin /assets/*.json cache) does NOT
- *     suffer from this poisoning — its handler was already using
- *     `resp.clone()` before the cache write, so v1 entries are still
- *     trustworthy and we keep it.
- * v14 was the body-consumption hotfix. v13 was Batch 3 (local
- * notifications + vehicle positions + offline mode runtime caches).
- * v12 was Batch 2 (light theme + empty state + bound swap). v11 was
- * Batch 1 (service-alerts banner + share/QR + planner depart-by mode).
+ * CACHE bumped to v17: forced SW update after the renderBusRoute
+ * ReferenceError hotfix shipped in app.js. Even though no SW logic
+ * changed, we still bump the cache name so any tab that was holding
+ * a v16 install while the index.html cache-buster flipped from v=27
+ * to v=28 gets a clean SW install — otherwise the SW could keep
+ * serving the v=27 app.js from the SHELL pre-cache until the user
+ * did a full page reload.
+ * v16 was the SW-registration-path hotfix (`./sw.js` relative +
+ * `updateViaCache: 'none'` so /sw.js isn't stuck behind the
+ * root-relative scope issue). v15 was the ETA_CACHE invalidation
+ * hotfix (etaSWR body-consumption poisoned the buseta-eta-v1 cache
+ * in v13; bumped to buseta-eta-v2). v14 was the etaSWR
+ * resp.clone() fix. v13 was Batch 3 (local notifications + vehicle
+ * positions + offline mode runtime caches). v12 was Batch 2 (light
+ * theme + empty state + bound swap). v11 was Batch 1 (service-alerts
+ * banner + share/QR + planner depart-by mode).
  */
-const CACHE = 'buseta-v16';
+const CACHE = 'buseta-v17';
 const SHELL = [
   '/',
   '/index.html',
@@ -80,7 +74,7 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys()
       .then((keys) => Promise.all(
-        // Drop legacy `buseta-vN` for N < 16; keep v16 + ASSET_CACHE
+        // Drop legacy `buseta-vN` for N < 17; keep v17 + ASSET_CACHE
         // + the new ETA_CACHE so existing offline data survives.
         // Also explicitly drop the poisoned `buseta-eta-v1` cache
         // (bumped to v2) so users on the v13-era poisoned SWR cache
@@ -88,7 +82,7 @@ self.addEventListener('activate', (event) => {
         keys.filter((k) => {
           if (k === 'buseta-eta-v1') return true;  // poisoned, drop
           const m = /^buseta-v(\d+)$/.exec(k);
-          if (m) return parseInt(m[1], 10) < 16;
+          if (m) return parseInt(m[1], 10) < 17;
           return k !== CACHE && k !== ASSET_CACHE && k !== ETA_CACHE;
         }).map((k) => caches.delete(k))
       ))

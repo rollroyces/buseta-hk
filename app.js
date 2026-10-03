@@ -4270,7 +4270,7 @@
       // arrives, the timer below swaps the section in-place via
       // updateVehicleMap() without a full re-render.
       //
-      // We pass `coordByStop` and `etasByStop` so the placeholder logic
+      // We pass `coordByStop` and `etaByStop` so the placeholder logic
       // can interpolate positions along the polyline. `op` lets the
       // marker colour track the operator chip palette.
       const vehicleSection = renderVehicleMap(stops, coordByStop, null, {

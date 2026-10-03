@@ -68,19 +68,25 @@ h1,h2,h3{margin:0;font-weight:700;letter-spacing:-0.01em}
 </style>
 <!-- Main stylesheet. The original style.css is what we ship today — a
      hand-rolled minifier produced a broken style.min.css earlier, so we
-     load the unminified bundle directly. v=27 forces cached browsers
-     to refetch after two hotfixes:
-       - SW registration path was `/sw.js` (resolved to the GitHub
-         Pages SITE root → 404). Now `./sw.js` (relative) so the SW
-         actually registers under the /buseta-hk/ scope. Without
-         this, the offline-mode runtime caches I shipped in v13–v15
-         were never reachable from a real browser.
+     load the unminified bundle directly. v=28 forces cached browsers
+     to refetch after the renderBusRoute ReferenceError hotfix:
+       - The renderBusRoute body had a typo (`etasByStop` at the
+         etaByStop call site) that threw ReferenceError after the
+         header had already been painted. The outer .catch then ran
+         `body.replaceChildren(routeNotFound)` and silently wiped the
+         already-rendered list — so "搵唔到呢條路線" was the ONLY thing
+         users saw on every KMB/CTB/GMB/LRT/MTR route detail page
+         since Batch 3's vehicle-positions feature shipped (the new
+         etaByStop argument was added in that batch). The fix is at
+         app.js:4278 (`etaByStop,` singular) plus the diagnostic
+         console.error in the .catch so future regressions are not
+         silent.
        - renderBusRoute's `.catch()` was silently swallowing
          exceptions and overwriting the body with "搵唔到呢條路線"
          — masking any real error in the route render chain. Now
          logs the underlying error to console before replacing the
          body, so future debugging isn't a guessing game. -->
-<link rel="stylesheet" href="style.css?v=27" />
+<link rel="stylesheet" href="style.css?v=28" />
 <script>
 /* Theme loader — runs synchronously in <head> so :root[data-theme] is set
    BEFORE the body paints. Mirrors the loadThemePreference() logic in app.js
@@ -420,7 +426,7 @@ window.__buseta = {
   },
 };
 </script>
-<script defer src="app.js?v=27"></script>
+<script defer src="app.js?v=28"></script>
 <script>
   // SW path must be RELATIVE — GitHub Pages serves this site under
   // /buseta-hk/ but a leading `/sw.js` would resolve to the site root
