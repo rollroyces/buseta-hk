@@ -1134,12 +1134,14 @@ h1, h2, h3 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
   color: var(--danger);
 }
 
-/* ------------------------------ route map (v30 hybrid) ------------------------------
-   v29 dropped the iframe in favour of the SVG schematic; v30 brought the
-   iframe back as the primary map inside this card, with the SVG
-   schematic nested as a `.vehicle-map-inline` sub-section. The card
-   owns the section chrome; the schematic just renders head + frame +
-   hint inside. */
+/* ------------------------------ route map (v31 iframe-only) ------------------------------
+   v30 tried to nest the SVG schematic inside this card as a sub-section,
+   but the hybrid layout had a regression: when the iframe lazy-loaded at
+   its intrinsic size before CSS kicked in, the SVG container stretched to
+   fill the leftover space, breaking the page. v31 keeps just the iframe
+   and the "Open in Maps" link as the only map on the route detail page.
+   The vehicle-positions helper / SVG renderer are kept on disk but no
+   longer rendered here. */
 .route-map {
   margin-top: 16px;
   margin-bottom: 18px;
@@ -3189,28 +3191,4 @@ h1, h2, h3 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
   font-size: 12px;
   color: var(--muted);
   line-height: 1.4;
-}
-/* Sub-section wrapper for the SVG schematic inside the .route-map card
-   (v30 hybrid layout). No card chrome — the route-map card above owns
-   the outer borders and padding; this wrapper just renders the schematic
-   head + SVG + hint stacked below the iframe. */
-.vehicle-map-inline {
-  margin-top: 14px;
-  padding-top: 12px;
-  border-top: 1px dashed var(--line);
-}
-.vehicle-map-inline-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 2px 4px 8px;
-}
-.vehicle-map-inline-title {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--muted);
-  letter-spacing: -0.01em;
-}
-.vehicle-map-inline.is-placeholder .vehicle-map-frame {
-  opacity: 0.92;
 }

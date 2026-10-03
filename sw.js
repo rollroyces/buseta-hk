@@ -4,24 +4,25 @@
  * upstream API calls. Static JSON in /assets/ is cached lazily on first
  * fetch via the same code path.
  *
- * CACHE bumped to v19: forced SW update after the v29→v30 hybrid
- * layout change. No SW logic changed in v19 — the SHELL pre-cache
- * still holds the same five files. We bump anyway so a tab that was
- * holding a v18 install while index.html flipped from v=29 to v=30
- * gets a clean install. Without the bump, the SHELL pre-cache could
- * serve the v=29 app.js (which dropped the iframe entirely) until
+ * CACHE bumped to v20: forced SW update after the v30→v31 layout revert.
+ * No SW logic changed in v20 — the SHELL pre-cache still holds the
+ * same five files. We bump anyway so a tab that was holding a v19
+ * install while index.html flipped from v=30 to v=31 gets a clean
+ * install. Without the bump, the SHELL pre-cache could serve the
+ * v=30 app.js (which had the broken iframe+SVG hybrid layout) until
  * the user did a hard reload.
- * v18 was the same forced-update after v29's merge shipped. v17 was
- * the same forced-update after the renderBusRoute ReferenceError
- * hotfix shipped in v=28 app.js. v16 was the SW-registration-path
- * hotfix (`./sw.js` relative + `updateViaCache: 'none'`). v15 was
- * the ETA_CACHE invalidation hotfix (buseta-eta-v1 → v2). v14 was
- * the etaSWR resp.clone() fix. v13 was Batch 3 (local notifications
- * + vehicle positions + offline mode runtime caches). v12 was Batch
- * 2 (light theme + empty state + bound swap). v11 was Batch 1
+ * v19 was the same forced-update after v30's hybrid shipped. v18
+ * was the same forced-update after v29's merge shipped. v17 was the
+ * same forced-update after the renderBusRoute ReferenceError hotfix
+ * shipped in v=28 app.js. v16 was the SW-registration-path hotfix
+ * (`./sw.js` relative + `updateViaCache: 'none'`). v15 was the
+ * ETA_CACHE invalidation hotfix (buseta-eta-v1 → v2). v14 was the
+ * etaSWR resp.clone() fix. v13 was Batch 3 (local notifications +
+ * vehicle positions + offline mode runtime caches). v12 was Batch 2
+ * (light theme + empty state + bound swap). v11 was Batch 1
  * (service-alerts banner + share/QR + planner depart-by mode).
  */
-const CACHE = 'buseta-v19';
+const CACHE = 'buseta-v20';
 const SHELL = [
   '/',
   '/index.html',
@@ -74,7 +75,7 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys()
       .then((keys) => Promise.all(
-        // Drop legacy `buseta-vN` for N < 19; keep v19 + ASSET_CACHE
+        // Drop legacy `buseta-vN` for N < 20; keep v20 + ASSET_CACHE
         // + the new ETA_CACHE so existing offline data survives.
         // Also explicitly drop the poisoned `buseta-eta-v1` cache
         // (bumped to v2) so users on the v13-era poisoned SWR cache
@@ -82,7 +83,7 @@ self.addEventListener('activate', (event) => {
         keys.filter((k) => {
           if (k === 'buseta-eta-v1') return true;  // poisoned, drop
           const m = /^buseta-v(\d+)$/.exec(k);
-          if (m) return parseInt(m[1], 10) < 19;
+          if (m) return parseInt(m[1], 10) < 20;
           return k !== CACHE && k !== ASSET_CACHE && k !== ETA_CACHE;
         }).map((k) => caches.delete(k))
       ))

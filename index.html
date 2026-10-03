@@ -68,19 +68,20 @@ h1,h2,h3{margin:0;font-weight:700;letter-spacing:-0.01em}
 </style>
 <!-- Main stylesheet. The original style.css is what we ship today — a
      hand-rolled minifier produced a broken style.min.css earlier, so we
-     load the unminified bundle directly. v=30 forces cached browsers
-     to refetch after the v29→v30 hybrid layout change:
-       - v29 tried to merge the iframe + SVG schematic into one card by
-         dropping the iframe entirely (SVG schematic as the only map).
-         Users found the SVG too abstract (no streets, no buildings) so
-         v30 brings the iframe back as the primary map AND keeps the
-         SVG schematic nested as a sub-section inside the same card.
-       - The schematic is built by renderVehicleMap() with a thin
-         `.vehicle-map-inline` wrapper (no outer card chrome — the
-         route-map card above already has the section title and frame).
-         Title says "實時車輛位置" (not "地圖") and the "Open in Google
-         Maps" link is dropped since the iframe IS the Google Maps view.
-<link rel="stylesheet" href="style.css?v=30" />
+     load the unminified bundle directly. v=31 forces cached browsers
+     to refetch after the v30→v31 layout revert:
+       - v30 tried a hybrid layout (Google Maps iframe as primary map +
+         SVG schematic with bus markers nested as a sub-section inside
+         the same card). It shipped but had a regression: when the iframe
+         lazy-loaded at its intrinsic size before CSS kicked in, the SVG
+         container stretched to fill the leftover space and blew the page
+         past the stop list. v31 reverts to iframe-only — the route
+         detail page has just the Google Maps directions iframe + the
+         "Open in Google Maps" link as the map, with the live-bus schematic
+         dropped from this view. The vehicle-positions helper stays on disk
+         for future re-use.
+-->
+<link rel="stylesheet" href="style.css?v=31" />
 <script>
 /* Theme loader — runs synchronously in <head> so :root[data-theme] is set
    BEFORE the body paints. Mirrors the loadThemePreference() logic in app.js
@@ -420,7 +421,7 @@ window.__buseta = {
   },
 };
 </script>
-<script defer src="app.js?v=30"></script>
+<script defer src="app.js?v=31"></script>
 <script>
   // SW path must be RELATIVE — GitHub Pages serves this site under
   // /buseta-hk/ but a leading `/sw.js` would resolve to the site root
