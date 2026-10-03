@@ -3352,46 +3352,60 @@
   }
 
   function renderSchedulePanel(panel, stopId, isCtb) {
+    // If the schedule is already cached and the panel was just freshly
+    // built, skip the loading spinner entirely — paint straight from cache.
+    const cacheKey = `${isCtb ? 'CTB' : 'KMB'}|${stopId}`;
+    const cached = scheduleCache.get(cacheKey);
+    if (cached) {
+      panel.innerHTML = '';
+      paintScheduleRows(panel, cached);
+      return;
+    }
+
     panel.innerHTML = '';
     panel.appendChild(el('p', { class: 'muted', style: 'text-align:center; padding: 24px 8px;' }, t_str('loadingSchedule')));
 
     fetchStopSchedule(stopId, isCtb).then((rows) => {
       panel.innerHTML = '';
-      panel.appendChild(el('p', { class: 'muted', style: 'margin-top: 4px; font-size: 12px;' }, t_str('scheduleNote')));
-
-      if (!rows.length) {
-        panel.appendChild(el('p', { class: 'empty', style: 'margin-top: 12px;' }, t_str('scheduleEmpty')));
-        return;
-      }
-
-      // Group rows by hour bucket (HH:00). Sort ascending within each hour.
-      const byHour = new Map();
-      for (const r of rows) {
-        const h = r.time.getHours();
-        if (!byHour.has(h)) byHour.set(h, []);
-        byHour.get(h).push(r);
-      }
-      const hours = Array.from(byHour.keys()).sort((a, b) => a - b);
-
-      const list = el('div', { class: 'stop-schedule' });
-      for (const h of hours) {
-        const bucket = el('section', { class: 'stop-schedule-bucket', 'aria-label': t_str('scheduleHour', h) });
-        bucket.appendChild(el('h3', { class: 'stop-schedule-hour' }, t_str('scheduleHour', h)));
-        const ul = el('ul', { class: 'stop-schedule-rows' });
-        byHour.get(h).forEach((r) => {
-          const destStr = pickFirst(r.destTc, r.destEn);
-          const li = el('li', { class: 'stop-schedule-row' });
-          li.appendChild(el('span', { class: 'stop-schedule-route' }, r.route));
-          li.appendChild(el('span', { class: 'stop-schedule-time' }, formatHMTimestamp(r.time.toISOString())));
-          if (destStr) li.appendChild(el('span', { class: 'stop-schedule-dest' }, destStr));
-          li.appendChild(el('span', { class: 'stop-schedule-op' }, t_str(opCoKey(r.co))));
-          ul.appendChild(li);
-        });
-        bucket.appendChild(ul);
-        list.appendChild(bucket);
-      }
-      panel.appendChild(list);
+      paintScheduleRows(panel, rows);
     });
+  }
+
+  function paintScheduleRows(panel, rows) {
+    panel.appendChild(el('p', { class: 'muted', style: 'margin-top: 4px; font-size: 12px;' }, t_str('scheduleNote')));
+
+    if (!rows.length) {
+      panel.appendChild(el('p', { class: 'empty', style: 'margin-top: 12px;' }, t_str('scheduleEmpty')));
+      return;
+    }
+
+    // Group rows by hour bucket (HH:00). Sort ascending within each hour.
+    const byHour = new Map();
+    for (const r of rows) {
+      const h = r.time.getHours();
+      if (!byHour.has(h)) byHour.set(h, []);
+      byHour.get(h).push(r);
+    }
+    const hours = Array.from(byHour.keys()).sort((a, b) => a - b);
+
+    const list = el('div', { class: 'stop-schedule' });
+    for (const h of hours) {
+      const bucket = el('section', { class: 'stop-schedule-bucket', 'aria-label': t_str('scheduleHour', h) });
+      bucket.appendChild(el('h3', { class: 'stop-schedule-hour' }, t_str('scheduleHour', h)));
+      const ul = el('ul', { class: 'stop-schedule-rows' });
+      byHour.get(h).forEach((r) => {
+        const destStr = pickFirst(r.destTc, r.destEn);
+        const li = el('li', { class: 'stop-schedule-row' });
+        li.appendChild(el('span', { class: 'stop-schedule-route' }, r.route));
+        li.appendChild(el('span', { class: 'stop-schedule-time' }, formatHMTimestamp(r.time.toISOString())));
+        if (destStr) li.appendChild(el('span', { class: 'stop-schedule-dest' }, destStr));
+        li.appendChild(el('span', { class: 'stop-schedule-op' }, t_str(opCoKey(r.co))));
+        ul.appendChild(li);
+      });
+      bucket.appendChild(ul);
+      list.appendChild(bucket);
+    }
+    panel.appendChild(list);
   }
 
   function renderBusStopView(stopId) {
@@ -3431,7 +3445,17 @@
       : fetchKmbStop(stopId).catch(() => null);
 
     const stateRef = { panel: livePanel, header, stopId, view, schedulePanel: tabs.schedulePanel, switchTo: tabs.switchTo };
-    state._refreshStop = (opts) => refreshBusStopView(stateRef, (opts && opts.mode) || 'live');
+    state._refreshStop = (opts) => {
+      const mode = (opts && opts.mode) || 'live';
+      if (mode === 'schedule' && stateRef.schedulePanel) {
+        // Bypass the cache and force a re-fetch of the timetable, then
+        // re-render the schedule panel.
+        scheduleCache.delete(`${isCtb ? 'CTB' : 'KMB'}|${stopId}`);
+        renderSchedulePanel(stateRef.schedulePanel, stopId, isCtb);
+        return;
+      }
+      refreshBusStopView(stateRef, mode);
+    };
 
     stopPromise.then((stopResp) => {
       let nameTc = stopId, nameSc = '', nameEn = '';
@@ -3816,7 +3840,15 @@
       type: 'button',
       class: 'stop-refresh',
       'aria-label': t_str('refresh'),
-      onclick: () => { if (typeof state._refreshStop === 'function') state._refreshStop(); else location.reload(); },
+      onclick: () => {
+        if (typeof state._refreshStop === 'function') {
+          // Respect the current tab: live refresh re-renders the arrivals,
+          // schedule refresh re-pulls the timetable.
+          state._refreshStop({ mode: state._stopViewMode === 'schedule' ? 'schedule' : 'live' });
+        } else {
+          location.reload();
+        }
+      },
     }, refreshIconSVG());
     meta.appendChild(refreshBtn);
     head.appendChild(meta);
