@@ -52,7 +52,6 @@
       geoBannerTitle: '想睇附近嘅車站同路線？',
       geoBannerBody: '授權使用你嘅位置，我哋會列出最近嘅巴士站、港鐵站同常見路線，仲可以幫你直接跳到最近嗰個車站。',
       geoBannerCta: '啟用位置',
-      geoBannerError: '未能取得位置。你可以稍後再試一次。',
       nearestStopLabel: '最近車站',
       noResults: '搵唔到相關嘅路線、車站或港鐵站。',
       back: '返回',
@@ -122,10 +121,46 @@
       updatedMeta: '到站時間每分鐘更新',
       refresh: '更新',
       ctbNoEtaHint: '請打開個別路線嘅詳情睇實時到站。',
+      tabLive: '即時',
+      tabLiveEn: 'Live',
+      tabSchedule: '時間表',
+      tabScheduleEn: 'Schedule',
+      loadingSchedule: '載入時間表中…',
+      scheduleEmpty: '時間表未有資料。',
+      scheduleNote: '以下係由各營辦商公開數據提供嘅預定到站時間，每日約 05:00 更新。',
+      scheduleHour: (h) => `${h}:00`,
       lastBusAlert: '尾班車已過，今日已無下一班',
       affectedServices: (n) => `${n} 班次受影響`,
       noServiceAlert: '暫無班次',
       dismissAlert: '關閉通知',
+      navPlanner: '行程',
+      plannerTitle: '行程規劃',
+      plannerSubtitle: '輸入起點同終點，搵直車或者轉車嘅最快路線。',
+      plannerFrom: '起點',
+      plannerTo: '終點',
+      plannerFromPh: '輸入車站、港鐵站或地點',
+      plannerToPh: '輸入車站、港鐵站或地點',
+      plannerSwap: '對調',
+      plannerGo: '搵路線',
+      plannerSearching: '搵緊路線…',
+      plannerWalk: '步行',
+      plannerRide: '乘車',
+      plannerTransfers: '轉乘',
+      plannerBest: '最快',
+      plannerBestLabel: '最快嘅建議',
+      plannerDirect: '直達',
+      plannerDirectCount: (n) => `搵到 ${n} 個直達方案`,
+      plannerNoDirect: '冇直達路線，需要轉車。',
+      planner1Hop: '轉一次車',
+      planner2Hop: '轉兩次車',
+      plannerBoard: '乘搭',
+      plannerArrive: '預計到達',
+      plannerNoStops: '請先輸入起點同終點。',
+      plannerNoResults: '暫時搵唔到合適嘅路線，試吓其他車站啦。',
+      plannerSameStop: '起點同終點係同一個車站。',
+      plannerError: '規劃時出咗啲問題，再試一次啦。',
+      plannerRecent: '最近嘅行程',
+      plannerRecentEmpty: '未有最近嘅行程。',
     },
     'en': {
       brandSub: 'Hong Kong Bus',
@@ -159,7 +194,6 @@
       geoBannerTitle: 'See nearby stops and routes?',
       geoBannerBody: 'Allow location access to list the closest bus stops, MTR stations and frequent routes — and jump straight to the nearest stop.',
       geoBannerCta: 'Use my location',
-      geoBannerError: 'Could not get your location. Try again later.',
       nearestStopLabel: 'Nearest stop',
       noResults: 'No matching routes, stops or stations.',
       back: 'Back',
@@ -229,10 +263,46 @@
       updatedMeta: 'Live arrivals refresh every minute',
       refresh: 'Refresh',
       ctbNoEtaHint: 'Open a route to see live arrivals for this stop.',
+      tabLive: 'Live',
+      tabLiveEn: '即時',
+      tabSchedule: 'Schedule',
+      tabScheduleEn: '時間表',
+      loadingSchedule: 'Loading timetable…',
+      scheduleEmpty: 'No timetable data available.',
+      scheduleNote: 'Scheduled arrival times from operator open-data feeds (updated around 05:00 daily).',
+      scheduleHour: (h) => `${h}:00`,
       lastBusAlert: 'Last bus has departed — no more services today',
       affectedServices: (n) => `${n} services affected`,
       noServiceAlert: 'No service running',
       dismissAlert: 'Dismiss',
+      navPlanner: 'Planner',
+      plannerTitle: 'Trip planner',
+      plannerSubtitle: 'Enter your origin and destination — find the fastest direct route or a quick transfer.',
+      plannerFrom: 'From',
+      plannerTo: 'To',
+      plannerFromPh: 'Stop, station or place',
+      plannerToPh: 'Stop, station or place',
+      plannerSwap: 'Swap',
+      plannerGo: 'Find route',
+      plannerSearching: 'Searching…',
+      plannerWalk: 'Walk',
+      plannerRide: 'Ride',
+      plannerTransfers: 'Transfers',
+      plannerBest: 'Fastest',
+      plannerBestLabel: 'Fastest option',
+      plannerDirect: 'Direct',
+      plannerDirectCount: (n) => `${n} direct option${n === 1 ? '' : 's'}`,
+      plannerNoDirect: 'No direct routes — transfers required.',
+      planner1Hop: '1 transfer',
+      planner2Hop: '2 transfers',
+      plannerBoard: 'Board',
+      plannerArrive: 'Arrive',
+      plannerNoStops: 'Please enter both an origin and a destination.',
+      plannerNoResults: 'No matching routes. Try different stops.',
+      plannerSameStop: 'Origin and destination are the same stop.',
+      plannerError: 'Something went wrong. Please try again.',
+      plannerRecent: 'Recent trips',
+      plannerRecentEmpty: 'No recent trips yet.',
     },
     'zh-Hans': {
       brandSub: '香港巴士',
@@ -318,6 +388,14 @@
       updatedMeta: '到站时间每分钟更新',
       refresh: '更新',
       ctbNoEtaHint: '请打开个别路线嘅详情睇实时到站。',
+      tabLive: '实时',
+      tabLiveEn: 'Live',
+      tabSchedule: '时间表',
+      tabScheduleEn: 'Schedule',
+      loadingSchedule: '载入时间表中…',
+      scheduleEmpty: '时间表未有资料。',
+      scheduleNote: '以下系由各营办商公开数据提供嘅预定到站时间，每日约 05:00 更新。',
+      scheduleHour: (h) => `${h}:00`,
       lastBusAlert: '尾班车已过，今日已无下一班',
       affectedServices: (n) => `${n} 班次受影响`,
       noServiceAlert: '暂无班次',
@@ -325,8 +403,35 @@
       geoBannerTitle: '想睇附近嘅车站同路线？',
       geoBannerBody: '授权使用你嘅位置，我哋会列出最近嘅巴士站、港铁站同常见路线，仲可以帮你直接跳到最近嗰个车站。',
       geoBannerCta: '启用位置',
-      geoBannerError: '未能取得位置。你可以稍后再试一次。',
       nearestStopLabel: '最近车站',
+      navPlanner: '行程',
+      plannerTitle: '行程规划',
+      plannerSubtitle: '输入起点同终点，搵直车或者转车嘅最快路线。',
+      plannerFrom: '起点',
+      plannerTo: '终点',
+      plannerFromPh: '输入车站、港铁站或地点',
+      plannerToPh: '输入车站、港铁站或地点',
+      plannerSwap: '对调',
+      plannerGo: '搵路线',
+      plannerSearching: '搵紧路线…',
+      plannerWalk: '步行',
+      plannerRide: '乘车',
+      plannerTransfers: '转乘',
+      plannerBest: '最快',
+      plannerBestLabel: '最快嘅建议',
+      plannerDirect: '直达',
+      plannerDirectCount: (n) => `搵到 ${n} 个直达方案`,
+      plannerNoDirect: '冇直达路线，需要转车。',
+      planner1Hop: '转一次车',
+      planner2Hop: '转两次车',
+      plannerBoard: '乘搭',
+      plannerArrive: '预计到达',
+      plannerNoStops: '请先输入起点同终点。',
+      plannerNoResults: '暂时搵唔到合适嘅路线，试下其他车站啦。',
+      plannerSameStop: '起点同终点系同一个车站。',
+      plannerError: '规划时出咗啲问题，再试一次啦。',
+      plannerRecent: '最近嘅行程',
+      plannerRecentEmpty: '未有最近嘅行程。',
     },
   };
 
@@ -369,6 +474,13 @@
   const INDEX_MAX_AGE_MS = 12 * 60 * 60 * 1000;
   const GMB_LIST_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
   const GMB_INDEX_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+
+  // ------------------------------------------------------------------
+  // Module-level caches
+  // ------------------------------------------------------------------
+  // Per-stop schedule cache. The schedule view reuses these so re-visits
+  // are instant without re-hitting the operator APIs.
+  const scheduleCache = new Map();
 
   // ------------------------------------------------------------------
   // State
@@ -789,6 +901,9 @@
   // CTB stop metadata (name includes "Stop, Location" for many stops).
   const fetchCitybusStop = (stopId) =>
     fetchJSON(`${API.CITYBUS}/stop/${encodeURIComponent(stopId)}`);
+  // Per-stop ETA feed (CTB uses 6-digit numeric stop IDs).
+  const fetchCitybusBatchStopEta = (stopId) =>
+    fetchJSON(`https://rt.data.gov.hk/v1/transport/batch/stop-eta/CTB/${encodeURIComponent(stopId)}`);
   // Returns the right ETA fetcher for a stop_id + route + dir.
   function fetchEtaForStop(stopId, route, dir) {
     if (typeof stopId === 'string' && /^[0-9a-fA-F]{16}$/.test(stopId)) return fetchKmbStopEta(stopId);
@@ -912,6 +1027,109 @@
     path.setAttribute('fill', 'currentColor');
     svg.appendChild(path);
     return svg;
+  }
+
+  // Module-level cache for stop coords fetched from operator endpoints.
+  // Keyed by `${operator}|${stopId}` so CTB and KMB stop IDs don't collide.
+  // Multiple routes share stops (CTB 680 ↔ 680A, KMB 1 ↔ 1A …) so caching
+  // here saves repeat fetches when the user jumps between routes.
+  const stopCoordCache = new Map();
+  async function ensureStopCoords(stopId, isCitybus) {
+    const op = isCitybus ? 'CTB' : 'KMB';
+    const key = `${op}|${stopId}`;
+    if (stopCoordCache.has(key)) return stopCoordCache.get(key);
+    const fetcher = isCitybus ? fetchCitybusStop : fetchKmbStop;
+    try {
+      const resp = await fetcher(stopId);
+      const d = resp && resp.data;
+      const obj = Array.isArray(d) ? d[0] : d;
+      const lat = Number(obj && obj.lat);
+      const lng = Number(obj && (obj.long || obj.lng));
+      const out = (Number.isFinite(lat) && Number.isFinite(lng)) ? { lat, lng } : null;
+      stopCoordCache.set(key, out);
+      return out;
+    } catch {
+      stopCoordCache.set(key, null);
+      return null;
+    }
+  }
+
+  // Render the route-level polyline map. Pure SVG — no Leaflet/Mapbox/
+  // Google Maps JS dependency. Takes the resolved stop list and a
+  // `coordByStop` Map<stopId, {lat,lng}>; returns a section Node, or null
+  // if fewer than two stops have coords (caller should then skip rendering).
+  function renderRoutePolyline(stops, coordByStop) {
+    if (!stops || stops.length === 0) return null;
+    const points = [];
+    stops.forEach((s, i) => {
+      const c = coordByStop.get(s.stop);
+      if (c && Number.isFinite(c.lat) && Number.isFinite(c.lng)) {
+        points.push({ idx: i, lat: c.lat, lng: c.lng });
+      }
+    });
+    if (points.length < 2) return null;
+
+    let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity;
+    points.forEach(({ lat, lng }) => {
+      if (lat < minLat) minLat = lat;
+      if (lat > maxLat) maxLat = lat;
+      if (lng < minLng) minLng = lng;
+      if (lng > maxLng) maxLng = lng;
+    });
+    const spanLat = maxLat - minLat || 0.01;
+    const spanLng = maxLng - minLng || 0.01;
+    const padLat = spanLat * 0.08;
+    const padLng = spanLng * 0.08;
+    const W = 1000, H = 360;
+    const project = (lat, lng) => {
+      const x = ((lng - (minLng - padLng)) / (spanLng + padLng * 2)) * W;
+      // Flip Y because SVG origin is top-left and latitude grows upward.
+      const y = ((maxLat + padLat - lat) / (spanLat + padLng * 2)) * H;
+      return [x, y];
+    };
+
+    const NS = 'http://www.w3.org/2000/svg';
+    const section = el('section', { class: 'route-map', 'aria-label': t_str('mapHeader') });
+    const head = el('div', { class: 'route-map-head' },
+      el('span', { class: 'route-map-title' }, t_str('mapHeader')),
+      el('span', { class: 'route-map-meta' }, `${points.length}/${stops.length}`),
+    );
+    section.appendChild(head);
+
+    const svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    svg.setAttribute('class', 'route-map-svg');
+    svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+    svg.setAttribute('role', 'img');
+
+    const lineD = points.map(({ lat, lng }, i) => {
+      const [x, y] = project(lat, lng);
+      return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)} ${y.toFixed(1)}`;
+    }).join(' ');
+    const path = document.createElementNS(NS, 'path');
+    path.setAttribute('d', lineD);
+    path.setAttribute('class', 'route-map-line');
+    svg.appendChild(path);
+
+    points.forEach((p, i) => {
+      const [x, y] = project(p.lat, p.lng);
+      const isOrigin = i === 0;
+      const isTarget = i === points.length - 1;
+      const c = document.createElementNS(NS, 'circle');
+      c.setAttribute('cx', x.toFixed(1));
+      c.setAttribute('cy', y.toFixed(1));
+      c.setAttribute('r', isOrigin || isTarget ? '5.5' : '3.5');
+      const cls = ['route-map-stop'];
+      if (isOrigin) cls.push('is-origin');
+      if (isTarget) cls.push('is-target');
+      c.setAttribute('class', cls.join(' '));
+      svg.appendChild(c);
+    });
+
+    const frame = el('div', { class: 'route-map-frame' });
+    frame.appendChild(svg);
+    section.appendChild(frame);
+    return section;
   }
 
   // ------------------------------------------------------------------
@@ -1089,6 +1307,7 @@
     const h = location.hash.replace(/^#/, '') || '/';
     if (h === '/' || h === '') return { view: 'home' };
     if (h === '/search') return { view: 'search' };
+    if (h === '/planner') return { view: 'planner' };
     // /route/<co>/<route>/<dir>/<service>[/<stop_seq>]
     let m = h.match(/^\/route\/([^/]+)\/([^/]+)\/([^/]+)\/([^/]+)(?:\/([^/]+))?$/);
     if (m) {
@@ -1108,7 +1327,7 @@
   function currentRoute() { return parseHash().view; }
 
   function showView(name) {
-    ['splash', 'view-home', 'view-search', 'view-route', 'view-stop', 'view-error']
+    ['splash', 'view-home', 'view-search', 'view-route', 'view-stop', 'view-error', 'view-planner']
       .forEach((id) => {
         const node = document.getElementById(id);
         if (!node) return;
@@ -1143,6 +1362,7 @@
     // Bottom nav active state
     let active = 'home';
     if (r.view === 'search') active = 'search';
+    else if (r.view === 'planner') active = 'planner';
     else if (r.view === 'home') active = 'home';
     else if (r.view === 'route' || r.view === 'stop') active = 'home';
     $$('.nav-item').forEach((n) => n.classList.toggle('is-active', n.dataset.route === active));
@@ -1154,6 +1374,7 @@
     switch (r.view) {
       case 'home': renderHome(); break;
       case 'search': renderSearch(); break;
+      case 'planner': renderPlannerView(); break;
       case 'route': renderRoute(r); break;
       case 'stop': renderStop(r); break;
       default: renderError();
@@ -1167,6 +1388,17 @@
   function renderHome() {
     showView('view-home');
     const view = renderInto('home', 'home');
+    const container = view.querySelector('.container') || view;
+
+    // Pre-fill / banner zone: at the top of the home view we either show
+    // the in-page location permission banner (no permission yet) OR the
+    // nearest-stop pill (permission granted). Hidden on denial.
+    if (shouldShowGeoBanner()) {
+      container.insertBefore(buildGeoBanner(), container.firstChild);
+    } else if (state.userLoc) {
+      const pill = buildNearestStopPill();
+      if (pill) container.insertBefore(pill, container.firstChild);
+    }
 
     const savedRoutesEl = $('[data-bind="savedRoutes"]', view);
     if (state.savedRoutes.length === 0) {
@@ -1219,6 +1451,36 @@
         onclick: () => { state.recent = []; persist(); renderHome(); toast(t_str('cleared')); },
       }, t_str('clearRecent')));
     }
+
+    // Nearby sections: only rendered when location is known. Insert the
+    // bind containers into the home template and let populateNearbyInto
+    // fill them in (same code path as the search view).
+    if (state.userLoc) {
+      const opsStrip = view.querySelector('.operators-strip');
+      const anchor = (opsStrip && opsStrip.parentNode === container)
+        ? opsStrip.nextSibling
+        : container.firstChild;
+
+      const nearbyStopsBlock = el('div', { 'data-bind': 'nearbyStops' });
+      nearbyStopsBlock.appendChild(el('h2', { class: 'section-title' }, t_str('nearbyStops')));
+      const nearbyRoutesBlock = el('div', { 'data-bind': 'nearbyRoutes' });
+      nearbyRoutesBlock.appendChild(el('h2', { class: 'section-title' }, t_str('nearbyRoutes')));
+      const nearbyStationsBlock = el('div', { 'data-bind': 'nearbyStations' });
+      nearbyStationsBlock.appendChild(el('h2', { class: 'section-title' }, t_str('nearbyStations')));
+
+      // Insert before the savedRoutes section (operators strip is at top,
+      // savedRoutes heading is right after it).
+      const savedRoutesHeading = container.querySelector('[data-bind="savedRoutes"]');
+      const insertAnchor = savedRoutesHeading
+        ? savedRoutesHeading.previousElementSibling // the <h2> "收藏路線"
+        : anchor;
+      // We insert in order: stations, routes, stops (matches search view).
+      container.insertBefore(nearbyStationsBlock, insertAnchor);
+      container.insertBefore(nearbyRoutesBlock, insertAnchor);
+      container.insertBefore(nearbyStopsBlock, insertAnchor);
+
+      populateNearbyInto(view);
+    }
   }
 
   // ------------------------------------------------------------------
@@ -1228,8 +1490,32 @@
     showView('view-search');
     const view = renderInto('search', 'search');
 
+    // No auto-prompt: show the in-page permission banner at the top so the
+    // user can opt in via a click instead of getting a native dialog.
+    if (shouldShowGeoBanner()) {
+      const container = view.querySelector('.container') || view;
+      container.insertBefore(buildGeoBanner(), container.firstChild);
+    }
+
     const input = $('#searchInput', view);
-    input.value = state.lastSearchQ;
+    // Pre-fill the search box with the nearest stop name when location is
+    // granted and the field isn't already populated from a previous visit.
+    // Auto-fill only — we don't navigate; the user still taps search.
+    if (!state.lastSearchQ && state.userLoc && state.index) {
+      const nearest = Array.from(state.index.stops.values())
+        .filter((s) => Number.isFinite(s.lat) && Number.isFinite(s.lng))
+        .map((s) => ({ s, d: haversine(state.userLoc.lat, state.userLoc.lng, s.lat, s.lng) }))
+        .sort((a, b) => a.d - b.d)[0];
+      if (nearest) {
+        const name = nameFor(nearest.s);
+        if (name) {
+          input.value = name;
+          state.lastSearchQ = name;
+        }
+      }
+    } else {
+      input.value = state.lastSearchQ;
+    }
     input.addEventListener('input', debounce(() => {
       state.lastSearchQ = input.value.trim();
       renderResults();
@@ -1460,51 +1746,148 @@
   // ------------------------------------------------------------------
   // Nearby
   // ------------------------------------------------------------------
-  function renderNearby() {
-    const view = $('#view-search');
-    if (!view) return;
+  // Whether the home/search view should currently show the in-page
+  // permission banner. We hide it once the user has either been asked
+  // (state._geoAsked) or is mid-request (status === 'pending').
+  function shouldShowGeoBanner() {
+    return !state.userLoc && !state._geoAsked && state.locationStatus !== 'pending';
+  }
+
+  // In-page permission banner. Replaces the auto-prompt that used to fire
+  // on first visit: the user must tap the CTA before we call the
+  // browser's geolocation API. Hidden on next render after grant/deny.
+  function buildGeoBanner() {
+    const banner = el('div', { class: 'geo-banner', role: 'region', 'aria-label': t_str('geoBannerTitle') });
+    const iconWrap = el('div', { class: 'geo-banner-icon', 'aria-hidden': 'true' });
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('width', '22');
+    svg.setAttribute('height', '22');
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('fill', 'currentColor');
+    path.setAttribute('d',
+      'M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z');
+    svg.appendChild(path);
+    iconWrap.appendChild(svg);
+    banner.appendChild(iconWrap);
+
+    const body = el('div', { class: 'geo-banner-body' });
+    body.appendChild(el('div', { class: 'geo-banner-title' }, t_str('geoBannerTitle')));
+    body.appendChild(el('div', { class: 'geo-banner-text' }, t_str('geoBannerBody')));
+    banner.appendChild(body);
+
+    const cta = el('button', {
+      class: 'geo-banner-cta btn-primary',
+      type: 'button',
+      onclick: () => { requestLocation(); },
+    }, t_str('geoBannerCta'));
+    banner.appendChild(cta);
+
+    return banner;
+  }
+
+  // "Nearest stop" pre-fill row — looks like a search-box, surfaces the
+  // closest stop name with its distance, and clicks through to that stop
+  // view. Hidden if location isn't granted or no nearby stops exist.
+  function buildNearestStopPill() {
+    if (!state.userLoc || !state.index) return null;
+    const nearbyStops = Array.from(state.index.stops.values())
+      .filter((s) => Number.isFinite(s.lat) && Number.isFinite(s.lng))
+      .map((s) => ({ s, d: haversine(state.userLoc.lat, state.userLoc.lng, s.lat, s.lng) }))
+      .sort((a, b) => a.d - b.d);
+    const top = nearbyStops[0];
+    if (!top) return null;
+    const name = nameFor(top.s);
+    const row = el('a', {
+      class: 'nearest-stop-pill nearby-row',
+      href: `#/stop/${encodeURIComponent(top.s.stop)}`,
+      'aria-label': `${t_str('nearestStopLabel')}: ${name}`,
+    });
+    const left = el('span', { class: 'nearest-stop-icon', 'aria-hidden': 'true' });
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('width', '18');
+    svg.setAttribute('height', '18');
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke', 'currentColor');
+    path.setAttribute('stroke-width', '1.8');
+    path.setAttribute('stroke-linecap', 'round');
+    path.setAttribute('stroke-linejoin', 'round');
+    path.setAttribute('d',
+      'M12 21s-7-7.5-7-12a7 7 0 1 1 14 0c0 4.5-7 12-7 12zM12 11.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z');
+    svg.appendChild(path);
+    left.appendChild(svg);
+    row.appendChild(left);
+
+    const main = el('span', { class: 'nearest-stop-main' });
+    main.appendChild(el('span', { class: 'nearest-stop-label' }, t_str('nearestStopLabel')));
+    main.appendChild(el('span', { class: 'nearest-stop-name' }, name));
+    row.appendChild(main);
+
+    row.appendChild(el('span', { class: 'nearest-stop-dist nearby-dist' }, formatDistance(top.d)));
+    row.appendChild(makeChev());
+    return row;
+  }
+
+  // Populate the [data-bind="nearbyStops"|"nearbyRoutes"|"nearbyStations"]
+  // containers inside `view`, sorted ascending by haversine distance.
+  // Also handles the search view's status placeholders (locating / denied
+  // / unavailable) so the user sees feedback while we wait.
+  function populateNearbyInto(view) {
+    if (!view || !state.index) return;
     const status = $('[data-bind="nearbyStatus"]', view);
     const status2 = $('[data-bind="nearbyStatus2"]', view);
     const status3 = $('[data-bind="nearbyStatus3"]', view);
-    if (!status || !status2) return;
+    const stopsBlock = $('[data-bind="nearbyStops"]', view);
+    const routesBlock = $('[data-bind="nearbyRoutes"]', view);
+    const stationsBlock = $('[data-bind="nearbyStations"]', view);
 
-    if (state.locationStatus === 'idle') {
-      status.textContent = t_str('locating');
-      status2.textContent = t_str('locating');
-      if (status3) status3.textContent = t_str('locating');
-      requestLocation();
-      return;
-    }
+    const setStatus = (node, msg) => {
+      if (!node) return;
+      const parent = node.parentElement;
+      if (parent) parent.replaceChildren(el('p', { class: 'muted' }, msg));
+    };
+
     if (state.locationStatus === 'pending') {
-      status.textContent = t_str('locating');
-      status2.textContent = t_str('locating');
-      if (status3) status3.textContent = t_str('locating');
+      setStatus(status, t_str('locating'));
+      setStatus(status2, t_str('locating'));
+      setStatus(status3, t_str('locating'));
       return;
     }
     if (state.locationStatus === 'denied') {
-      status.parentElement.replaceChildren(el('p', { class: 'muted' }, t_str('locationDenied')));
-      status2.parentElement.replaceChildren(el('p', { class: 'muted' }, t_str('locationDenied')));
-      if (status3) status3.parentElement.replaceChildren(el('p', { class: 'muted' }, t_str('locationDenied')));
+      setStatus(status, t_str('locationDenied'));
+      setStatus(status2, t_str('locationDenied'));
+      setStatus(status3, t_str('locationDenied'));
       return;
     }
     if (state.locationStatus === 'unavailable') {
-      status.parentElement.replaceChildren(el('p', { class: 'muted' }, t_str('locationUnavailable')));
-      status2.parentElement.replaceChildren(el('p', { class: 'muted' }, t_str('locationUnavailable')));
-      if (status3) status3.parentElement.replaceChildren(el('p', { class: 'muted' }, t_str('locationUnavailable')));
+      setStatus(status, t_str('locationUnavailable'));
+      setStatus(status2, t_str('locationUnavailable'));
+      setStatus(status3, t_str('locationUnavailable'));
       return;
     }
+    if (!state.userLoc) return; // No permission yet — banner handles it.
+
+    const loc = state.userLoc;
 
     // --- Nearby bus stops (only KMB/CTB/etc — stops we have lat/lng for) ---
     const nearbyStops = Array.from(state.index.stops.values())
       .filter((s) => Number.isFinite(s.lat) && Number.isFinite(s.lng))
-      .map((s) => ({ s, d: haversine(state.location.lat, state.location.lng, s.lat, s.lng) }))
+      .map((s) => ({ s, d: haversine(loc.lat, loc.lng, s.lat, s.lng) }))
       .filter((x) => x.d < 1.2)
       .sort((a, b) => a.d - b.d)
       .slice(0, 12);
 
     if (nearbyStops.length === 0) {
-      status.parentElement.replaceChildren(el('p', { class: 'muted' }, t_str('noNearbyStops')));
-      status2.parentElement.replaceChildren(el('p', { class: 'muted' }, t_str('noNearbyRoutes')));
+      if (status || status2) {
+        setStatus(status, t_str('noNearbyStops'));
+        setStatus(status2, t_str('noNearbyRoutes'));
+      } else {
+        // Home view: bind blocks have only the section title we added.
+        if (stopsBlock) stopsBlock.appendChild(el('p', { class: 'muted' }, t_str('noNearbyStops')));
+        if (routesBlock) routesBlock.appendChild(el('p', { class: 'muted' }, t_str('noNearbyRoutes')));
+      }
     } else {
       Promise.allSettled(nearbyStops.map((x) => fetchKmbStopEta(x.s.stop))).then((results) => {
         const routeMap = new Map();
@@ -1532,10 +1915,13 @@
           });
         });
 
-        const stopsBlock = $('[data-bind="nearbyStops"]', view);
-        const routesBlock = $('[data-bind="nearbyRoutes"]', view);
-        if (stopsBlock) stopsBlock.replaceChildren(buildNearbyStops(stopItems));
-        if (routesBlock) routesBlock.replaceChildren(buildNearbyRoutes(Array.from(routeMap.values())));
+        // Re-resolve the live bind containers in case the view was
+        // re-rendered while the fetch was in flight.
+        const liveView = $('#' + view.id);
+        const liveStops = $('[data-bind="nearbyStops"]', liveView || view);
+        const liveRoutes = $('[data-bind="nearbyRoutes"]', liveView || view);
+        if (liveStops) liveStops.replaceChildren(buildNearbyStops(stopItems));
+        if (liveRoutes) liveRoutes.replaceChildren(buildNearbyRoutes(Array.from(routeMap.values())));
       });
     }
 
@@ -1543,23 +1929,39 @@
     const nearbyMtr = Array.from(state.index.mtr.values())
       .filter((st) => st && !st._isLine)
       .filter((st) => Number.isFinite(st.lat) && Number.isFinite(st.lng))
-      .map((st) => ({ st, d: haversine(state.location.lat, state.location.lng, st.lat, st.lng) }))
+      .map((st) => ({ st, d: haversine(loc.lat, loc.lng, st.lat, st.lng) }))
       .filter((x) => x.d < 1.5)
       .sort((a, b) => a.d - b.d)
       .slice(0, 6);
 
-    if (!status3) return;
+    if (!stationsBlock) return;
     if (nearbyMtr.length === 0) {
-      status3.parentElement.replaceChildren(el('p', { class: 'muted' }, t_str('noNearbyStations')));
+      if (status3) {
+        // Search view: status placeholder lives inside the bind block.
+        setStatus(status3, t_str('noNearbyStations'));
+      } else {
+        // Home view: bind block has only the section title we added; keep
+        // it and append a muted note below.
+        stationsBlock.appendChild(el('p', { class: 'muted' }, t_str('noNearbyStations')));
+      }
     } else {
       Promise.allSettled(nearbyMtr.map((x) => {
         const line = (x.st.lines && x.st.lines[0]) || null;
         return line ? fetchMtrSchedule(line, x.st.stop).catch(() => null) : Promise.resolve(null);
       })).then((results) => {
-        const block = $('[data-bind="nearbyStations"]', view);
-        if (block) block.replaceChildren(buildNearbyStations(nearbyMtr, results));
+        const liveView = $('#' + view.id);
+        const liveBlock = $('[data-bind="nearbyStations"]', liveView || view);
+        if (liveBlock) liveBlock.replaceChildren(buildNearbyStations(nearbyMtr, results));
       });
     }
+  }
+
+  // Backwards-compatible wrapper for the search view. No longer auto-prompts
+  // — the search view shows an in-page banner when location is needed.
+  function renderNearby() {
+    const view = $('#view-search');
+    if (!view) return;
+    populateNearbyInto(view);
   }
 
   function buildNearbyStops(items) {
@@ -2056,6 +2458,43 @@
         }
       });
 
+      // ---- Route-level polyline map ----
+      // Build a Map<stopId, {lat,lng}> from any coords we already know
+      // (index.hk-stops.json, or extracted from the nameResults above). For
+      // stops still missing coords — typically CTB/NWFB stops whose 6-digit
+      // IDs aren't in hk-stops.json — fall back to the operator's /stop
+      // endpoint via ensureStopCoords(), which caches results across routes.
+      const coordByStop = new Map();
+      stops.forEach((s) => {
+        if (Number.isFinite(s.lat) && Number.isFinite(s.lng)) {
+          coordByStop.set(s.stop, { lat: s.lat, lng: s.lng });
+        }
+      });
+      // Also harvest coords from the operator /stop fetches we already
+      // fired in the nameResults loop above — saves a duplicate request
+      // for every CTB stop, which is most of them.
+      nameResults.forEach((rr, i) => {
+        const s = stops[i];
+        if (!s || coordByStop.has(s.stop)) return;
+        if (!rr || rr.status !== 'fulfilled' || !rr.value || !rr.value.data) return;
+        let st = rr.value.data;
+        if (Array.isArray(st)) st = st[0];
+        if (!st) return;
+        const lat = Number(st.lat);
+        const lng = Number(st.long || st.lng);
+        if (Number.isFinite(lat) && Number.isFinite(lng)) {
+          coordByStop.set(s.stop, { lat, lng });
+        }
+      });
+      const missingStops = stops.filter((s) => !coordByStop.has(s.stop));
+      if (missingStops.length > 0) {
+        await Promise.all(missingStops.map(async (s) => {
+          const c = await ensureStopCoords(s.stop, isCitybus);
+          if (c) coordByStop.set(s.stop, c);
+        }));
+      }
+      const polylineEl = renderRoutePolyline(stops, coordByStop);
+
       const list = el('div', { class: 'eta-list' });
       // Pick the row that should be highlighted (the user's current stop)
       // and remember its DOM node so we can scroll it into view below.
@@ -2125,7 +2564,14 @@
         : null;
 
       const heading = el('h2', { class: 'section-title' }, t_str('showingStop', stops.length));
-      body.replaceChildren(...(alertEl ? [alertEl, heading, list] : [heading, list]));
+      // Order: optional alert → polyline map → stop list heading → rows.
+      // The polyline sits between the route header (above) and the stop
+      // list (below), matching the justarrived.grok.me aesthetic.
+      const children = [];
+      if (alertEl) children.push(alertEl);
+      if (polylineEl) children.push(polylineEl);
+      children.push(heading, list);
+      body.replaceChildren(...children);
       // Anchor the view at the user's current stop, justarrived-style.
       if (targetRow) {
         requestAnimationFrame(() => {
@@ -2761,6 +3207,186 @@
     return renderBusStopView(r.stop);
   }
 
+  // ------------------------------------------------------------------
+  // Schedule tab — fetch the day's pre-recorded arrival times for a stop.
+  //
+  // The KMB and Citybus open-data feeds don't expose a true "schedule-stop"
+  // endpoint, but /stop-eta (KMB) and /batch/stop-eta/CTB/{stop} return the
+  // next few scheduled arrivals for every route serving the stop. We surface
+  // those times as a "timetable" preview grouped by hour — useful for
+  // off-hours browsing when there is no live bus to chase.
+  //
+  // Results are cached in `scheduleCache` so re-visits skip the round-trip.
+  // ------------------------------------------------------------------
+  async function fetchStopSchedule(stopId, isCtb) {
+    const cacheKey = `${isCtb ? 'CTB' : 'KMB'}|${stopId}`;
+    if (scheduleCache.has(cacheKey)) return scheduleCache.get(cacheKey);
+
+    const fetcher = isCtb
+      ? () => fetchCitybusBatchStopEta(stopId)
+      : () => fetchKmbStopEta(stopId);
+
+    const promise = fetcher()
+      .then((resp) => {
+        const data = (resp && Array.isArray(resp.data)) ? resp.data : [];
+        // Normalize rows from both operators into a single shape:
+        // { co, route, dir, service, destTc, destEn, time (Date), seq }
+        const rows = [];
+        for (const e of data) {
+          if (!e || !e.eta) continue; // skip null ETAs (route not running today)
+          const t = new Date(e.eta);
+          if (Number.isNaN(t.getTime())) continue;
+          const co = isCtb ? 'CTB' : classifyKmbOp(e.route, '', e.dest_tc || '');
+          rows.push({
+            co,
+            route: e.route,
+            dir: e.dir,
+            service: e.service_type != null ? String(e.service_type) : '1',
+            destTc: e.dest_tc || e.dest || '',
+            destEn: e.dest_en || '',
+            time: t,
+            seq: e.seq,
+            rmk: e.rmk_tc || e.rmk_en || e.rmk || '',
+          });
+        }
+        rows.sort((a, b) => a.time - b.time);
+        scheduleCache.set(cacheKey, rows);
+        return rows;
+      })
+      .catch((err) => {
+        // Don't poison the cache on a single transient failure.
+        console.warn('[schedule] fetch failed', err);
+        return [];
+      });
+
+    return promise;
+  }
+
+  // Build the schedule tab DOM (tablist + panels). Returns
+  // { refresh, panel, switchTo } so renderBusStopView can wire it up.
+  function buildStopTabs(stopId, isCtb) {
+    const isLive = (state._stopViewMode !== 'schedule');
+    const tablist = el('div', { class: 'stop-tabs', role: 'tablist', 'aria-label': 'View mode' });
+
+    const liveTab = el('button', {
+      class: 'stop-tab' + (isLive ? ' is-on' : ''),
+      type: 'button',
+      role: 'tab',
+      'aria-selected': isLive ? 'true' : 'false',
+      id: 'stop-tab-live',
+      'aria-controls': 'stop-panel-live',
+      tabindex: isLive ? '0' : '-1',
+    });
+    const liveLabel = el('span', { class: 'stop-tab-primary' }, t_str('tabLive'));
+    liveTab.appendChild(liveLabel);
+    liveTab.appendChild(el('span', { class: 'stop-tab-secondary' }, t_str('tabLiveEn')));
+
+    const scheduleTab = el('button', {
+      class: 'stop-tab' + (!isLive ? ' is-on' : ''),
+      type: 'button',
+      role: 'tab',
+      'aria-selected': !isLive ? 'true' : 'false',
+      id: 'stop-tab-schedule',
+      'aria-controls': 'stop-panel-schedule',
+      tabindex: !isLive ? '0' : '-1',
+    });
+    scheduleTab.appendChild(el('span', { class: 'stop-tab-primary' }, t_str('tabSchedule')));
+    scheduleTab.appendChild(el('span', { class: 'stop-tab-secondary' }, t_str('tabScheduleEn')));
+
+    tablist.appendChild(liveTab);
+    tablist.appendChild(scheduleTab);
+
+    const livePanel = el('div', {
+      class: 'stop-panel',
+      role: 'tabpanel',
+      id: 'stop-panel-live',
+      'aria-labelledby': 'stop-tab-live',
+      hidden: !isLive,
+    });
+    const schedulePanel = el('div', {
+      class: 'stop-panel',
+      role: 'tabpanel',
+      id: 'stop-panel-schedule',
+      'aria-labelledby': 'stop-tab-schedule',
+      hidden: isLive,
+    });
+
+    const switchTo = (mode) => {
+      state._stopViewMode = mode;
+      const goLive = mode !== 'schedule';
+      liveTab.classList.toggle('is-on', goLive);
+      scheduleTab.classList.toggle('is-on', !goLive);
+      liveTab.setAttribute('aria-selected', goLive ? 'true' : 'false');
+      scheduleTab.setAttribute('aria-selected', goLive ? 'false' : 'true');
+      liveTab.setAttribute('tabindex', goLive ? '0' : '-1');
+      scheduleTab.setAttribute('tabindex', goLive ? '-1' : '0');
+      livePanel.hidden = !goLive;
+      schedulePanel.hidden = goLive;
+      if (goLive) {
+        // Delegate back to the live view renderer.
+        state._refreshStop && state._refreshStop({ mode: 'live' });
+      } else {
+        renderSchedulePanel(schedulePanel, stopId, isCtb);
+      }
+    };
+
+    liveTab.addEventListener('click', () => switchTo('live'));
+    scheduleTab.addEventListener('click', () => switchTo('schedule'));
+
+    // Keyboard navigation: ← / → move focus between tabs.
+    tablist.addEventListener('keydown', (ev) => {
+      if (ev.key === 'ArrowRight' || ev.key === 'ArrowLeft') {
+        ev.preventDefault();
+        (state._stopViewMode === 'schedule' ? liveTab : scheduleTab).focus();
+      }
+    });
+
+    return { tablist, livePanel, schedulePanel, switchTo };
+  }
+
+  function renderSchedulePanel(panel, stopId, isCtb) {
+    panel.innerHTML = '';
+    panel.appendChild(el('p', { class: 'muted', style: 'text-align:center; padding: 24px 8px;' }, t_str('loadingSchedule')));
+
+    fetchStopSchedule(stopId, isCtb).then((rows) => {
+      panel.innerHTML = '';
+      panel.appendChild(el('p', { class: 'muted', style: 'margin-top: 4px; font-size: 12px;' }, t_str('scheduleNote')));
+
+      if (!rows.length) {
+        panel.appendChild(el('p', { class: 'empty', style: 'margin-top: 12px;' }, t_str('scheduleEmpty')));
+        return;
+      }
+
+      // Group rows by hour bucket (HH:00). Sort ascending within each hour.
+      const byHour = new Map();
+      for (const r of rows) {
+        const h = r.time.getHours();
+        if (!byHour.has(h)) byHour.set(h, []);
+        byHour.get(h).push(r);
+      }
+      const hours = Array.from(byHour.keys()).sort((a, b) => a - b);
+
+      const list = el('div', { class: 'stop-schedule' });
+      for (const h of hours) {
+        const bucket = el('section', { class: 'stop-schedule-bucket', 'aria-label': t_str('scheduleHour', h) });
+        bucket.appendChild(el('h3', { class: 'stop-schedule-hour' }, t_str('scheduleHour', h)));
+        const ul = el('ul', { class: 'stop-schedule-rows' });
+        byHour.get(h).forEach((r) => {
+          const destStr = pickFirst(r.destTc, r.destEn);
+          const li = el('li', { class: 'stop-schedule-row' });
+          li.appendChild(el('span', { class: 'stop-schedule-route' }, r.route));
+          li.appendChild(el('span', { class: 'stop-schedule-time' }, formatHMTimestamp(r.time.toISOString())));
+          if (destStr) li.appendChild(el('span', { class: 'stop-schedule-dest' }, destStr));
+          li.appendChild(el('span', { class: 'stop-schedule-op' }, t_str(opCoKey(r.co))));
+          ul.appendChild(li);
+        });
+        bucket.appendChild(ul);
+        list.appendChild(bucket);
+      }
+      panel.appendChild(list);
+    });
+  }
+
   function renderBusStopView(stopId) {
     showView('view-stop');
     const view = renderInto('stop', 'stop');
@@ -2776,14 +3402,29 @@
     const opGuess = isCtb ? 'CTB' : 'KMB';
 
     header.appendChild(buildStopHeader(stopId, stopId, '', opGuess));
-    body.appendChild(el('p', { class: 'muted' }, t_str('loading')));
+
+    // Stop view mode lives on the bus-stop view only. Default to 'live'
+    // every time the user opens a new stop so they get the familiar arrival
+    // board first; they can opt into the Schedule tab from there.
+    state._stopViewMode = 'live';
+
+    // Tab control + per-tab panels. Live panel keeps the existing
+    // body element so the current rendering logic still works.
+    const tabs = buildStopTabs(stopId, isCtb);
+    const livePanel = tabs.livePanel;
+    livePanel.appendChild(el('p', { class: 'muted' }, t_str('loading')));
+    tabs.schedulePanel.appendChild(el('p', { class: 'muted', style: 'text-align:center; padding: 24px 8px;' }, t_str('loadingSchedule')));
+
+    body.appendChild(tabs.tablist);
+    body.appendChild(livePanel);
+    body.appendChild(tabs.schedulePanel);
 
     const stopPromise = isCtb
       ? fetchCitybusStop(stopId).catch(() => null)
       : fetchKmbStop(stopId).catch(() => null);
 
-    const stateRef = { panel: body, header, stopId, view };
-    state._refreshStop = () => refreshBusStopView(stateRef);
+    const stateRef = { panel: livePanel, header, stopId, view, schedulePanel: tabs.schedulePanel, switchTo: tabs.switchTo };
+    state._refreshStop = (opts) => refreshBusStopView(stateRef, (opts && opts.mode) || 'live');
 
     stopPromise.then((stopResp) => {
       let nameTc = stopId, nameSc = '', nameEn = '';
@@ -2809,13 +3450,17 @@
       state._lastStopNameEn = nameEn;
     });
 
-    refreshBusStopView(stateRef);
+    refreshBusStopView(stateRef, 'live');
     startEtaRefresh(renderStopDetail);
   }
 
   // Fetch the latest ETAs for the current bus stop and re-render the body.
-  function refreshBusStopView(stateRef) {
+  // `mode` lets callers force a re-render of the live panel even when the
+  // user is currently looking at the Schedule tab (used when switching back
+  // to live so the board always shows fresh data).
+  function refreshBusStopView(stateRef, mode) {
     if (!stateRef || !stateRef.panel) return;
+    if (mode === 'schedule') return; // Schedule owns its own render path.
     const { stopId, panel: body } = stateRef;
 
     // Body only — never wipe the header.
@@ -3195,6 +3840,21 @@
   }
 
   // ------------------------------------------------------------------
+  // Planner view (A → B trip planner) — rendering lives in planner.js
+  // ------------------------------------------------------------------
+  function renderPlannerView() {
+    showView('view-planner');
+    const view = document.getElementById('view-planner');
+    if (!view) return;
+    // Planner.js owns the markup; we just hand it the view shell.
+    if (window.Planner && typeof window.Planner.renderPlanner === 'function') {
+      window.Planner.renderPlanner(view);
+    } else {
+      view.innerHTML = '<div class="container" style="padding: 24px 16px; color: var(--muted);">Trip planner failed to load.</div>';
+    }
+  }
+
+  // ------------------------------------------------------------------
   // Recent
   // ------------------------------------------------------------------
   function pushRecent(item) {
@@ -3334,4 +3994,16 @@
   } else {
     boot();
   }
+
+  // ------------------------------------------------------------------
+  // Expose the minimum surface the planner (planner.js) needs to read
+  // the index, i18n dict, and a few small helpers. The planner owns its
+  // own rendering; this just gives it read access to shared state.
+  // ------------------------------------------------------------------
+  window.state = state;
+  window.STRINGS = STRINGS;
+  window.el = el;
+  window.t_str = t_str;
+  window.nameFor = nameFor;
+  window.makeRouteKey = makeRouteKey;
 })();
