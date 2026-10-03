@@ -4,12 +4,15 @@
  * upstream API calls. Static JSON in /assets/ is cached lazily on first
  * fetch via the same code path.
  *
- * CACHE bumped to v6: v5 was the splash-freeze recovery + 'cannot find route'
- * hotfix. v6 ships the justarrived-style 主線 / 特別班 N service-type tabs
- * on the route detail header; existing v3-era clients get the corrected
- * shell on every bump until they pick it up.
+ * CACHE bumped to v7: v6 shipped the justarrived-style 主線 / 特別班 N
+ * service-type tabs on the route detail header. v7 ships per-stop fare
+ * pills + the `車費 $X.X – $Y.Y` header range, plus the planner MTR/LRT
+ * leg fares + the curated assets/mtr-fares.json + assets/lrt-fares.json
+ * + assets/ctb-fares.json + assets/gmb-fares.json. Existing v6 clients
+ * still get a working shell, just without fares; the bump forces them
+ * to refetch and pick up the new helpers.
  */
-const CACHE = 'buseta-v6';
+const CACHE = 'buseta-v7';
 const SHELL = [
   '/',
   '/index.html',
