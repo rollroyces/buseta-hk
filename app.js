@@ -49,9 +49,16 @@
       locating: '定位中…',
       locationDenied: '定位被拒絕，未能取得附近路線。',
       locationUnavailable: '未能取得位置，未能提供附近路線。',
+      locationGranted: '已取得位置',
+      locationUnavailableShort: '位置不可用',
+      retryLocation: '再試一次',
       geoBannerTitle: '想睇附近嘅車站同路線？',
       geoBannerBody: '授權使用你嘅位置，我哋會列出最近嘅巴士站、港鐵站同常見路線，仲可以幫你直接跳到最近嗰個車站。',
       geoBannerCta: '啟用位置',
+      geoBannerDeniedTitle: '位置被拒絕',
+      geoBannerDeniedBody: '如想用附近車站功能，請喺瀏覽器設定允許位置。',
+      geoBannerUnavailableTitle: '此裝置不支援定位',
+      geoBannerUnavailableBody: '你仍可以輸入搜尋字眼搵路線或車站。',
       nearestStopLabel: '最近車站',
       noResults: '搵唔到相關嘅路線、車站或港鐵站。',
       back: '返回',
@@ -191,9 +198,16 @@
       locating: 'Locating…',
       locationDenied: 'Location denied — nearby routes unavailable.',
       locationUnavailable: 'Location unavailable — nearby routes unavailable.',
+      locationGranted: 'Location received',
+      locationUnavailableShort: 'Location unavailable',
+      retryLocation: 'Try again',
       geoBannerTitle: 'See nearby stops and routes?',
       geoBannerBody: 'Allow location access to list the closest bus stops, MTR stations and frequent routes — and jump straight to the nearest stop.',
       geoBannerCta: 'Use my location',
+      geoBannerDeniedTitle: 'Location permission denied',
+      geoBannerDeniedBody: 'Enable location in your browser settings to use the nearby stops feature.',
+      geoBannerUnavailableTitle: 'Geolocation not supported',
+      geoBannerUnavailableBody: 'You can still search for routes and stops above.',
       nearestStopLabel: 'Nearest stop',
       noResults: 'No matching routes, stops or stations.',
       back: 'Back',
@@ -403,6 +417,16 @@
       geoBannerTitle: '想睇附近嘅车站同路线？',
       geoBannerBody: '授权使用你嘅位置，我哋会列出最近嘅巴士站、港铁站同常见路线，仲可以帮你直接跳到最近嗰个车站。',
       geoBannerCta: '启用位置',
+      geoBannerDeniedTitle: '位置被拒绝',
+      geoBannerDeniedBody: '如想用附近车站功能，请喺浏览器设定允许位置。',
+      geoBannerUnavailableTitle: '此装置不支援定位',
+      geoBannerUnavailableBody: '你仍然可以输入搜寻字眼搵路线或车站。',
+      locating: '定位中…',
+      locationDenied: '定位被拒绝，未能取得附近路线。',
+      locationUnavailable: '未能取得位置，未能提供附近路线。',
+      locationGranted: '已取得位置',
+      locationUnavailableShort: '位置不可用',
+      retryLocation: '再试一次',
       nearestStopLabel: '最近车站',
       navPlanner: '行程',
       plannerTitle: '行程规划',
@@ -1261,30 +1285,99 @@
   // will surface the native permission prompt. We never call this
   // automatically on page load — instead the home view shows an
   // in-page banner that the user taps to opt in.
+  //
+  // GeolocationPositionError codes (spec):
+  //   1 = PERMISSION_DENIED
+  //   2 = POSITION_UNAVAILABLE
+  //   3 = TIMEOUT
+  // We treat 1 as "denied" (user explicitly said no) and 2/3 (and anything
+  // else) as "unavailable" (silent failure). The original code referenced
+  // `err.PERMISSION_DENIED` — that's a static on the constructor, not an
+  // instance property, so the check was always false and every error was
+  // bucketed as 'unavailable'. Fixed by comparing the numeric code.
+  const GEO_ERR_PERMISSION_DENIED = 1;
+  // Guard against stacking multiple getCurrentPosition calls while a
+  // previous request is still in flight. Reset on terminal transitions
+  // (ok / denied / unavailable) inside the callbacks, plus a watchdog
+  // in case the browser's callback never fires (silent WebView reject).
+  let geoInFlight = false;
+  let geoWatchdog = null;
   function requestLocation() {
-    if (state.locationStatus === 'pending' || state.locationStatus === 'ok') return;
+    // Always allow re-prompt: a stuck 'pending' can happen if the previous
+    // getCurrentPosition callback never fired (silent WebView reject).
+    // retryLocation() resets state so the user can opt back in cleanly.
+    // We only short-circuit when there's already an in-flight request to
+    // avoid stacking native dialogs on rapid double-clicks.
+    if (geoInFlight) return;
     if (!navigator.geolocation) {
-      state.locationStatus = 'unavailable';
-      state._geoAsked = true;
+      setLocationStatus('unavailable');
       toast(t_str('locationUnavailable'));
-      rerenderLocationViews();
       return;
     }
-    state.locationStatus = 'pending';
+    geoInFlight = true;
+    setLocationStatus('pending');
+    rerenderLocationViews();
+    // Safety net: if neither success nor error fires within the timeout,
+    // assume a stuck prompt and surface an error state so the user isn't
+    // stranded on the spinner forever.
+    clearTimeout(geoWatchdog);
+    geoWatchdog = setTimeout(() => {
+      if (!geoInFlight) return;
+      geoInFlight = false;
+      setLocationStatus('unavailable');
+      toast(t_str('locationUnavailable'));
+      rerenderLocationViews();
+    }, 10_000);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
+        clearTimeout(geoWatchdog);
+        geoInFlight = false;
         state.location = { lat: pos.coords.latitude, lng: pos.coords.longitude };
         state.userLoc = state.location;
-        state.locationStatus = 'ok';
+        setLocationStatus('ok');
+        toast(t_str('locationGranted'));
         rerenderLocationViews();
       },
       (err) => {
-        state.locationStatus = err && err.code === err.PERMISSION_DENIED ? 'denied' : 'unavailable';
-        state._geoAsked = true;
+        clearTimeout(geoWatchdog);
+        geoInFlight = false;
+        // Always update state on every error path — never leave it stuck
+        // on 'pending' (which would block re-prompt via the old early-
+        // return guard).
+        const code = (err && typeof err.code === 'number') ? err.code : null;
+        const next = code === GEO_ERR_PERMISSION_DENIED ? 'denied' : 'unavailable';
+        setLocationStatus(next);
+        if (next === 'denied') toast(t_str('locationDenied'));
+        else toast(t_str('locationUnavailable'));
         rerenderLocationViews();
       },
       { enableHighAccuracy: false, maximumAge: 60_000, timeout: 8_000 }
     );
+  }
+
+  // Reset state so the user can opt back in from a denied/unavailable
+  // banner. Called by the "再試一次 / Try again" button on the banner.
+  function retryLocation() {
+    state._geoAsked = false;
+    state.locationStatus = 'idle';
+    state.userLoc = null;
+    state.location = null;
+    logGeoStatus('reset');
+    rerenderLocationViews();
+    requestLocation();
+  }
+
+  // Single mutation point for the geolocation status. Keeps the console
+  // log discipline in one place so future debugging doesn't require
+  // grepping every branch.
+  function setLocationStatus(next) {
+    const prev = state.locationStatus;
+    state.locationStatus = next;
+    if (next !== 'idle') state._geoAsked = true;
+    logGeoStatus(`transition: ${prev} → ${next}`);
+  }
+  function logGeoStatus(msg) {
+    try { console.log('[geo]', msg, { status: state.locationStatus, asked: !!state._geoAsked, hasLoc: !!state.userLoc }); } catch {}
   }
 
   // Re-render whichever views depend on the user's location, so the
@@ -1750,17 +1843,42 @@
   // Nearby
   // ------------------------------------------------------------------
   // Whether the home/search view should currently show the in-page
-  // permission banner. We hide it once the user has either been asked
-  // (state._geoAsked) or is mid-request (status === 'pending').
+  // permission banner. The banner stays mounted across the whole
+  // opt-in lifecycle so the user can see what state we're in:
+//   - idle         → "啟用位置" CTA
+//   - pending      → spinner + "定位中…" (gives instant visual confirmation
+//                    that the click was registered, even before the
+//                    browser's native prompt appears)
+//   - denied       → "再試一次" button
+//   - unavailable  → muted "位置不可用" label, no retry
+// Only hide the banner after the user has successfully granted location
+// (state.userLoc is set) — at which point the nearest-stop pill or
+// nearby sections replace it.
   function shouldShowGeoBanner() {
-    return !state.userLoc && !state._geoAsked && state.locationStatus !== 'pending';
+    return !state.userLoc;
   }
 
   // In-page permission banner. Replaces the auto-prompt that used to fire
   // on first visit: the user must tap the CTA before we call the
   // browser's geolocation API. Hidden on next render after grant/deny.
+  //
+  // Renders four states:
+  //   idle      → "想睇附近嘅車站同路線？" with [啟用位置] CTA
+  //   pending   → same copy, button replaced by [定位中…] spinner
+  //   denied    → denied message + [再試一次] button (re-runs prompt)
+  //   unavailable → unavailable message + no retry (geolocation API missing
+  //                 from this browser). The user can still type a search.
   function buildGeoBanner() {
-    const banner = el('div', { class: 'geo-banner', role: 'region', 'aria-label': t_str('geoBannerTitle') });
+    const status = state.locationStatus;
+    const isPending = status === 'pending';
+    const isDenied = status === 'denied';
+    const isUnavailable = status === 'unavailable';
+
+    const banner = el('div', {
+      class: `geo-banner geo-banner--${status}`,
+      role: 'region',
+      'aria-label': t_str('geoBannerTitle'),
+    });
     const iconWrap = el('div', { class: 'geo-banner-icon', 'aria-hidden': 'true' });
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     svg.setAttribute('viewBox', '0 0 24 24');
@@ -1775,16 +1893,42 @@
     banner.appendChild(iconWrap);
 
     const body = el('div', { class: 'geo-banner-body' });
-    body.appendChild(el('div', { class: 'geo-banner-title' }, t_str('geoBannerTitle')));
-    body.appendChild(el('div', { class: 'geo-banner-text' }, t_str('geoBannerBody')));
+    if (isDenied) {
+      body.appendChild(el('div', { class: 'geo-banner-title' }, t_str('geoBannerDeniedTitle')));
+      body.appendChild(el('div', { class: 'geo-banner-text' }, t_str('geoBannerDeniedBody')));
+    } else if (isUnavailable) {
+      body.appendChild(el('div', { class: 'geo-banner-title' }, t_str('geoBannerUnavailableTitle')));
+      body.appendChild(el('div', { class: 'geo-banner-text' }, t_str('geoBannerUnavailableBody')));
+    } else {
+      body.appendChild(el('div', { class: 'geo-banner-title' }, t_str('geoBannerTitle')));
+      body.appendChild(el('div', { class: 'geo-banner-text' }, t_str('geoBannerBody')));
+    }
     banner.appendChild(body);
 
-    const cta = el('button', {
-      class: 'geo-banner-cta btn-primary',
-      type: 'button',
-      onclick: () => { requestLocation(); },
-    }, t_str('geoBannerCta'));
-    banner.appendChild(cta);
+    if (isPending) {
+      const spinner = el('span', { class: 'geo-banner-cta btn-primary geo-banner-cta--pending', 'aria-live': 'polite' });
+      const ring = el('span', { class: 'geo-spinner', 'aria-hidden': 'true' });
+      spinner.appendChild(ring);
+      spinner.appendChild(document.createTextNode(t_str('locating')));
+      spinner.disabled = true;
+      banner.appendChild(spinner);
+    } else if (isDenied) {
+      banner.appendChild(el('button', {
+        class: 'geo-banner-cta btn-primary',
+        type: 'button',
+        onclick: () => { retryLocation(); },
+      }, t_str('retryLocation')));
+    } else if (isUnavailable) {
+      // No retry — the browser simply doesn't expose geolocation.
+      const pill = el('span', { class: 'geo-banner-cta geo-banner-cta--muted', 'aria-hidden': 'true' }, t_str('locationUnavailableShort'));
+      banner.appendChild(pill);
+    } else {
+      banner.appendChild(el('button', {
+        class: 'geo-banner-cta btn-primary',
+        type: 'button',
+        onclick: () => { requestLocation(); },
+      }, t_str('geoBannerCta')));
+    }
 
     return banner;
   }

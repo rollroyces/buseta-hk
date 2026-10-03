@@ -1295,6 +1295,67 @@ h1, h2, h3 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 }
 .geo-banner-cta:active { transform: scale(0.97); }
 
+/* Pending state — button morphs into a non-interactive pill with a
+   spinner + "定位中…" label so the user gets instant feedback even
+   before the browser's native permission dialog surfaces. */
+.geo-banner-cta--pending {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: default;
+  opacity: 0.85;
+  background: var(--accent);
+  color: #fff;
+}
+.geo-banner-cta--pending:hover,
+.geo-banner-cta--pending:focus-visible {
+  background: var(--accent);
+  outline: none;
+}
+.geo-banner-cta--pending:active { transform: none; }
+.geo-spinner {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-top-color: #fff;
+  animation: spin 0.9s linear infinite;
+  display: inline-block;
+  flex: none;
+}
+
+/* Unavailable state — visual-only pill (no retry; geolocation API is
+   absent from the browser). */
+.geo-banner-cta--muted {
+  background: var(--bg-soft);
+  color: var(--muted);
+  cursor: default;
+  pointer-events: none;
+  box-shadow: none;
+}
+
+/* Status variants tint the border + title slightly so the user can tell
+   idle / pending / denied / unavailable apart at a glance. */
+.geo-banner--denied {
+  background: linear-gradient(135deg, #FEF2F2, #FFF1F2);
+  border-color: #FECACA;
+}
+.geo-banner--unavailable {
+  background: linear-gradient(135deg, var(--bg-soft), #F1F5F9);
+  border-color: var(--line);
+}
+
+@media (prefers-color-scheme: dark) {
+  .geo-banner--denied {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.16), rgba(239, 68, 68, 0.06));
+    border-color: rgba(239, 68, 68, 0.4);
+  }
+  .geo-banner--unavailable {
+    background: linear-gradient(135deg, rgba(148, 163, 184, 0.16), rgba(148, 163, 184, 0.06));
+    border-color: rgba(148, 163, 184, 0.4);
+  }
+}
+
 @media (max-width: 380px) {
   .geo-banner { flex-wrap: wrap; }
   .geo-banner-cta { width: 100%; margin-top: 6px; }
