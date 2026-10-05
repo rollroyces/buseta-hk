@@ -228,6 +228,17 @@
       themeDark: '深色',
       themeSystem: '跟系統',
       themeToggleAria: '切換主題',
+      settingsTitle: '設定',
+      settingsTheme: '主題',
+      settingsAbout: '關於',
+      settingsVersion: '版本',
+      settingsDataSource: '資料來源',
+      settingsBackHome: '返回主頁',
+      settingsEmptyStopTitle: '暫無到站時間',
+      settingsEmptyStopSub: '可能係班次已過咗，試下切到時間表或者等一分鐘再睇。',
+      settingsEmptyStopCtaSchedule: '睇時間表',
+      settingsEmptyStopCtaRetry: '再試一次',
+      refreshProgressLabel: (s) => `下次更新：${s} 秒後`,
       notifEnable: '啟用即時到站通知',
       notifThreshold: '提前通知時間',
       notifThreshold3: '3 分鐘前',
@@ -452,6 +463,17 @@
       themeDark: 'Dark',
       themeSystem: 'System',
       themeToggleAria: 'Toggle theme',
+      settingsTitle: 'Settings',
+      settingsTheme: 'Theme',
+      settingsAbout: 'About',
+      settingsVersion: 'Version',
+      settingsDataSource: 'Data source',
+      settingsBackHome: 'Back to home',
+      settingsEmptyStopTitle: 'No arrival times',
+      settingsEmptyStopSub: 'The bus may have already passed. Try the Schedule tab or wait a minute.',
+      settingsEmptyStopCtaSchedule: 'View schedule',
+      settingsEmptyStopCtaRetry: 'Try again',
+      refreshProgressLabel: (s) => `Next refresh in ${s}s`,
       notifEnable: 'Enable arrival alerts',
       notifThreshold: 'Alert me',
       notifThreshold3: '3 min before',
@@ -665,6 +687,17 @@
       themeDark: '深色',
       themeSystem: '跟系统',
       themeToggleAria: '切换主题',
+      settingsTitle: '设定',
+      settingsTheme: '主题',
+      settingsAbout: '关于',
+      settingsVersion: '版本',
+      settingsDataSource: '资料来源',
+      settingsBackHome: '返回主页',
+      settingsEmptyStopTitle: '暂无到站时间',
+      settingsEmptyStopSub: '可能系班次已过咗，试下切到时间表或者等一分钟再睇。',
+      settingsEmptyStopCtaSchedule: '睇时间表',
+      settingsEmptyStopCtaRetry: '再试一次',
+      refreshProgressLabel: (s) => `下次更新：${s} 秒后`,
       notifEnable: '启用实时到站通知',
       notifThreshold: '提前通知时间',
       notifThreshold3: '3 分钟前',
@@ -2388,6 +2421,7 @@
     if (h === '/' || h === '') return { view: 'home' };
     if (h === '/search') return { view: 'search' };
     if (h === '/planner') return { view: 'planner' };
+    if (h === '/settings') return { view: 'settings' };
     // /route/<co>/<route>/<dir>/<service>[/<stop_seq>]
     let m = h.match(/^\/route\/([^/]+)\/([^/]+)\/([^/]+)\/([^/]+)(?:\/([^/]+))?$/);
     if (m) {
@@ -2407,7 +2441,7 @@
   function currentRoute() { return parseHash().view; }
 
   function showView(name) {
-    ['splash', 'view-home', 'view-search', 'view-route', 'view-stop', 'view-error', 'view-planner']
+    ['splash', 'view-home', 'view-search', 'view-route', 'view-stop', 'view-error', 'view-planner', 'view-settings']
       .forEach((id) => {
         const node = document.getElementById(id);
         if (!node) return;
@@ -2444,8 +2478,12 @@
     if (r.view === 'search') active = 'search';
     else if (r.view === 'planner') active = 'planner';
     else if (r.view === 'home') active = 'home';
-    else if (r.view === 'route' || r.view === 'stop') active = 'home';
-    $$('.nav-item').forEach((n) => n.classList.toggle('is-active', n.dataset.route === active));
+    else if (r.view === 'route' || r.view === 'stop') active = null; // QW-9: no nav item lit on detail
+    else if (r.view === 'settings') active = null; // QW-3: settings has its own header link
+    $$('.nav-item').forEach((n) => {
+      n.classList.toggle('is-active', n.dataset.route === active);
+      n.classList.toggle('is-detail', r.view === 'route' || r.view === 'stop');
+    });
 
     // Hide splash once we navigate
     const splash = document.getElementById('splash');
@@ -2455,6 +2493,7 @@
       case 'home': renderHome(); break;
       case 'search': renderSearch(); break;
       case 'planner': renderPlannerView(); break;
+      case 'settings': renderSettings(); break;
       case 'route': renderRoute(r); break;
       case 'stop': renderStop(r); break;
       default: renderError();
@@ -3590,7 +3629,7 @@
     const list = el('div', { class: 'list' });
     items.forEach(({ stop, dist, etas }) => {
       const name = nameFor(stop);
-      const row = el('a', { class: 'row', href: `#/stop/${encodeURIComponent(stop.stop)}` });
+      const row = el('a', { class: 'row', href: `#/stop/${encodeURIComponent(stop.stop)}`, tabindex: '0' });
       row.appendChild(makeBadge(stop.co || 'STOP'));
       const main = el('div', { class: 'row-main' });
       main.appendChild(el('div', { class: 'row-title' }, name));
@@ -3616,7 +3655,7 @@
       const name = nameFor(st);
       const line = (st.lines && st.lines[0]) || '';
       const href = `#/route/MTR/${encodeURIComponent(st.stop)}/STATION/`;
-      const row = el('a', { class: 'row', href });
+      const row = el('a', { class: 'row', href, tabindex: '0' });
       row.appendChild(makeBadge('MTR'));
       const main = el('div', { class: 'row-main' });
       main.appendChild(el('div', { class: 'row-title' }, name));
@@ -3728,6 +3767,111 @@
         return x;
       })()
     );
+  }
+
+  // QW-2 · Skeleton list — three grey-bone rows with shimmer overlay.
+  // Used as the loading placeholder for route-detail / stop-detail live
+  // panels and anywhere else that says "載入緊資料…".
+  function buildSkeletonList(rows = 4) {
+    const wrap = el('div', { class: 'skeleton-list', 'aria-busy': 'true' });
+    for (let i = 0; i < rows; i++) {
+      const row = el('div', { class: 'skeleton-row' });
+      row.appendChild(el('div', { class: 'skeleton-badge' }));
+      const lines = el('div', { class: 'skeleton-lines' });
+      lines.appendChild(el('div', { class: 'skeleton-line is-long' }));
+      lines.appendChild(el('div', { class: 'skeleton-line is-short' }));
+      row.appendChild(lines);
+      row.appendChild(el('div', { class: 'skeleton-eta' }));
+      wrap.appendChild(row);
+    }
+    return wrap;
+  }
+
+  // QW-5 · Rich stop-detail empty state.
+  // Replaces the bare "暫無到站時間" with an illustration + title +
+  // sub + two CTAs (Schedule + Retry). Mirrors the home empty state.
+  function buildStopEmptyState({ onRetry, onSchedule }) {
+    const wrap = el('section', {
+      class: 'stop-empty',
+      role: 'region',
+      'aria-label': t_str('settingsEmptyStopTitle'),
+    });
+
+    // Inline illustration: a small clock + dashed circle (pure SVG).
+    const illo = el('div', { class: 'stop-empty-illustration', 'aria-hidden': 'true' });
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 48 48');
+    svg.setAttribute('width', '40'); svg.setAttribute('height', '40');
+    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    circle.setAttribute('cx', '24'); circle.setAttribute('cy', '24'); circle.setAttribute('r', '16');
+    circle.setAttribute('fill', 'none'); circle.setAttribute('stroke', 'currentColor');
+    circle.setAttribute('stroke-width', '2'); circle.setAttribute('stroke-dasharray', '4 4');
+    const hand1 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    hand1.setAttribute('d', 'M24 24V14');
+    hand1.setAttribute('stroke', 'currentColor'); hand1.setAttribute('stroke-width', '2.4');
+    hand1.setAttribute('stroke-linecap', 'round'); hand1.setAttribute('fill', 'none');
+    const hand2 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    hand2.setAttribute('d', 'M24 24L30 30');
+    hand2.setAttribute('stroke', 'currentColor'); hand2.setAttribute('stroke-width', '2.4');
+    hand2.setAttribute('stroke-linecap', 'round'); hand2.setAttribute('fill', 'none');
+    svg.appendChild(circle); svg.appendChild(hand1); svg.appendChild(hand2);
+    illo.appendChild(svg);
+    wrap.appendChild(illo);
+
+    wrap.appendChild(el('h2', { class: 'stop-empty-title' }, t_str('settingsEmptyStopTitle')));
+    wrap.appendChild(el('p', { class: 'stop-empty-sub' }, t_str('settingsEmptyStopSub')));
+
+    const ctas = el('div', { class: 'stop-empty-ctas' });
+    if (typeof onSchedule === 'function') {
+      ctas.appendChild(el('button', {
+        type: 'button',
+        class: 'stop-empty-cta stop-empty-cta--primary',
+        onclick: onSchedule,
+      }, t_str('settingsEmptyStopCtaSchedule')));
+    }
+    if (typeof onRetry === 'function') {
+      ctas.appendChild(el('button', {
+        type: 'button',
+        class: 'stop-empty-cta',
+        onclick: onRetry,
+      }, t_str('settingsEmptyStopCtaRetry')));
+    }
+    wrap.appendChild(ctas);
+    return wrap;
+  }
+
+  // QW-7 · Row focus enhancer. Anchors get tabindex so keyboard users
+  // can tab through results, and we attach an aria-label that names the
+  // route + destination so screen readers don't just read "link".
+  function enhanceRowFocus(rowEl, labelParts) {
+    if (!rowEl || rowEl.tagName !== 'A') return rowEl;
+    rowEl.setAttribute('tabindex', '0');
+    if (labelParts && labelParts.length) {
+      rowEl.setAttribute('aria-label', labelParts.filter(Boolean).join(' · '));
+    }
+    return rowEl;
+  }
+
+  // QW-8 · Refresh countdown chip. Render next to the "updated HH:MM"
+  // line on route / stop detail. Counts down to the next auto-refresh.
+  function buildRefreshProgress(refreshAtMs) {
+    const wrap = el('span', { class: 'refresh-progress', 'aria-hidden': 'true' });
+    const bar = el('span', { class: 'refresh-progress-bar' });
+    const text = el('span', { class: 'refresh-progress-text' });
+    wrap.appendChild(text);
+    wrap.appendChild(bar);
+    const update = () => {
+      const ms = Math.max(0, refreshAtMs - Date.now());
+      const sec = Math.ceil(ms / 1000);
+      text.textContent = t_str('refreshProgressLabel')(sec);
+      bar.style.setProperty('--refresh-progress', String(Math.max(0, Math.min(1, ms / 60_000))));
+    };
+    update();
+    const id = setInterval(() => {
+      if (wrap.isConnected) update();
+      else clearInterval(id);
+    }, 1000);
+    return wrap;
   }
 
   function routeRow(r) {
@@ -4023,9 +4167,9 @@
       // behaviour when the upstream returns no fare data.
       fareMin: null, fareMax: null,
     }));
-    body.appendChild(el('p', { class: 'muted' }, t_str('loading')));
-
-    // Pick the right route-stop endpoint based on operator. KMB / LWB share
+    // QW-2: skeleton placeholders replace the bare loading text on
+    // bus-route detail while we wait for the ETA response.
+    body.appendChild(buildSkeletonList(6));
     // /route-stop; CTB / NWFB use the Citybus endpoint.
     const isCitybus = (r.co === 'CTB' || r.co === 'NWFB');
     const fetchRouteStop = isCitybus
@@ -4182,7 +4326,7 @@
         const classes = ['stop-row'];
         if (isOrigin) classes.push('is-origin');
         if (isTarget) classes.push('is-target');
-        const row = el('a', { class: classes.join(' '), href: `#/stop/${encodeURIComponent(s.stop)}` });
+        const row = el('a', { class: classes.join(' '), href: `#/stop/${encodeURIComponent(s.stop)}`, tabindex: '0' });
         row.appendChild(el('span', { class: 'stop-idx' }, String(seq)));
         if (isTarget) {
           row.dataset.targetSeq = String(seq);
@@ -4357,9 +4501,7 @@
       dirLabel: '', fare: null, directions: [],
       currentDirKey: `MTR|${lineCode}|LINE|`,
     }));
-    body.appendChild(el('p', { class: 'muted' }, t_str('loading')));
-
-    // Build the list of stations on this line (in sequence for a representative direction).
+    body.appendChild(buildSkeletonList(8));
     // Pull from state.index.mtr lines: each MTR station entry has lines:[...].
     const stations = [];
     const seen = new Set();
@@ -4440,9 +4582,7 @@
       currentDirKey: `MTR|${stationCode}|STATION|`,
     }));
     body.innerHTML = '';
-    body.appendChild(el('p', { class: 'muted' }, t_str('loading')));
-
-    // Fetch ETA for each line passing through this station.
+    body.appendChild(buildSkeletonList(4));
     Promise.allSettled(stationLines.map((line) => fetchMtrSchedule(line, stationCode))).then((results) => {
       const sections = [];
       stationLines.forEach((line, idx) => {
@@ -5035,6 +5175,8 @@
     const updateLeft = el('div', { class: 'route-updated-left' });
     updateLeft.appendChild(el('p', { class: 'route-updated-when', 'data-bind': 'route-updated-when' }, t_str('updatedJust')));
     updateLeft.appendChild(el('p', { class: 'route-updated-meta' }, t_str('updatedMeta')));
+    // QW-8: countdown chip — counts down to the next auto-refresh.
+    updateLeft.appendChild(buildRefreshProgress((state._nextRefreshAt || (Date.now() + REFRESH_INTERVAL_MS))));
     updated.appendChild(updateLeft);
 
     const refreshBtn = el('button', {
@@ -5604,7 +5746,31 @@
     const isCtb = typeof stopId === 'string' && /^[0-9]{6}$/.test(stopId);
     const opGuess = isCtb ? 'CTB' : 'KMB';
 
-    header.appendChild(buildStopHeader(stopId, stopId, '', opGuess));
+    // QW-1: Seed the header from the local stop index *synchronously* so
+    // the user never sees the raw 16-hex ID (e.g. "0C81107C4ABFCD7C") as
+    // the heading while waiting for the upstream fetch. If the local index
+    // doesn't have this stop we still render with the ID, but only as a
+    // last-resort fallback — and we re-render below the moment the fetch
+    // resolves.
+    let seedNameTc = stopId;
+    let seedNameEn = '';
+    let seedNameSc = '';
+    if (state.index && state.index.stops) {
+      const idxMeta = state.index.stops.get(stopId);
+      if (idxMeta) {
+        seedNameTc = idxMeta.nameTc || seedNameTc;
+        seedNameEn = idxMeta.nameEn || seedNameEn;
+        seedNameSc = idxMeta.nameSc || seedNameSc;
+      } else if (!isCtb && state.index.kmbOperatorId) {
+        const opMeta = state.index.kmbOperatorId.get(stopId);
+        if (opMeta) {
+          seedNameTc = opMeta.nameTc || seedNameTc;
+          seedNameEn = opMeta.nameEn || seedNameEn;
+          seedNameSc = opMeta.nameSc || seedNameSc;
+        }
+      }
+    }
+    header.appendChild(buildStopHeader(stopId, seedNameTc, seedNameEn, opGuess, seedNameSc));
 
     // Stop view mode lives on the bus-stop view only. Default to 'live'
     // every time the user opens a new stop so they get the familiar arrival
@@ -5615,7 +5781,8 @@
     // body element so the current rendering logic still works.
     const tabs = buildStopTabs(stopId, isCtb);
     const livePanel = tabs.livePanel;
-    livePanel.appendChild(el('p', { class: 'muted' }, t_str('loading')));
+    // QW-2: skeleton placeholders replace the bare "載入緊資料…" text.
+    livePanel.appendChild(buildSkeletonList(4));
     tabs.schedulePanel.appendChild(el('p', { class: 'muted', style: 'text-align:center; padding: 24px 8px;' }, t_str('loadingSchedule')));
 
     body.appendChild(tabs.tablist);
@@ -5689,11 +5856,12 @@
   function refreshBusStopView(stateRef, mode) {
     if (!stateRef || !stateRef.panel) return;
     if (mode === 'schedule') return; // Schedule owns its own render path.
-    const { stopId, panel: body } = stateRef;
+    const { stopId, panel: body, switchTo } = stateRef;
 
     // Body only — never wipe the header.
     body.innerHTML = '';
-    body.appendChild(el('p', { class: 'muted' }, t_str('loading')));
+    // QW-2: skeleton placeholders replace the bare "載入緊資料…" text.
+    body.appendChild(buildSkeletonList(4));
 
     const isCtb = typeof stopId === 'string' && /^[0-9]{6}$/.test(stopId);
     const etaPromise = isCtb ? null : fetchKmbStopEta(stopId).catch(() => null);
@@ -5712,14 +5880,18 @@
       body.innerHTML = '';
 
       if (data.length === 0) {
+        // QW-5: rich empty state with CTAs.
+        const emptyState = buildStopEmptyState({
+          onSchedule: switchTo ? () => switchTo('schedule') : null,
+          onRetry: () => {
+            if (typeof state._refreshStop === 'function') state._refreshStop({ mode: 'live' });
+          },
+        });
+        body.appendChild(emptyState);
         if (isCtb) {
-          // CTB endpoints are per-(stop, route); we don't have an "all routes at this stop" feed.
-          body.appendChild(el('p', { class: 'empty' }, t_str('noEta')));
           const hint = el('p', { class: 'muted', style: 'margin-top: 4px;' });
           hint.appendChild(document.createTextNode(t_str('ctbNoEtaHint') || ''));
           body.appendChild(hint);
-        } else {
-          body.appendChild(el('p', { class: 'empty' }, t_str('noEta')));
         }
         if (mapEl) body.appendChild(mapEl);
         return;
@@ -5900,7 +6072,14 @@
     const body = $('[data-bind="stopBody"]', view);
     header.innerHTML = '';
     body.innerHTML = '';
-    header.appendChild(buildStopHeader(stopId, stopId, '', 'GMB'));
+    // QW-1: Seed the GMB stop header from the local stop index so the
+    // heading never sits on the raw numeric operator ID while waiting
+    // for primeGmbStopCoord to enrich.
+    const gmbSeed = (state.index && state.index.stops && state.index.stops.get(stopId)) || null;
+    const gmbSeedNameTc = (gmbSeed && gmbSeed.nameTc) || stopId;
+    const gmbSeedNameEn = (gmbSeed && gmbSeed.nameEn) || '';
+    const gmbSeedNameSc = (gmbSeed && gmbSeed.nameSc) || '';
+    header.appendChild(buildStopHeader(stopId, gmbSeedNameTc, gmbSeedNameEn, 'GMB', gmbSeedNameSc));
     body.appendChild(el('p', { class: 'muted' }, t_str('loading')));
 
     // Try to enrich the stop with a real name + coordinates.
@@ -6036,6 +6215,8 @@
     const meta = el('div', { class: 'stop-meta' });
     const updateLeft = el('div', { class: 'stop-meta-left' });
     updateLeft.appendChild(el('p', { class: 'stop-updated-when', 'data-bind': 'stop-updated-when' }, t_str('updatedJust')));
+    // QW-8: countdown chip — counts down to the next auto-refresh.
+    updateLeft.appendChild(buildRefreshProgress((state._nextRefreshAt || (Date.now() + REFRESH_INTERVAL_MS))));
     meta.appendChild(updateLeft);
     const refreshBtn = el('button', {
       type: 'button',
@@ -6131,6 +6312,104 @@
   }
 
   // ------------------------------------------------------------------
+  // Settings view (QW-3) — pulled out of the home view into a dedicated
+  // surface so it doesn't compete with the actual home content for
+  // attention. Three sections: Theme, Notifications (reuses
+  // renderNotifSettings), and an About block.
+  // ------------------------------------------------------------------
+  function renderSettings() {
+    showView('view-settings');
+    const view = document.getElementById('view-settings');
+    if (!view) return;
+    view.innerHTML = '';
+    // Cache the build version for the Settings → About card. Pulled from
+    // <meta name="buseta-version"> set in index.html so the displayed
+    // version matches the shipped cache-buster bump.
+    if (!window.__busetaVersion) {
+      const meta = document.querySelector('meta[name="buseta-version"]');
+      window.__busetaVersion = meta ? meta.getAttribute('content') : '—';
+    }
+
+    const container = el('div', { class: 'container settings-view' });
+
+    // Header: back chevron + title.
+    const topbar = el('div', { class: 'settings-topbar' });
+    topbar.appendChild(el('a', {
+      class: 'settings-back',
+      href: '#/',
+      'aria-label': t_str('back'),
+    }, (function () {
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('viewBox', '0 0 24 24');
+      svg.setAttribute('width', '22'); svg.setAttribute('height', '22');
+      svg.setAttribute('aria-hidden', 'true');
+      const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      p.setAttribute('fill', 'none'); p.setAttribute('stroke', 'currentColor');
+      p.setAttribute('stroke-width', '2'); p.setAttribute('stroke-linecap', 'round');
+      p.setAttribute('stroke-linejoin', 'round'); p.setAttribute('d', 'M15 6l-6 6 6 6');
+      svg.appendChild(p);
+      return svg;
+    })()));
+    topbar.appendChild(el('h1', { class: 'settings-title' }, t_str('settingsTitle')));
+    container.appendChild(topbar);
+
+    // ----- Section: Theme -----
+    container.appendChild(el('h2', { class: 'settings-section-title' }, t_str('settingsTheme')));
+    const themeCard = el('div', { class: 'settings-card', role: 'radiogroup', 'aria-label': t_str('settingsTheme') });
+    const modes = [
+      { key: 'system', labelKey: 'themeSystem' },
+      { key: 'light',  labelKey: 'themeLight' },
+      { key: 'dark',   labelKey: 'themeDark' },
+    ];
+    let storedTheme;
+    try { storedTheme = localStorage.getItem(STORAGE_KEYS.THEME); } catch { storedTheme = null; }
+    const currentTheme = (VALID_THEMES.has(storedTheme) && storedTheme !== 'system') ? storedTheme : 'system';
+    modes.forEach((m) => {
+      const isOn = currentTheme === m.key;
+      const btn = el('button', {
+        type: 'button',
+        class: 'settings-pill' + (isOn ? ' is-on' : ''),
+        role: 'radio',
+        'aria-checked': isOn ? 'true' : 'false',
+        onclick: () => {
+          setTheme(m.key);
+          renderSettings();
+        },
+      }, t_str(m.labelKey));
+      themeCard.appendChild(btn);
+      // i18n re-apply doesn't catch programmatic text — labelKey is
+      // already resolved via t_str() above, so no follow-up needed.
+    });
+    container.appendChild(themeCard);
+
+    // ----- Section: Notifications (re-uses renderNotifSettings) -----
+    container.appendChild(el('h2', { class: 'settings-section-title' }, t_str('notifEnable')));
+    const notifMount = el('div', { class: 'settings-notif-mount' });
+    container.appendChild(notifMount);
+    renderNotifSettings(notifMount);
+
+    // ----- Section: About -----
+    container.appendChild(el('h2', { class: 'settings-section-title' }, t_str('settingsAbout')));
+    const about = el('div', { class: 'settings-card settings-about' });
+    about.appendChild(el('p', { class: 'settings-about-row' }, [
+      el('span', { class: 'settings-about-label' }, t_str('settingsVersion')),
+      el('span', { class: 'settings-about-value' }, 'v' + (window.__busetaVersion || '—')),
+    ]));
+    about.appendChild(el('p', { class: 'settings-about-row' }, [
+      el('span', { class: 'settings-about-label' }, t_str('settingsDataSource')),
+      el('span', { class: 'settings-about-value' }, t_str('footerAttribution').split('：')[0] || t_str('settingsDataSource')),
+    ]));
+    about.appendChild(el('a', {
+      class: 'settings-link',
+      href: '#/',
+      'aria-label': t_str('settingsBackHome'),
+    }, t_str('settingsBackHome')));
+    container.appendChild(about);
+
+    view.appendChild(container);
+  }
+
+  // ------------------------------------------------------------------
   // Recent
   // ------------------------------------------------------------------
   function pushRecent(item) {
@@ -6183,11 +6462,29 @@
   // ------------------------------------------------------------------
   function startEtaRefresh(fn) {
     clearInterval(state.refreshTimer);
+    clearInterval(state._refreshCountdown);
+    // QW-8: track the next refresh time so the countdown chip can paint.
+    state._nextRefreshAt = Date.now() + REFRESH_INTERVAL_MS;
+    paintRefreshCountdown();
     state.refreshTimer = setInterval(() => {
       fn();
+      state._nextRefreshAt = Date.now() + REFRESH_INTERVAL_MS;
       updateRouteTimestamp();
     }, REFRESH_INTERVAL_MS);
+    state._refreshCountdown = setInterval(paintRefreshCountdown, 1000);
     updateRouteTimestamp();
+  }
+  function paintRefreshCountdown() {
+    if (!state._nextRefreshAt) return;
+    const next = state._nextRefreshAt;
+    document.querySelectorAll('.refresh-progress').forEach((wrap) => {
+      const text = wrap.querySelector('.refresh-progress-text');
+      const bar = wrap.querySelector('.refresh-progress-bar');
+      const ms = Math.max(0, next - Date.now());
+      const sec = Math.ceil(ms / 1000);
+      if (text) text.textContent = t_str('refreshProgressLabel')(sec);
+      if (bar) bar.style.setProperty('--refresh-progress', String(Math.max(0, Math.min(1, ms / REFRESH_INTERVAL_MS))));
+    });
   }
   function updateRouteTimestamp() {
     // Both route and stop views have an "updated HH:MM" element — find the
@@ -6232,7 +6529,7 @@
   // Toast
   // ------------------------------------------------------------------
   let toastTimer = null;
-  function toast(msg) {
+  function toast(msg, durationMs) {
     let node = document.querySelector('.toast');
     if (!node) {
       node = el('div', { class: 'toast', role: 'status', 'aria-live': 'polite' });
@@ -6241,8 +6538,11 @@
     node.textContent = msg;
     requestAnimationFrame(() => node.classList.add('is-on'));
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => node.classList.remove('is-on'), 1800);
+    toastTimer = setTimeout(() => node.classList.remove('is-on'), durationMs || 1800);
   }
+  // SR-7 · Expose `toast` so the inline SW-install handler in index.html
+  // can fire the offline-onboarding toast without a back-reference.
+  window.__busetaToast = toast;
 
   // ------------------------------------------------------------------
   // Share (copy clean URL + inline QR)

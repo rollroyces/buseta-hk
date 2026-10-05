@@ -1881,6 +1881,175 @@ h1, h2, h3 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 }
 .nav-item.is-active .nav-rule { transform: translateX(-50%) scaleX(1); }
 
+/* ============================================================
+   QW-3 · Settings view
+   ============================================================
+   Dedicated surface for Theme + Notifications + About. Renders
+   into #view-settings (added by index.html). Layout is a single
+   column on mobile; cards stack with 12px gap. */
+.settings-view {
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+.settings-topbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0 18px;
+  min-height: 48px;
+}
+.settings-back {
+  width: 48px;
+  height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-pill);
+  color: var(--ink-2);
+  background: var(--card);
+  border: 1px solid var(--line);
+  -webkit-tap-highlight-color: transparent;
+}
+.settings-back:hover,
+.settings-back:focus-visible {
+  background: var(--bg-soft);
+  outline: none;
+}
+.settings-title {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  margin: 0;
+}
+.settings-section-title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 18px 4px 8px;
+}
+.settings-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 14px 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.settings-pill {
+  flex: 1 1 0;
+  min-width: 88px;
+  min-height: 48px;
+  padding: 0 14px;
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--ink-2);
+  font-weight: 700;
+  font-size: 14px;
+  border: 1px solid var(--line);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.settings-pill:hover,
+.settings-pill:focus-visible {
+  background: var(--bg-soft);
+  outline: none;
+}
+.settings-pill.is-on {
+  background: var(--accent);
+  color: #fff;
+  border-color: transparent;
+}
+.settings-about {
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+}
+.settings-about-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin: 0;
+  font-size: 13px;
+}
+.settings-about-label {
+  color: var(--muted);
+  font-weight: 600;
+}
+.settings-about-value {
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.settings-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 10px;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: var(--r-pill);
+  background: var(--accent-soft);
+  color: var(--accent-2);
+  font-weight: 700;
+  font-size: 13px;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  text-decoration: none;
+}
+.settings-link:hover,
+.settings-link:focus-visible {
+  background: color-mix(in srgb, var(--accent) 18%, var(--accent-soft));
+  outline: none;
+}
+.settings-notif-mount .notif-settings {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+}
+.settings-link--home {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 16px 0 8px;
+  padding: 14px 16px;
+  border-radius: var(--r-md);
+  background: var(--card);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  font-weight: 700;
+  font-size: 14px;
+  text-decoration: none;
+  transition: background 0.15s ease;
+  min-height: 48px;
+}
+.settings-link--home:hover,
+.settings-link--home:focus-visible {
+  background: var(--bg-soft);
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.settings-link-gear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--r-pill);
+  background: var(--accent-soft);
+  color: var(--accent-2);
+}
+.settings-link-chev {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 20px;
+  font-weight: 400;
+  line-height: 1;
+}
+
 /* ------------------------------ toast ------------------------------ */
 .toast {
   position: fixed; left: 50%; bottom: 88px;
@@ -3192,3 +3361,303 @@ h1, h2, h3 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
   color: var(--muted);
   line-height: 1.4;
 }
+
+/* ============================================================
+   QW-2 · Skeleton placeholders for route / stop loading states
+   ============================================================
+   Three grey-bone rows with a shimmer overlay replace the bare
+   "載入緊資料…" text on route-detail / stop-detail live panels.
+   Animations are disabled in `prefers-reduced-motion: reduce`
+   (see QW-10 block at the bottom of this file). */
+.skeleton-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 4px 0 8px;
+}
+.skeleton-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 14px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  overflow: hidden;
+  position: relative;
+}
+.skeleton-row::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--ink) 8%, transparent) 50%,
+    transparent 100%
+  );
+  transform: translateX(-100%);
+  animation: skeleton-shimmer 1.2s linear infinite;
+}
+@keyframes skeleton-shimmer {
+  to { transform: translateX(100%); }
+}
+.skeleton-badge {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  flex: 0 0 auto;
+  background: var(--bg-soft);
+}
+.skeleton-lines {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.skeleton-line {
+  height: 12px;
+  border-radius: 6px;
+  background: var(--bg-soft);
+}
+.skeleton-line.is-short { width: 38%; }
+.skeleton-line.is-long  { width: 70%; }
+.skeleton-eta {
+  width: 56px;
+  height: 18px;
+  border-radius: 6px;
+  flex: 0 0 auto;
+  background: var(--bg-soft);
+}
+
+/* ============================================================
+   QW-5 · Rich stop-detail empty state
+   ============================================================
+   Replaces the bare "暫無到站時間" string with an illustration +
+   CTA pair ("切到時間表" + "再試一次"). Mirrors the home empty
+   state pattern (illustration + CTAs + tip). */
+.stop-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 28px 16px;
+  text-align: center;
+  background: var(--card);
+  border: 1px dashed var(--line);
+  border-radius: var(--r-md);
+  margin: 8px 0;
+}
+.stop-empty-illustration {
+  width: 84px;
+  height: 60px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  background: var(--accent-soft);
+  color: var(--accent-2);
+}
+.stop-empty-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+.stop-empty-sub {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+  max-width: 32ch;
+  line-height: 1.5;
+}
+.stop-empty-ctas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 4px;
+}
+.stop-empty-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: var(--r-pill);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.01em;
+  border: 1px solid var(--line);
+  background: var(--accent-soft);
+  color: var(--accent-2);
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.12s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.stop-empty-cta:hover,
+.stop-empty-cta:focus-visible {
+  background: color-mix(in srgb, var(--accent) 18%, var(--accent-soft));
+  outline: none;
+}
+.stop-empty-cta:active { transform: translateY(1px); }
+.stop-empty-cta--primary {
+  background: var(--accent);
+  color: #fff;
+  border-color: transparent;
+}
+.stop-empty-cta--primary:hover,
+.stop-empty-cta--primary:focus-visible {
+  background: var(--accent-2);
+}
+
+/* ============================================================
+   QW-6 · Tap targets ≥ 48 dp (a11y)
+   ============================================================
+   Bumps a few under-sized interactive elements to the 48 dp
+   minimum recommended by WCAG 2.5.5. */
+.stop-tab {
+  min-height: 48px;
+  padding: 6px 14px;
+}
+.route-detail-pill {
+  min-height: 48px;
+  padding: 12px 18px;
+}
+.stop-refresh,
+.stop-share,
+.stop-fav,
+.route-refresh {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--r-pill);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.route-fav {
+  width: 48px;
+  height: 48px;
+}
+.lang-toggle {
+  min-height: 48px;
+}
+
+/* ============================================================
+   QW-7 · Focus-visible rings on long lists
+   ============================================================
+   ETA rows + stop rows + saved rows are the most-trafficked
+   interactive elements in the app. Keyboard / screen-reader
+   users need a visible focus ring on each. tabindex is added
+   by JS in app.js (QW-7 wiring). */
+a.row:focus-visible,
+.row[tabindex]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--r-md);
+}
+.route-alert:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ============================================================
+   QW-8 · Refresh countdown chip
+   ============================================================
+   Small chip next to "剛剛更新 · HH:MM" that counts down to
+   the next auto-refresh + a thin linear progress bar. */
+.refresh-progress {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--muted-2);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+.refresh-progress-bar {
+  position: relative;
+  flex: 0 0 64px;
+  height: 3px;
+  background: var(--line);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.refresh-progress-bar::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--accent);
+  transform-origin: left center;
+  transform: scaleX(var(--refresh-progress, 1));
+  transition: transform 0.5s linear;
+}
+
+/* ============================================================
+   QW-9 · "On a detail" nav pseudo-tab highlight
+   ============================================================
+   When the user is on /route/... or /stop/... the bottom nav
+   currently shows nothing selected. Highlight Home with a
+   subdued indicator + label suffix to communicate "you're in a
+   sub-page of Home". */
+.nav-item.is-detail::after {
+  content: '';
+  position: absolute;
+  top: 6px;
+  right: 18%;
+  width: 6px;
+  height: 6px;
+  background: var(--accent);
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--bg);
+}
+.nav-item.is-detail .nav-label::after {
+  content: ' ·';
+  color: var(--muted-2);
+  font-weight: 500;
+}
+
+/* ============================================================
+   QW-10 · prefers-reduced-motion
+   ============================================================
+   Zero out non-essential motion for users who set the OS-level
+   reduce-motion preference. Critical transitions (focus ring,
+   color states) are kept; decorative motion (nav pulse,
+   skeleton shimmer, illustration hover) is dropped. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .skeleton-row::after { animation: none; transform: translateX(0); opacity: 0.4; }
+  .nav-rule { transition: none; }
+  .refresh-progress-bar::after { transition: none; }
+}
+
+/* ============================================================
+   SR-3 · Light theme contrast tuning
+   ============================================================
+   Tighten the cyan accent on light backgrounds so body text
+   reaches WCAG AA (4.5:1). The dark-theme values are unchanged.
+   We don't touch --accent (the saturated cyan used for active
+   pills + buttons) — the new --accent-2 is the body-text colour
+   on light, deepening from #0369A1 to #075985 (8.6:1 on white).
+   We also lift --warn and --danger from amber/red that washed
+   out on near-white to deeper shades that clear 4.5:1. */
+:root[data-theme="light"] {
+  --accent: #0369A1;
+  --accent-2: #075985;
+  --accent-soft: #E0F2FE;
+  --warn: #92400E;
+  --danger: #991B1B;
+  --muted: #475569;
+  --muted-2: #64748B;
+}
+:root[data-theme="light"] .row-eta.is-soon { color: var(--warn); }
+:root[data-theme="light"] .row-eta.is-now { color: var(--danger); }

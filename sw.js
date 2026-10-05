@@ -22,7 +22,7 @@
  * (light theme + empty state + bound swap). v11 was Batch 1
  * (service-alerts banner + share/QR + planner depart-by mode).
  */
-const CACHE = 'buseta-v20';
+const CACHE = 'buseta-v21';
 const SHELL = [
   '/',
   '/index.html',
@@ -75,7 +75,7 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys()
       .then((keys) => Promise.all(
-        // Drop legacy `buseta-vN` for N < 20; keep v20 + ASSET_CACHE
+        // Drop legacy `buseta-vN` for N < 21; keep v21 + ASSET_CACHE
         // + the new ETA_CACHE so existing offline data survives.
         // Also explicitly drop the poisoned `buseta-eta-v1` cache
         // (bumped to v2) so users on the v13-era poisoned SWR cache
@@ -83,7 +83,7 @@ self.addEventListener('activate', (event) => {
         keys.filter((k) => {
           if (k === 'buseta-eta-v1') return true;  // poisoned, drop
           const m = /^buseta-v(\d+)$/.exec(k);
-          if (m) return parseInt(m[1], 10) < 20;
+          if (m) return parseInt(m[1], 10) < 21;
           return k !== CACHE && k !== ASSET_CACHE && k !== ETA_CACHE;
         }).map((k) => caches.delete(k))
       ))

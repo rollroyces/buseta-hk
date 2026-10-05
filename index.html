@@ -11,6 +11,37 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="BusETA" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="buseta-version" content="32" />
+<!-- Main stylesheet. The original style.css is what we ship today — a
+     hand-rolled minifier produced a broken style.min.css earlier, so we
+     load the unminified bundle directly. v=32 ships the QW-2 → SR-7
+     UX review batch on top of v31's iframe-only layout:
+       - QW-1  Stop name resolves from local index synchronously — no
+               more raw 16-hex IDs (e.g. "0C81107C4ABFCD7C") as headings.
+       - QW-2  Skeleton placeholders replace bare "載入緊資料…" text on
+               every route / stop / MTR / LRT / GMB loading state.
+       - QW-3  Dedicated /settings view (Theme + Notifications + About),
+               linked from Home via a gear card.
+       - QW-4  Refresh / share / star icon buttons keep aria-label; new
+               settings buttons follow the same pattern.
+       - QW-5  Rich stop-detail empty state with schedule + retry CTAs.
+       - QW-6  Tap targets bumped to ≥ 48 dp (stop-tab, pills, header
+               icon buttons).
+       - QW-7  Focus-visible rings + tabindex on bus / MTR / LRT row
+               anchors for keyboard + screen-reader users.
+       - QW-8  Refresh countdown chip ("下次更新：12 秒後") + linear
+               progress bar on route + stop detail.
+       - QW-9  Bottom nav lights "Home" with a "·" dot indicator on
+               route / stop detail so users see they're inside a sub-page.
+       - QW-10 prefers-reduced-motion media block disables non-essential
+               motion (skeleton shimmer, nav pulse).
+       - SR-3  Light-theme cyan accent retuned (#0369A1 / #075985) for
+               WCAG AA on white backgrounds.
+       - SR-4  Stop heading now shows the resolved TC + EN name (share
+               button already on the header).
+       - SR-7  Offline-mode onboarding toast on first SW activation.
+-->
+<link rel="stylesheet" href="style.css?v=32" />
 <title>BusETA HK · 巴士到站</title>
 <style id="critical-css">
 /* ============================================================
@@ -66,22 +97,6 @@ h1,h2,h3{margin:0;font-weight:700;letter-spacing:-0.01em}
 .nav-rule{position:absolute;left:50%;bottom:8px;width:24px;height:2px;border-radius:2px;background:var(--accent);transform:translateX(-50%) scaleX(0);transform-origin:center;transition:transform 0.18s ease}
 .nav-item.is-active .nav-rule{transform:translateX(-50%) scaleX(1)}
 </style>
-<!-- Main stylesheet. The original style.css is what we ship today — a
-     hand-rolled minifier produced a broken style.min.css earlier, so we
-     load the unminified bundle directly. v=31 forces cached browsers
-     to refetch after the v30→v31 layout revert:
-       - v30 tried a hybrid layout (Google Maps iframe as primary map +
-         SVG schematic with bus markers nested as a sub-section inside
-         the same card). It shipped but had a regression: when the iframe
-         lazy-loaded at its intrinsic size before CSS kicked in, the SVG
-         container stretched to fill the leftover space and blew the page
-         past the stop list. v31 reverts to iframe-only — the route
-         detail page has just the Google Maps directions iframe + the
-         "Open in Google Maps" link as the map, with the live-bus schematic
-         dropped from this view. The vehicle-positions helper stays on disk
-         for future re-use.
--->
-<link rel="stylesheet" href="style.css?v=31" />
 <script>
 /* Theme loader — runs synchronously in <head> so :root[data-theme] is set
    BEFORE the body paints. Mirrors the loadThemePreference() logic in app.js
@@ -191,6 +206,9 @@ h1,h2,h3{margin:0;font-weight:700;letter-spacing:-0.01em}
 
   <!-- Planner view (A→B trip planner, owned by planner.js) -->
   <section id="view-planner" class="view" hidden aria-hidden="true"></section>
+
+  <!-- Settings view (QW-3) — Theme + Notifications + About -->
+  <section id="view-settings" class="view" hidden aria-hidden="true"></section>
 </main>
 
 <nav class="bottom-nav" role="navigation" aria-label="主要選單">
@@ -302,6 +320,17 @@ h1,h2,h3{margin:0;font-weight:700;letter-spacing:-0.01em}
          strings so the card wording stays consistent with the rest of
          the app STRINGS object. -->
     <div data-bind="notifSettings"></div>
+
+    <!-- QW-3 · Link to the dedicated Settings view. -->
+    <a class="settings-link settings-link--home" href="#/settings" aria-label="Settings">
+      <span class="settings-link-gear" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="18" height="18">
+          <path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7zM19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      </span>
+      <span data-i18n="settingsTitle">設定</span>
+      <span class="settings-link-chev" aria-hidden="true">›</span>
+    </a>
 
     <footer class="page-footer">
       <p data-i18n-html="footerAttribution">
@@ -421,7 +450,7 @@ window.__buseta = {
   },
 };
 </script>
-<script defer src="app.js?v=31"></script>
+<script defer src="app.js?v=32"></script>
 <script>
   // SW path must be RELATIVE — GitHub Pages serves this site under
   // /buseta-hk/ but a leading `/sw.js` would resolve to the site root
@@ -433,7 +462,33 @@ window.__buseta = {
   // bumps take effect within one navigation.
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).catch((err) => {
+      navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).then((reg) => {
+        // SR-7 · Offline-mode onboarding. After a successful SW install
+        // (first time only), tell the user the app can now be used offline.
+        // We fire the toast when the very first install completes — that
+        // way the user knows about the offline capability. The flag is
+        // stored under a dedicated key so the toast never repeats.
+        const swFlag = 'buseta.swOnboarded';
+        try {
+          if (!localStorage.getItem(swFlag)) {
+            const seen = reg.installing || reg.waiting || reg.active;
+            const watch = (sw) => {
+              if (!sw) return;
+              const done = () => {
+                if (sw.state === 'activated' && !localStorage.getItem(swFlag)) {
+                  try { localStorage.setItem(swFlag, '1'); } catch {}
+                  if (typeof window.__busetaToast === 'function') {
+                    window.__busetaToast('離線可用：常用路線會自動快取，無網絡時仍可查詢。', 5000);
+                  }
+                }
+              };
+              sw.addEventListener('statechange', done);
+              if (sw.state === 'activated') done();
+            };
+            watch(seen);
+          }
+        } catch { /* localStorage unavailable */ }
+      }).catch((err) => {
         console.warn('Service worker registration failed:', err);
       });
     });
