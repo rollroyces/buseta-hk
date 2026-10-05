@@ -3335,37 +3335,274 @@
   // ------------------------------------------------------------------
   // Service-disruption banner
   // ------------------------------------------------------------------
-  // KMB / Citybus do not publish a structured disruption feed on their
-  // open-data endpoints (verified Oct 2026: every plausible path under
-  // data.etabus.gov.hk/v1/transport/kmb/{notice,disruption,alert,alerts,
-  // service-update,roadworkNotice,...}/ returns HTTP 422 "Invalid/Missing
-  // parameter(s)" — the same shape every unknown route sub-path produces
-  // — and rt.data.gov.hk/v2/transport/citybus/{...} 404s). Same for the
-  // opendata.mtr.com.hk / data.etagmb.gov.hk roots. KMB's HTML site also
-  // 302-redirects /notice.html etc. to a missing page. We therefore load
-  // a curated snapshot from assets/disruptions.json (committable, easy to
-  // refresh on the next cache-buster bump) and treat a future live feed
-  // as a swap-in for fetchDisruptions() — the rest of the pipeline only
-  // cares about the returned array shape.
+  // Pulls service-disruption notices from the Transport Department's
+  // public-data XML feed and projects each notice into one row per
+  // affected route, in the shape the rest of the banner pipeline
+  // (disruptionsForUserRoutes / renderDisruptionBanner) already
+  // expects.
+  //
+  // The TD feed is the source the original v37-era audit missed:
+  // https://www.td.gov.hk/datagovhk_tis/traffic-notices/Notices_on_Public_Transports.xml
+  // — a single ~3.5 MB XML document carrying ~500 active notices
+  // (TNID, TrafficNoticesTypeID, Title_{EN,TC,SC}, StartEffectiveDate
+  // as DD.MM.YYYY, HTML bodies). It has CORS * and a daily Last-Modified,
+  // so we cache it in the SW with a 24h TTL + If-Modified-Since and only
+  // touch the network when the cached entry is stale.
+  const TD_DISRUPTIONS_URL = 'https://www.td.gov.hk/datagovhk_tis/traffic-notices/Notices_on_Public_Transports.xml';
+
+  // Parse a TD `DD.MM.YYYY` date string into the canonical `YYYY-MM-DD`
+  // form used everywhere else (compareable via plain string compare).
+  // Returns '' on any malformed input so the caller can drop the notice
+  // rather than surface a half-parsed row.
+  function parseTdDate(s) {
+    if (typeof s !== 'string') return '';
+    const m = /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/.exec(s.trim());
+    if (!m) return '';
+    const d = parseInt(m[1], 10);
+    const mo = parseInt(m[2], 10);
+    const y = m[3];
+    if (mo < 1 || mo > 12 || d < 1 || d > 31) return '';
+    return `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  }
+
+  // Today's date in the HK time zone as `YYYY-MM-DD` (the same shape
+  // the until filter compares against). Falls back to UTC on the
+  // vanishingly rare browser that lacks full Intl+timeZone support.
+  function hktToday() {
+    try {
+      return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Hong_Kong' });
+    } catch (_) {
+      return new Date().toISOString().slice(0, 10);
+    }
+  }
+
+  // Map an operator prefix found in the TC/EN title to the canonical
+  // operator code used by disruptionsForUserRoutes (KMB / LWB / CTB /
+  // NWFB / GMB / MTR / LRT). Returns null for cross-harbour-only and
+  // area-wide notices — those should match any operator carrying the
+  // route number (or, in the area-wide case, be dropped at the route-
+  // extraction stage below).
+  function classifyOperator(titleTc, titleEn) {
+    const body = `${titleTc || ''} ${titleEn || ''}`;
+    // Order matters: more-specific operators (LWB → CTB → NWFB) must
+    // match before GMB so a title like "Long Win" doesn't fall through
+    // to the catch-all minibus rule.
+    if (/九巴|KMB/.test(body)) return 'KMB';
+    if (/龍運|Long Win|LWB/.test(body)) return 'LWB';
+    if (/城巴|CTB|Citybus/.test(body)) return 'CTB';
+    if (/新巴|NWFB/.test(body)) return 'NWFB';
+    if (/港島專線小巴|新界專線小巴|九龍專線小巴|專線小巴|GMB|Green Minibus/.test(body)) return 'GMB';
+    if (/港鐵巴士|港鐵接駁巴士|MTR Feeder Bus|MTR/.test(body)) return 'MTR';
+    if (/輕鐵|Light Rail|LRT/.test(body)) return 'LRT';
+    return null;
+  }
+
+  // Pull a route-number list out of the TC and EN title text. Returns
+  // the merged, de-duplicated result so the caller can attach one item
+  // per route per notice. Returns [] when no parseable route number
+  // exists — area-wide notices like "Bus Stop Relocation on Wah Fu
+  // Road" deliberately fail both extractors so they're dropped here
+  // rather than surfacing as banner items with an empty `route`.
+  function extractRouteNumbers(titleTc, titleEn) {
+    const tc = titleTc || '';
+    const en = titleEn || '';
+    const out = new Set();
+    const routeLike = /^[A-Z0-9][0-9A-Z]*$/;
+
+    // CN pattern: text between 第 and 號 (or 號線). Capture as wide a
+    // span as the title offers, then split on the CN/EN separator
+    // characters that the TD titles use between route numbers in a
+    // list. Token filter requires at least one alphanumeric with a
+    // leading letter-or-digit — pure punctuation / parens fall through.
+    const cnRegex = /第([^第]{0,40}?)號(?:線)?/g;
+    let cm;
+    while ((cm = cnRegex.exec(tc)) !== null) {
+      for (const part of cm[1].split(/[、，,及和 \t()（）]/)) {
+        const t = part.trim();
+        if (routeLike.test(t)) out.add(t);
+      }
+    }
+
+    // EN pattern: "Route No." / "Route Nos." followed by a comma- and
+    // "and"-separated list of route tokens. Capture up to the next
+    // sentence boundary (".", "Route ", or end-of-string) so a trailing
+    // prose fragment like "Siu Sai Wan (Island Resort)" doesn't sneak
+    // in. Splits into chunks, then takes the leading route-like token
+    // from each chunk (chunks occasionally start with a stray word like
+    // "Siu Sai Wan"; we only want the first route-like token anyway).
+    const enRegex = /Route\s+Nos?\.?\s*(.+?)(?:\.|\s+Route\s+|$)/g;
+    let em;
+    while ((em = enRegex.exec(en)) !== null) {
+      for (const part of em[1].split(/,\s*|\s+and\s+/)) {
+        const m2 = /^\s*([A-Z0-9][0-9A-Z]*)/.exec(part);
+        if (m2) out.add(m2[1]);
+      }
+    }
+
+    return Array.from(out);
+  }
+
+  // Heuristic severity classifier — scans the TC + EN title text (and
+  // the TC + EN content bodies — the bodies often restate the impact
+  // in plainer language than the title). Severe keywords win over warn,
+  // warn over info, info over the default. We deliberately skip the SC
+  // body to keep the haystack small (the SC body is usually a near-
+  // duplicate of the TC one).
+  const SEVERITY_SEVERE = [
+    /暫停/, /停駛/, /取消服務/, /全線停駛/, /封閉/, /封路/,
+    /suspend/i, /suspended/i, /cancellation/i, /cancelled/i, /closed/i, /closure/i,
+  ];
+  const SEVERITY_WARN = [
+    /改道/, /繞道/, /繞經/, /臨時遷移/, /調整服務/, /服務調整/, /縮短/,
+    /detour/i, /relocation/i, /relocated/i, /diversion/i, /service adjustment/i, /temporary relocation/i,
+  ];
+  const SEVERITY_INFO = [
+    /車費/, /加強/, /更換營辦商/, /新增/,
+    /fare/i, /enhancement/i, /operator replacement/i, /new stop/i,
+  ];
+  function classifySeverity(titleTc, titleEn, contentTc, contentEn) {
+    const body = `${titleTc || ''} ${titleEn || ''} ${contentTc || ''} ${contentEn || ''}`;
+    for (const re of SEVERITY_SEVERE) if (re.test(body)) return 'severe';
+    for (const re of SEVERITY_WARN) if (re.test(body)) return 'warn';
+    for (const re of SEVERITY_INFO) if (re.test(body)) return 'info';
+    return 'info';
+  }
+
   let disruptionsCache = null;
 
-  // Loads (and caches) the curated disruption snapshot. Returns
+  // Loads (and caches) the parsed TD disruption feed. Returns
   // Array<{route, co?, severity, titleTc, titleEn, titleSc, until?}>; an
   // empty array on any failure (network, parse, missing file).
   //
-  // v39: hard-disabled. The snapshot is hand-authored content (audit Oct
-  // 2026 — every plausible KMB/CTB open-data feed returns 422/404, so
-  // there's no upstream source to swap in). Operators asked to hide
-  // the banner rather than surface stale hand-curated alerts as if
-  // they were live. We keep the JSON on disk + the rest of the
-  // pipeline intact so this is a one-line revert; restoring = delete
-  // the `Promise.resolve([])` line below and the SW cache will pick
-  // up the snapshot within 6h on the next home-view mount.
+  // The pipeline:
+  //   1. fetchText the TD XML (cached by the SW in buseta-td-disruptions-v1
+  //      with a 24h TTL + If-Modified-Since, so repeat visits are O(1)).
+  //   2. DOMParser → walk <Notice> nodes. parsererror element → [].
+  //   3. Drop notices with StartEffectiveDate older than today-30d.
+  //   4. Per notice, extract route numbers from TC + EN title and
+  //      classify the operator / severity. Notices with no parseable
+  //      route numbers (area-wide bus-stop moves etc.) are dropped.
+  //   5. Emit one banner item per (notice × route) so a multi-route
+  //      "service adjustment" becomes a row per affected route.
+  //
+  // v40: wired up against the TD XML feed that the original v37 audit
+  // missed. The committed assets/disruptions.json snapshot is kept on
+  // disk as the revert path — restoring it is a one-line change: drop
+  // the TD pipeline body and short-circuit back to `Promise.resolve([])`
+  // (or fetch the JSON, as v37/v38 did).
   async function fetchDisruptions() {
     if (disruptionsCache) return disruptionsCache;
-    const p = Promise.resolve([]);
+    const p = (async () => {
+      let xmlText;
+      try {
+        xmlText = await fetchText(TD_DISRUPTIONS_URL);
+      } catch (_) {
+        return [];
+      }
+      if (typeof xmlText !== 'string' || !xmlText) return [];
+      let doc;
+      try {
+        doc = new DOMParser().parseFromString(xmlText, 'application/xml');
+      } catch (_) {
+        return [];
+      }
+      // parsererror element appears at the document root on a malformed
+      // XML body — bail out instead of walking a half-parsed tree.
+      if (doc.getElementsByTagName('parsererror').length > 0) return [];
+      const notices = doc.getElementsByTagName('Notice');
+      if (!notices || notices.length === 0) return [];
+
+      const today = hktToday();
+      // Compare strings as YYYY-MM-DD: lexicographic == chronological.
+      // Today-30d in HK time so we don't accidentally include notices
+      // that started yesterday in UTC but 1+ day ago in HK.
+      const cutoff = (() => {
+        try {
+          const parts = today.split('-');
+          const d = new Date(Date.UTC(+parts[0], +parts[1] - 1, +parts[2]));
+          d.setUTCDate(d.getUTCDate() - 30);
+          return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+        } catch (_) {
+          return today;
+        }
+      })();
+
+      const items = [];
+      for (let i = 0; i < notices.length; i++) {
+        const n = notices[i];
+        const titleTc = textOf(n, 'Title_TC');
+        const titleEn = textOf(n, 'Title_EN');
+        const titleSc = textOf(n, 'Title_SC') || titleTc || titleEn;
+        const start = parseTdDate(textOf(n, 'StartEffectiveDate'));
+        // TD feed doesn't carry an EndEffectiveDate in practice (audit:
+        // 0 of 536 records) — keep the field name for the day the feed
+        // grows one, and so the until-shape stays honest.
+        const end = parseTdDate(textOf(n, 'EndEffectiveDate'));
+        if (!start || start < cutoff) continue;
+        if (end && end < today) continue;
+
+        // Strip HTML from the content bodies for severity sniffing —
+        // the feeds stuff `<div>`, `<strong>` etc. around the same
+        // keywords the title uses, and we want the prose text only.
+        const contentTc = stripTags(textOf(n, 'Content_TC'));
+        const contentEn = stripTags(textOf(n, 'Content_EN'));
+
+        const routes = extractRouteNumbers(titleTc, titleEn);
+        if (!routes.length) continue;
+
+        const co = classifyOperator(titleTc, titleEn);
+        const severity = classifySeverity(titleTc, titleEn, contentTc, contentEn);
+        // until = explicit end date when present, otherwise start + 30d
+        // so the existing isDisruptionExpired filter keeps the notice
+        // visible for the same 30-day window we use for the start cutoff.
+        const until = end || addDays(start, 30);
+
+        // Trilingual title fallback — keep all three fields populated so
+        // disruptionTitleFor() in any of the three langs has something
+        // to show even when one of the titles is missing in the source.
+        const tc = titleTc || titleEn || titleSc;
+        const en = titleEn || titleTc || titleSc;
+        const sc = titleSc || titleTc || titleEn;
+
+        for (const route of routes) {
+          const item = { route, severity, titleTc: tc, titleEn: en, titleSc: sc, until };
+          if (co) item.co = co;
+          items.push(item);
+        }
+      }
+      return items;
+    })();
     disruptionsCache = p;
     return p;
+  }
+
+  // Helper: textContent of the first child <tagName> under `parent`.
+  // Returns '' when the tag is absent so callers can pass straight into
+  // string ops without a null guard.
+  function textOf(parent, tagName) {
+    if (!parent || !parent.getElementsByTagName) return '';
+    const el = parent.getElementsByTagName(tagName)[0];
+    return el && el.textContent ? el.textContent : '';
+  }
+
+  // Helper: strip every HTML tag from a string. Used for the severity
+  // sniff — TD ships the content bodies as `<div>...<strong>...` and
+  // we don't want markup noise in the keyword match.
+  function stripTags(s) {
+    if (!s) return '';
+    return s.replace(/<[^>]*>/g, ' ');
+  }
+
+  // Helper: add `n` days to a `YYYY-MM-DD` string and return the same
+  // shape. Used to synthesise a 30-day `until` for notices that only
+  // carry a StartEffectiveDate. Returns the input string on parse
+  // failure so the caller never produces `undefined`.
+  function addDays(ymd, n) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(ymd || '');
+    if (!m) return ymd || '';
+    const d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]));
+    d.setUTCDate(d.getUTCDate() + n);
+    return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
   }
 
   // Pick the localised title for a disruption item in the current UI

@@ -4,10 +4,17 @@
  * upstream API calls. Static JSON in /assets/ is cached lazily on first
  * fetch via the same code path.
  *
- * CACHE bumped to v27: forces a clean install after v39's disruption-
- * banner hide. App.js short-circuits fetchDisruptions() to [] so the
- * banner never renders; the disruption-specific SWR branch below
- * remains in place in case the banner is ever re-enabled.
+ * CACHE bumped to v28: forces a clean install after v40's TD-feed wire-
+ * up. App.js now fetches the Transport Department's public-data XML
+ * feed; the dedicated SW cross-origin branch below caches it under
+ * TD_DISRUPTION_CACHE with a 24h TTL + If-Modified-Since so repeat
+ * visits stay O(1) and don't spam the upstream on every home-view
+ * mount.
+ *
+ * v27 was the v39 cache-buster bump (disruption banner hide via
+ * short-circuit). The dedicated /assets/disruptions.json SWR branch
+ * below remains in place for the same one-line-revert reason noted
+ * in app.js fetchDisruptions().
  *
  * v26 was the v38 cache-buster bump (disruption banner freshness: until
  * filter + 6h TTL on assets/disruptions.json). Hand-authored content
@@ -21,7 +28,7 @@
  * v21 was the same forced-update after v32's QW-1 → QW-10 batch.
  * v20 was the same forced-update after the v30→v31 layout revert.
  */
-const CACHE = 'buseta-v27';
+const CACHE = 'buseta-v28';
 const SHELL = [
   '/',
   '/index.html',
@@ -38,6 +45,7 @@ const ASSET_CACHE = 'buseta-assets-v1';
 const ETA_CACHE = 'buseta-eta-v2';
 // (was 'buseta-eta-v1' before v15 — bumped to invalidate the empty-
 // body poisoned entries left over from the v13 body-consumption bug.)
+const TD_DISRUPTION_CACHE = 'buseta-td-disruptions-v1';
 
 // 5-minute freshness window for cached ETA responses. The operator
 // feeds update roughly every minute, so 5 min balances "don't
@@ -52,6 +60,15 @@ const ETA_MAX_AGE_MS = 5 * 60 * 1000;
 // returning user would see stale alerts until the next cache-buster
 // bump forces a fresh fetch.
 const DISRUPTION_MAX_AGE_MS = 6 * 60 * 60 * 1000;
+
+// Transport Department disruption XML — daily-updated feed that the
+// v37-era audit missed. ~3.5 MB body, daily Last-Modified, CORS *, so
+// we cache it in its own bucket with a 24h TTL and pass If-Modified-
+// Since on revalidation so the server only sends a fresh body when it
+// actually changed. Falls through to the network when the SW is bypassed
+// (e.g. first visit before the SW installs).
+const TD_DISRUPTION_URL = 'https://www.td.gov.hk/datagovhk_tis/traffic-notices/Notices_on_Public_Transports.xml';
+const TD_DISRUPTION_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 // Upstream API origins whose responses are safe to cache briefly for
 // offline fallback. Anything else cross-origin stays network-only.
@@ -82,16 +99,17 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys()
       .then((keys) => Promise.all(
-        // Drop legacy `buseta-vN` for N < 27; keep v27 + ASSET_CACHE
-        // + the new ETA_CACHE so existing offline data survives.
-        // Also explicitly drop the poisoned `buseta-eta-v1` cache
-        // (bumped to v2) so users on the v13-era poisoned SWR cache
-        // stop getting empty-body responses back.
+        // Drop legacy `buseta-vN` for N < 28; keep v28 + ASSET_CACHE
+        // + ETA_CACHE + the new TD_DISRUPTION_CACHE so existing
+        // offline data survives. Also explicitly drop the poisoned
+        // `buseta-eta-v1` cache (bumped to v2) so users on the v13-
+        // era poisoned SWR cache stop getting empty-body responses
+        // back.
         keys.filter((k) => {
           if (k === 'buseta-eta-v1') return true;  // poisoned, drop
           const m = /^buseta-v(\d+)$/.exec(k);
-          if (m) return parseInt(m[1], 10) < 27;
-          return k !== CACHE && k !== ASSET_CACHE && k !== ETA_CACHE;
+          if (m) return parseInt(m[1], 10) < 28;
+          return k !== CACHE && k !== ASSET_CACHE && k !== ETA_CACHE && k !== TD_DISRUPTION_CACHE;
         }).map((k) => caches.delete(k))
       ))
       .then(() => self.clients.claim())
@@ -162,6 +180,63 @@ self.addEventListener('fetch', (event) => {
   if (req.method !== 'GET') return;
 
   const reqUrl = new URL(req.url);
+
+  // 0) Transport Department disruption XML — dedicated bucket with a
+  //    24h TTL + If-Modified-Since. The feed is daily-updated, the body
+  //    is ~3.5 MB, and the SW otherwise treats cross-origin requests
+  //    as network-only — so without this branch every home-view mount
+  //    re-downloads the whole file. We do the freshness check on the
+  //    x-sw-cached-at header (set by timestampedResponse); cached
+  //    entries from before v40's wire-up lack that header so the first
+  //    request after upgrade falls through to the network and rewrites
+  //    the entry. On 200 we re-cache + return the wrapped response; on
+  //    304 we return the still-fresh cached body.
+  if (reqUrl.href === TD_DISRUPTION_URL) {
+    event.respondWith(
+      caches.open(TD_DISRUPTION_CACHE).then(async (cache) => {
+        const cached = await cache.match(req);
+        const cachedAt = cached
+          ? parseInt(cached.headers.get('x-sw-cached-at') || '0', 10) || 0
+          : 0;
+        const fresh = cached && cachedAt && (Date.now() - cachedAt) < TD_DISRUPTION_MAX_AGE_MS;
+        const cachedLastMod = cached ? cached.headers.get('last-modified') || '' : '';
+
+        if (fresh) {
+          // Background revalidate with IMS so the server only sends a
+          // fresh body when the feed actually changed since the cached
+          // Last-Modified. Drop the 200 result on the floor if the
+          // cache is still fresh — nothing to do.
+          const headers = cachedLastMod ? { 'If-Modified-Since': cachedLastMod } : {};
+          event.waitUntil(
+            fetch(new Request(req, { headers })).then(async (resp) => {
+              if (resp && resp.ok) {
+                try {
+                  const wrapped = await timestampedResponse(resp.clone());
+                  await cache.put(req, wrapped);
+                } catch (_) { /* body read failed; skip cache write */ }
+              }
+            }).catch(() => null)
+          );
+          return cached;
+        }
+
+        // Stale or missing — try the network with IMS if we have it.
+        const headers = cachedLastMod ? { 'If-Modified-Since': cachedLastMod } : {};
+        const live = await fetch(new Request(req, { headers })).catch(() => null);
+        if (live && live.ok) {
+          try {
+            const wrapped = await timestampedResponse(live.clone());
+            await cache.put(req, wrapped);
+          } catch (_) { /* body read failed; return live anyway */ }
+          return live;
+        }
+        if (live && live.status === 304 && cached) return cached;
+        if (cached) return cached;        // stale-but-better-than-nothing
+        return new Response('', { status: 504, statusText: 'Offline' });
+      })
+    );
+    return;
+  }
 
   // 1a) Same-origin /assets/disruptions.json — SWR with a 6h freshness
   //    window. Hand-authored snapshot that can change any time the

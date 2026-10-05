@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="BusETA" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="buseta-version" content="39" />
+<meta name="buseta-version" content="40" />
 <!-- Main stylesheet. The original style.css is what we ship today — a
      hand-rolled minifier produced a broken style.min.css earlier, so we
      load the unminified bundle directly. v=35 ships the "show every
@@ -158,6 +158,62 @@
        - index.html cache-buster ?v=38 → ?v=39 on app.js (style.css
          unchanged — banner styles are now dead CSS but harmless),
          meta name="buseta-version" content="38" → "39".
+
+     v=40 ships "TD XML feed wire-up" on top of v=39:
+       - app.js: fetchDisruptions() now actually fetches — the
+         Transport Department's public-data XML feed at
+         https://www.td.gov.hk/datagovhk_tis/traffic-notices/Notices_on_Public_Transports.xml
+         was missed by the original v37-era audit (the v37 hand-
+         audit only probed operator open-data endpoints). DOMParser
+         walks every <Notice> in the ~3.5 MB feed, projects each into
+         one banner item per affected route. New module-scope helpers
+         placed right before fetchDisruptions(): parseTdDate(s)
+         (DD.MM.YYYY → YYYY-MM-DD), hktToday() (HK-local date as
+         YYYY-MM-DD), classifyOperator(titleTc, titleEn) → 'KMB' |
+         'LWB' | 'CTB' | 'NWFB' | 'GMB' | 'MTR' | 'LRT' | null,
+         extractRouteNumbers(titleTc, titleEn) (CN regex on
+         第...號/號線 plus EN regex on Route No(s).), and
+         classifySeverity(titleTc, titleEn, contentTc, contentEn)
+         → 'severe' | 'warn' | 'info'. Cross-check on route
+         numbers is implicit (Set merge of CN + EN).
+       - Filter pipeline: drop notices with StartEffectiveDate older
+         than today-30d, drop ones with no parseable route number
+         (area-wide bus-stop relocations don't fit the per-route
+         banner shape), expand multi-route notices into one item
+         per route. Output shape — { co?, route, severity,
+         titleTc, titleEn, titleSc, until } — is unchanged so
+         disruptionsForUserRoutes() + renderDisruptionBanner()
+         work without modification. Per-route `until` falls back
+         to StartEffectiveDate + 30d (no EndEffectiveDate in the
+         feed today — audit: 0/536 records carry one). Cached
+         disruptionsCache = p so repeat calls in the same session
+         are O(1); parse failures cache [] so we don't retry every
+         mount.
+       - Revert path: assets/disruptions.json stays on disk, and
+         the v39 short-circuit is gone but easy to put back —
+         delete the TD pipeline body in fetchDisruptions() and
+         replace with `const p = Promise.resolve([]);
+         disruptionsCache = p; return p;`. Restoring = one
+         deleted block.
+       - sw.js: new dedicated cross-origin fetch branch BEFORE the
+         generic same-origin /assets/*.json path. Constant
+         TD_DISRUPTION_URL + TD_DISRUPTION_MAX_AGE_MS = 24h (the
+         feed is daily-updated). New bucket TD_DISRUPTION_CACHE =
+         'buseta-td-disruptions-v1'. Freshness check on
+         x-sw-cached-at (set by timestampedResponse); cached
+         entries lacking that header (none today — this is a fresh
+         bucket) fall through to the network on first request and
+         get rewritten. Background revalidate with If-Modified-
+         Since passes the cached Last-Modified so the server only
+         sends a fresh body when the feed actually changed; 304
+         returns the still-fresh cached body.
+       - sw.js: CACHE bumped buseta-v27 → buseta-v28 (forces clean
+         install). activate-handler keep-list updated to also keep
+         TD_DISRUPTION_CACHE so the cached entry survives the
+         upgrade.
+       - index.html cache-buster ?v=39 → ?v=40 on app.js (style.css
+         unchanged — no CSS shipped this round), meta
+         name="buseta-version" content="39" → "40".
 -->
 <link rel="stylesheet" href="style.css?v=36" />
 <title>BusETA HK · 巴士到站</title>
@@ -568,7 +624,7 @@ window.__buseta = {
   },
 };
 </script>
-<script defer src="app.js?v=39"></script>
+<script defer src="app.js?v=40"></script>
 <script>
   // SW path must be RELATIVE — GitHub Pages serves this site under
   // /buseta-hk/ but a leading `/sw.js` would resolve to the site root
