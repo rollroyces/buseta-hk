@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="BusETA" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="buseta-version" content="38" />
+<meta name="buseta-version" content="39" />
 <!-- Main stylesheet. The original style.css is what we ship today — a
      hand-rolled minifier produced a broken style.min.css earlier, so we
      load the unminified bundle directly. v=35 ships the "show every
@@ -136,6 +136,28 @@
        - index.html cache-buster ?v=37 → ?v=38 on app.js (style.css
          unchanged — no CSS shipped this round), meta
          name="buseta-version" content="37" → "38".
+
+     v=39 ships "hide the disruption banner" on top of v=38:
+       - app.js: fetchDisruptions() now short-circuits to Promise.
+         resolve([]) — neither fetches assets/disruptions.json nor
+         caches anything. renderDisruptionBanner() already returns
+         null on an empty array, so the banner DOM is never built and
+         never inserted into the home view. The curated JSON stays
+         on disk and the rest of the pipeline (disruptionForRoute,
+         disruptionTitleFor, disruptionUntil, renderDisruptionBanner)
+         stays in place — restoring the banner is a one-line revert
+         (delete the short-circuit).
+       - Rationale (audit Oct 2026): the snapshot is hand-authored
+         content with no upstream source — every plausible KMB/CTB
+         open-data path returns 422/404. Surfacing stale hand-
+         curated alerts as a "live" 服務通知 banner is misleading;
+         better to hide until a real feed exists.
+       - sw.js: bumped buseta-v26 → buseta-v27 to force a clean
+         install. The disruption-specific SWR branch (6h TTL) stays
+         in place for the same one-line-revert reason.
+       - index.html cache-buster ?v=38 → ?v=39 on app.js (style.css
+         unchanged — banner styles are now dead CSS but harmless),
+         meta name="buseta-version" content="38" → "39".
 -->
 <link rel="stylesheet" href="style.css?v=36" />
 <title>BusETA HK · 巴士到站</title>
@@ -546,7 +568,7 @@ window.__buseta = {
   },
 };
 </script>
-<script defer src="app.js?v=38"></script>
+<script defer src="app.js?v=39"></script>
 <script>
   // SW path must be RELATIVE — GitHub Pages serves this site under
   // /buseta-hk/ but a leading `/sw.js` would resolve to the site root

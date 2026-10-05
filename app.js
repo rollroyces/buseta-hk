@@ -3352,16 +3352,18 @@
   // Loads (and caches) the curated disruption snapshot. Returns
   // Array<{route, co?, severity, titleTc, titleEn, titleSc, until?}>; an
   // empty array on any failure (network, parse, missing file).
+  //
+  // v39: hard-disabled. The snapshot is hand-authored content (audit Oct
+  // 2026 — every plausible KMB/CTB open-data feed returns 422/404, so
+  // there's no upstream source to swap in). Operators asked to hide
+  // the banner rather than surface stale hand-curated alerts as if
+  // they were live. We keep the JSON on disk + the rest of the
+  // pipeline intact so this is a one-line revert; restoring = delete
+  // the `Promise.resolve([])` line below and the SW cache will pick
+  // up the snapshot within 6h on the next home-view mount.
   async function fetchDisruptions() {
     if (disruptionsCache) return disruptionsCache;
-    const p = (async () => {
-      try {
-        const data = await fetchJSON('assets/disruptions.json');
-        return (data && Array.isArray(data.items)) ? data.items : [];
-      } catch (_) {
-        return [];
-      }
-    })();
+    const p = Promise.resolve([]);
     disruptionsCache = p;
     return p;
   }

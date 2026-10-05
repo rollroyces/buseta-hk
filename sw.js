@@ -4,19 +4,15 @@
  * upstream API calls. Static JSON in /assets/ is cached lazily on first
  * fetch via the same code path.
  *
- * CACHE bumped to v26: ships a 6h TTL on assets/disruptions.json so the
- * curated snapshot refreshes without a cache-buster bump. The disruption
- * JSON is hand-authored and can be edited any time the operator news
- * changes; without a TTL, a returning visitor who hasn't navigated to
- * home in a few days would keep seeing the pre-edit copy because the
- * generic asset handler only background-revalidates on cache-hit fetch
- * (which only fires when something asks for the file). Other assets
- * (hk-stops.json, route shapes, ...) are still cache-first with no TTL —
- * those change rarely and are large. SWR-style freshness uses the same
- * x-sw-cached-at timestampedResponse wrapper as the ETA cache. Cached
- * entries written by the v25-era plain cache.put() lack that header, so
- * the first request after upgrade falls through to network and rewrites
- * the entry with a fresh timestamp — no migration needed.
+ * CACHE bumped to v27: forces a clean install after v39's disruption-
+ * banner hide. App.js short-circuits fetchDisruptions() to [] so the
+ * banner never renders; the disruption-specific SWR branch below
+ * remains in place in case the banner is ever re-enabled.
+ *
+ * v26 was the v38 cache-buster bump (disruption banner freshness: until
+ * filter + 6h TTL on assets/disruptions.json). Hand-authored content
+ * remains cacheable via the dedicated branch below for the same
+ * restore-in-one-line reason noted in app.js fetchDisruptions().
  *
  * v25 was the v37 cache-buster bump (terminus scan).
  * v24 was the v36 cache-buster bump (operator-code → internal-ID).
@@ -25,7 +21,7 @@
  * v21 was the same forced-update after v32's QW-1 → QW-10 batch.
  * v20 was the same forced-update after the v30→v31 layout revert.
  */
-const CACHE = 'buseta-v26';
+const CACHE = 'buseta-v27';
 const SHELL = [
   '/',
   '/index.html',
@@ -86,7 +82,7 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys()
       .then((keys) => Promise.all(
-        // Drop legacy `buseta-vN` for N < 26; keep v26 + ASSET_CACHE
+        // Drop legacy `buseta-vN` for N < 27; keep v27 + ASSET_CACHE
         // + the new ETA_CACHE so existing offline data survives.
         // Also explicitly drop the poisoned `buseta-eta-v1` cache
         // (bumped to v2) so users on the v13-era poisoned SWR cache
@@ -94,7 +90,7 @@ self.addEventListener('activate', (event) => {
         keys.filter((k) => {
           if (k === 'buseta-eta-v1') return true;  // poisoned, drop
           const m = /^buseta-v(\d+)$/.exec(k);
-          if (m) return parseInt(m[1], 10) < 26;
+          if (m) return parseInt(m[1], 10) < 27;
           return k !== CACHE && k !== ASSET_CACHE && k !== ETA_CACHE;
         }).map((k) => caches.delete(k))
       ))
