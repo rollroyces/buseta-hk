@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="BusETA" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="buseta-version" content="37" />
+<meta name="buseta-version" content="38" />
 <!-- Main stylesheet. The original style.css is what we ship today — a
      hand-rolled minifier produced a broken style.min.css earlier, so we
      load the unminified bundle directly. v=35 ships the "show every
@@ -105,6 +105,37 @@
        - index.html cache-buster ?v=36 → ?v=37 on app.js (style.css
          unchanged — no CSS shipped this round), meta
          name="buseta-version" content="36" → "37".
+
+     v=38 ships "disruption banner freshness" on top of v=37:
+       - app.js: new helper isDisruptionExpired(it) — returns true
+         when it.until (YYYY-MM-DD, HK end-of-day) is strictly before
+         today in HK time. Items without an `until` field are treated
+         as indefinite and never expire via this check. Unparseable
+         values fall through to false so a typo doesn't hide a real
+         alert. disruptionsForUserRoutes() now applies this filter
+         before the user-route match, so the banner stops pinning
+         expired entries like the v37-era snapshot's KMB 914X
+         (until 2026-10-03), CTB 8 (until 2026-10-04), KMB 968
+         (until 2026-10-04). Items without until (e.g. "A11 extra
+         service until further notice", "route 11 suspended") stay
+         visible.
+       - sw.js: SWR-style 6h freshness window for assets/disruptions.
+         json specifically. New constant DISRUPTION_MAX_AGE_MS = 6h
+         alongside ETA_MAX_AGE_MS = 5min. etaSWR() generalised to
+         take a maxAgeMs argument (default = ETA_MAX_AGE_MS for
+         backwards compat) and reused for the disruption file.
+         Dedicated fetch-handler branch added before the generic
+         /assets/*.json cache-first path. The fresh-vs-stale
+         decision reads x-sw-cached-at set by timestampedResponse;
+         old plain cache.put() entries lack that header so the first
+         request after upgrade falls through to network and rewrites
+         the entry — no migration needed. ASSET_CACHE for other
+         assets (hk-stops.json, route shapes, ...) is unchanged —
+         those files change rarely and are large.
+       - SW bumped buseta-v25 → buseta-v26 to force a clean install.
+       - index.html cache-buster ?v=37 → ?v=38 on app.js (style.css
+         unchanged — no CSS shipped this round), meta
+         name="buseta-version" content="37" → "38".
 -->
 <link rel="stylesheet" href="style.css?v=36" />
 <title>BusETA HK · 巴士到站</title>
@@ -515,7 +546,7 @@ window.__buseta = {
   },
 };
 </script>
-<script defer src="app.js?v=37"></script>
+<script defer src="app.js?v=38"></script>
 <script>
   // SW path must be RELATIVE — GitHub Pages serves this site under
   // /buseta-hk/ but a leading `/sw.js` would resolve to the site root

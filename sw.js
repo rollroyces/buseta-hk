@@ -4,19 +4,28 @@
  * upstream API calls. Static JSON in /assets/ is cached lazily on first
  * fetch via the same code path.
  *
- * CACHE bumped to v24: forced SW update after v36's operator-code →
- * internal-ID resolution shipped. Same logic as the previous forced-
- * update bumps — a tab holding a v23 install while index.html flipped
- * from ?v=35 to ?v=36 would otherwise keep serving the v35 app.js
- * until the user did a hard reload.
+ * CACHE bumped to v26: ships a 6h TTL on assets/disruptions.json so the
+ * curated snapshot refreshes without a cache-buster bump. The disruption
+ * JSON is hand-authored and can be edited any time the operator news
+ * changes; without a TTL, a returning visitor who hasn't navigated to
+ * home in a few days would keep seeing the pre-edit copy because the
+ * generic asset handler only background-revalidates on cache-hit fetch
+ * (which only fires when something asks for the file). Other assets
+ * (hk-stops.json, route shapes, ...) are still cache-first with no TTL —
+ * those change rarely and are large. SWR-style freshness uses the same
+ * x-sw-cached-at timestampedResponse wrapper as the ETA cache. Cached
+ * entries written by the v25-era plain cache.put() lack that header, so
+ * the first request after upgrade falls through to network and rewrites
+ * the entry with a fresh timestamp — no migration needed.
+ *
+ * v25 was the v37 cache-buster bump (terminus scan).
+ * v24 was the v36 cache-buster bump (operator-code → internal-ID).
  * v23 was v35's cache-buster bump (.route-card--no-eta placeholder).
  * v22 was the v33 cache-buster bump (settings view + hardenings).
  * v21 was the same forced-update after v32's QW-1 → QW-10 batch.
  * v20 was the same forced-update after the v30→v31 layout revert.
- * No SW logic changed in v24 — the SHELL pre-cache still holds the
- * same five files.
  */
-const CACHE = 'buseta-v25';
+const CACHE = 'buseta-v26';
 const SHELL = [
   '/',
   '/index.html',
@@ -39,6 +48,14 @@ const ETA_CACHE = 'buseta-eta-v2';
 // spam upstream on every render" against "don't show stale ETAs for
 // too long after coming back online".
 const ETA_MAX_AGE_MS = 5 * 60 * 1000;
+
+// 6-hour freshness window for the curated service-disruption snapshot.
+// The JSON is hand-authored and shipped in the static bundle, so there's
+// no upstream rate-limit concern; the only cost of a 6h window is one
+// extra network round-trip per home-view mount. Without this, a
+// returning user would see stale alerts until the next cache-buster
+// bump forces a fresh fetch.
+const DISRUPTION_MAX_AGE_MS = 6 * 60 * 60 * 1000;
 
 // Upstream API origins whose responses are safe to cache briefly for
 // offline fallback. Anything else cross-origin stays network-only.
@@ -69,7 +86,7 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys()
       .then((keys) => Promise.all(
-        // Drop legacy `buseta-vN` for N < 25; keep v25 + ASSET_CACHE
+        // Drop legacy `buseta-vN` for N < 26; keep v26 + ASSET_CACHE
         // + the new ETA_CACHE so existing offline data survives.
         // Also explicitly drop the poisoned `buseta-eta-v1` cache
         // (bumped to v2) so users on the v13-era poisoned SWR cache
@@ -77,7 +94,7 @@ self.addEventListener('activate', (event) => {
         keys.filter((k) => {
           if (k === 'buseta-eta-v1') return true;  // poisoned, drop
           const m = /^buseta-v(\d+)$/.exec(k);
-          if (m) return parseInt(m[1], 10) < 25;
+          if (m) return parseInt(m[1], 10) < 26;
           return k !== CACHE && k !== ASSET_CACHE && k !== ETA_CACHE;
         }).map((k) => caches.delete(k))
       ))
@@ -103,12 +120,14 @@ async function timestampedResponse(resp) {
 // Stale-while-revalidate with a freshness window. Returns the cached
 // copy if it's still fresh, otherwise tries the network and falls
 // back to the stale cache only if the network is unreachable.
-async function etaSWR(req, cache) {
+// `maxAgeMs` is the per-bucket freshness window (ETA_MAX_AGE_MS for
+// upstream APIs, DISRUPTION_MAX_AGE_MS for the curated snapshot).
+async function etaSWR(req, cache, maxAgeMs = ETA_MAX_AGE_MS) {
   const cached = await cache.match(req);
   const cachedAt = cached
     ? parseInt(cached.headers.get('x-sw-cached-at') || '0', 10) || 0
     : 0;
-  const fresh = cached && cachedAt && (Date.now() - cachedAt) < ETA_MAX_AGE_MS;
+  const fresh = cached && cachedAt && (Date.now() - cachedAt) < maxAgeMs;
 
   // Always attempt a network refresh — when the cache is fresh the
   // response is dropped on the floor, when stale it becomes the new
@@ -147,6 +166,18 @@ self.addEventListener('fetch', (event) => {
   if (req.method !== 'GET') return;
 
   const reqUrl = new URL(req.url);
+
+  // 1a) Same-origin /assets/disruptions.json — SWR with a 6h freshness
+  //    window. Hand-authored snapshot that can change any time the
+  //    operator news changes; without a TTL, returning users would see
+  //    a stale copy until the next cache-buster bump. Other assets stay
+  //    on the plain cache-first path below.
+  if (reqUrl.origin === self.location.origin && reqUrl.pathname === '/assets/disruptions.json') {
+    event.respondWith(
+      caches.open(ASSET_CACHE).then((cache) => etaSWR(req, cache, DISRUPTION_MAX_AGE_MS))
+    );
+    return;
+  }
 
   // 1) Same-origin /assets/*.json — cache-first with background
   //    revalidation. The SHELL cache covers the app's own code/CSS/

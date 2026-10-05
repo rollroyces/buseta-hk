@@ -3492,11 +3492,32 @@
     return wrap;
   }
 
+  // True when an item's `until` (YYYY-MM-DD, HK end-of-day) is strictly
+  // before today's date in HK time. Items without an `until` field are
+  // treated as indefinite ("until further notice") and never expire via
+  // this check. Unparseable `until` values also fall through to false so
+  // a typo doesn't hide a real alert.
+  function isDisruptionExpired(it) {
+    if (!it || !it.until) return false;
+    // toLocaleDateString with 'en-CA' produces YYYY-MM-DD, the same
+    // shape our JSON uses, so a plain string compare is chronological.
+    let todayHkt;
+    try {
+      todayHkt = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Hong_Kong' });
+    } catch (_) {
+      // Older browsers without full Intl support — fall back to UTC.
+      todayHkt = new Date().toISOString().slice(0, 10);
+    }
+    return typeof it.until === 'string' && it.until < todayHkt;
+  }
+
   // Filter the curated disruption list down to entries that apply to at
   // least one route in `state.savedRoutes` or the route-shaped entries of
   // `state.recent`. Stops-only recent entries are ignored. When an item
   // declares an operator `co`, it matches only that operator; otherwise
-  // any operator carrying that route number matches.
+  // any operator carrying that route number matches. Items whose `until`
+  // date has already passed are dropped (see isDisruptionExpired) — the
+  // curated snapshot has historically kept 3+ day-old alerts pinned.
   function disruptionsForUserRoutes(items) {
     if (!Array.isArray(items) || items.length === 0) return [];
     const wanted = new Map();
@@ -3510,6 +3531,7 @@
 
     return items.filter((it) => {
       if (!it || !it.route) return false;
+      if (isDisruptionExpired(it)) return false;
       if (it.co) return wanted.has(`${it.co}\t${it.route}`);
       return wanted.has(`\t${it.route}`);
     });
