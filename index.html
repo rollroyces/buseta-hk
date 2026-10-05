@@ -767,7 +767,7 @@ window.__buseta = {
     if (this._plannerScript) return this._plannerScript;
     this._plannerScript = new Promise((resolve, reject) => {
       const s = document.createElement('script');
-      s.src = 'planner.js?v=20';
+      s.src = 'planner.js?v=21';
       s.async = false; // preserve execution order
       s.onload = () => resolve(window.Planner);
       s.onerror = () => reject(new Error('planner.js failed to load'));
@@ -781,7 +781,7 @@ window.__buseta = {
     this._plannerCss = new Promise((resolve, reject) => {
       const l = document.createElement('link');
       l.rel = 'stylesheet';
-      l.href = 'planner.css?v=20';
+      l.href = 'planner.css?v=21';
       l.setAttribute('data-planner-css', '1');
       l.media = 'print';
       l.onload = () => { l.media = 'all'; resolve(); };
