@@ -1220,13 +1220,30 @@
     for (let i = 0; i < steps.length; i++) {
       const s = steps[i];
       if (s.kind === 'ride') {
+        // v42 — compute real km via haversine between consecutive stations
+        // so the planner card's "乘車" meter is no longer 0m. Look up both
+        // ends in `reverseIdx` (populated by buildMtrGraph / buildLrtGraph
+        // with lat/lng for MTR stations; LRT stops have no coords yet, so
+        // those legs fall back to 0 — see TODO below).
+        let rideMeters = 0;
+        const fromMeta = reverseIdx.get(s.fromStop);
+        const toMeta = reverseIdx.get(s.toStop);
+        if (fromMeta && toMeta &&
+            Number.isFinite(fromMeta.lat) && Number.isFinite(fromMeta.lng) &&
+            Number.isFinite(toMeta.lat) && Number.isFinite(toMeta.lng)) {
+          rideMeters = haversine(fromMeta.lat, fromMeta.lng, toMeta.lat, toMeta.lng) * 1000;
+        }
+        // TODO(v42.x): LRT stops in `state.index.lrt.stops` don't carry
+        // lat/lng today (lrt-routes.json is line + stop names only). Until
+        // we curate an LRT stops lat/lng table, LRT-only journeys still
+        // show 0m on the ride badge.
         legs.push({
           kind: 'ride',
           routeKey: co + '|' + s.seg,
           routeMeta: routeMetaFor(s.seg),
           from: s.fromStop,
           to: s.toStop,
-          meters: 0,
+          meters: rideMeters,
           minutes: perStationMin,
         });
       } else {
@@ -1257,6 +1274,11 @@
       if (tail && l.kind === 'ride' && tail.kind === 'ride' && tail.routeKey === l.routeKey) {
         tail.to = l.to;
         tail.minutes = +(tail.minutes + l.minutes).toFixed(2);
+        // v42 — sum meters across consecutive single-station ride legs so a
+        // multi-station ride on the same line shows the full km, not just
+        // the first hop's km.
+        tail.meters = (Number.isFinite(tail.meters) ? tail.meters : 0)
+                    + (Number.isFinite(l.meters) ? l.meters : 0);
       } else {
         merged.push({ ...l });
       }
@@ -1489,12 +1511,18 @@
     // Single line, easy to grep / spot regressions in DevTools.
     // Format: planner.search | N requests | Nms | direct=… one=… two=… cache=…
     try {
+      // v42 — extended log: cov = number of strategies with ≥1 journey
+      // (e.g. "1" = only bus fired, "3" = all three strategies fired).
+      // empty = 1 when the user got the no-results state.
+      const coveredStrats = Object.keys(strategies).filter((k) => strategies[k].journeys.length > 0).length;
+      const empty = coveredStrats === 0 ? 1 : 0;
       console.log(
         `planner.search | req=${_reqCounter} | ${elapsed}ms ` +
         `| direct=${direct.length} one=${oneTransfer.length} two=${twoTransfer.length} ` +
         `| strategy bus=${strategies.bus.journeys.length} ` +
         `rail=${strategies.rail.journeys.length} ` +
         `mixed=${strategies.mixed.journeys.length} ` +
+        `| cov=${coveredStrats} empty=${empty} ` +
         `| cache rs=${_routeStopsCache.size} sr=${_stopRoutesCache.size} ` +
         `| rail mtr=${mtrRoutes.direct.length + mtrRoutes.oneTransfer.length} ` +
         `lrt=${lrtRoutes.direct.length + lrtRoutes.oneTransfer.length}`
@@ -1774,6 +1802,106 @@
     return stopName(idx, stopId);
   }
 
+  // ---- v42 — Route-shape canvas -------------------------------------
+  // Render the journey's ride legs as an inline SVG polyline + markers so
+  // each card visually distinguishes its route. Coordinates come from
+  // `stopLatLng` (already used elsewhere) and per-co colour rules reuse
+  // the existing `.planner-chip.co-X` palette via SVG class names.
+  const CANVAS_W = 120;
+  const CANVAS_H = 80;
+  const CANVAS_PAD = 8;        // px around the bounding box
+  function buildJourneyCanvas(legs) {
+    const idx = window.state && window.state.index;
+    if (!idx) return null;
+    // Collect one (lat, lng, co) per ride-leg endpoint. Intermediate stops
+    // on multi-station rides would be a nice-to-have; for the first cut we
+    // just connect from → to which is enough to make 5 bus routes that
+    // all take 33 min visually distinguishable.
+    const pts = []; // { lat, lng, co }
+    for (const l of legs) {
+      if (l.kind !== 'ride') continue;
+      const fromLL = stopLatLng(idx, l.from);
+      const toLL = stopLatLng(idx, l.to);
+      const co = (l.routeMeta && l.routeMeta.co) || 'BUS';
+      if (fromLL) pts.push({ lat: fromLL.lat, lng: fromLL.lng, co });
+      if (toLL) pts.push({ lat: toLL.lat, lng: toLL.lng, co });
+    }
+    // Dedupe consecutive identical points (back-to-back legs on same stop).
+    const uniq = [];
+    for (const p of pts) {
+      const last = uniq[uniq.length - 1];
+      if (last && last.lat === p.lat && last.lng === p.lng) continue;
+      uniq.push(p);
+    }
+    if (uniq.length < 2) return null;
+
+    // Bounding box with padding.
+    let minLat = uniq[0].lat, maxLat = uniq[0].lat;
+    let minLng = uniq[0].lng, maxLng = uniq[0].lng;
+    for (const p of uniq) {
+      if (p.lat < minLat) minLat = p.lat;
+      if (p.lat > maxLat) maxLat = p.lat;
+      if (p.lng < minLng) minLng = p.lng;
+      if (p.lng > maxLng) maxLng = p.lng;
+    }
+    // Avoid div-by-zero when all ride-leg endpoints share a lat/lng
+    // (degenerate case; the algorithm would have rejected such a route
+    // upstream, but defensive here keeps the SVG from collapsing).
+    const latSpan = Math.max(maxLat - minLat, 1e-6);
+    const lngSpan = Math.max(maxLng - minLng, 1e-6);
+    // Project to (x, y). SVG y is inverted (north → smaller y).
+    const project = (lat, lng) => {
+      const x = CANVAS_PAD + ((lng - minLng) / lngSpan) * (CANVAS_W - 2 * CANVAS_PAD);
+      const y = CANVAS_PAD + (1 - (lat - minLat) / latSpan) * (CANVAS_H - 2 * CANVAS_PAD);
+      return [x, y];
+    };
+    // Build per-leg polylines so each ride leg inherits its operator's
+    // colour via .co-X rules.
+    const lines = [];
+    let firstPts = null;
+    for (const l of legs) {
+      if (l.kind !== 'ride') continue;
+      const fromLL = stopLatLng(idx, l.from);
+      const toLL = stopLatLng(idx, l.to);
+      if (!fromLL || !toLL) continue;
+      const co = (l.routeMeta && l.routeMeta.co) || 'BUS';
+      const [x1, y1] = project(fromLL.lat, fromLL.lng);
+      const [x2, y2] = project(toLL.lat, toLL.lng);
+      lines.push({ co, x1: x1.toFixed(2), y1: y1.toFixed(2), x2: x2.toFixed(2), y2: y2.toFixed(2) });
+      if (firstPts == null) firstPts = [x1, y1, co];
+    }
+    if (lines.length === 0) return null;
+
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('class', 'planner-card-canvas');
+    svg.setAttribute('viewBox', `0 0 ${CANVAS_W} ${CANVAS_H}`);
+    svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+    svg.setAttribute('role', 'img');
+    // One polyline per ride leg, coloured by operator. Walking segments
+    // are omitted so the canvas focuses on the actual ride shape.
+    for (const ln of lines) {
+      const polyline = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      polyline.setAttribute('x1', ln.x1); polyline.setAttribute('y1', ln.y1);
+      polyline.setAttribute('x2', ln.x2); polyline.setAttribute('y2', ln.y2);
+      polyline.setAttribute('class', `planner-canvas-line co-${ln.co}`);
+      svg.appendChild(polyline);
+    }
+    // Origin / destination dots use the FIRST/LAST ride leg's operator
+    // colour so they blend with the polyline they belong to.
+    const [ox, oy, oco] = firstPts;
+    const last = lines[lines.length - 1];
+    const [dx, dy, dco] = [last.x2, last.y2, last.co];
+    const oDot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    oDot.setAttribute('cx', ox); oDot.setAttribute('cy', oy); oDot.setAttribute('r', '3');
+    oDot.setAttribute('class', `planner-canvas-dot dot--origin co-${oco}`);
+    svg.appendChild(oDot);
+    const dDot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    dDot.setAttribute('cx', dx); dDot.setAttribute('cy', dy); dDot.setAttribute('r', '3');
+    dDot.setAttribute('class', `planner-canvas-dot dot--dest co-${dco}`);
+    svg.appendChild(dDot);
+    return svg;
+  }
+
   function buildJourneyCard(rank, journey, opts) {
     const card = el('article', { class: 'planner-card' + (rank === 1 ? ' is-best' : '') });
     card.appendChild(el('div', { class: 'planner-card-rank' }, String(rank)));
@@ -1819,6 +1947,13 @@
       }
     }
     main.appendChild(head);
+
+    // v42 — inline-SVG route-shape canvas. Sits between the chips header
+    // and the meta row so the user sees the shape before reading the
+    // numbers. Cheap enough to render per card (~5 polyline points for
+    // most journeys) so no caching is needed.
+    const canvas = buildJourneyCanvas(journey.legs);
+    if (canvas) main.appendChild(canvas);
 
     // Summary meta row (total walk, total ride, transfer count).
     const totalWalkM = journey.legs.filter((l) => l.kind === 'walk').reduce((s, l) => s + (l.meters || 0), 0);
@@ -1885,6 +2020,17 @@
       const big = el('span', { class: 'big' }, `${mins(direct[0].totalMin)} ${t_str('minShort')}`);
       right.appendChild(big);
       right.appendChild(el('span', { class: 'small' }, t_str('plannerBestLabel')));
+      // v42 — surface computed km alongside the best (lowest-totalMin)
+      // journey so the user has a "how far?" answer next to "how long?".
+      // Walks come from the walk-out/move-in meters; rides come from the
+      // ride-leg meters summed across all ride legs.
+      const sumMeters = (direct[0].legs || []).reduce((s, l) => {
+        return s + (Number.isFinite(l.meters) ? l.meters : 0);
+      }, 0);
+      if (sumMeters > 0) {
+        right.appendChild(el('span', { class: 'small planner-summary-km' },
+          fmtDistance(sumMeters)));
+      }
       summary.appendChild(right);
     }
     return summary;

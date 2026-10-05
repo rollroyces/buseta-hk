@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="BusETA" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="buseta-version" content="41" />
+<meta name="buseta-version" content="42" />
 <!-- Main stylesheet. The original style.css is what we ship today — a
      hand-rolled minifier produced a broken style.min.css earlier, so we
      load the unminified bundle directly. v=35 ships the "show every
@@ -259,6 +259,48 @@
          content="40" → "41", app.js?v=40 → app.js?v=41,
          planner.js?v=15 → planner.js?v=16, planner.css?v=15
          → planner.css?v=16.
+
+     v=42 ships "Trip planner — fix 乘車0m + route-shape canvas + km
+     summary" on top of v=41:
+       - planner.js: 乘車0m bug fix. railRoute() now looks up
+         `fromStop` / `toStop` in the rail graph's reverseIdx and
+         computes meters via haversine between consecutive stations,
+         so MTR / LRT ride legs report real km instead of 0. The merge
+         loop that combines consecutive single-station rides on the
+         same line now sums meters across legs (was: first leg's
+         meters only). LRT stops fall back to 0 because
+         `state.index.lrt.stops` doesn't carry lat/lng today (no
+         curated LRT stops table shipped with the app) — TODO marked
+         for v42.x if anyone asks.
+       - planner.js: inline-SVG route-shape canvas on every journey
+         card. New buildJourneyCanvas() collects from/to lat/lng
+         across ride legs via the existing stopLatLng(), bounds them
+         into a 120×80 SVG with 8 px padding, draws one `<line>` per
+         ride leg coloured by operator (reuses the existing
+         .planner-chip.co-X palette) plus origin (green) and
+         destination (red) dots. Walking segments omitted by design
+         so the canvas focuses on the ride shape.
+       - planner.js: summary card now surfaces `X.X km` beside the
+         best-journey's minutes. Walks + rides summed via the existing
+         journey.legs meters (no new calculation — the data was
+         already there, just never displayed).
+       - planner.js: extended console.log line now reports
+         `cov=N empty=0|1` — cov = number of strategies (bus / rail /
+         mixed) that produced ≥1 journey; empty = 1 iff the user got
+         the no-results state. Lets us track per-query strategy
+         coverage across a session without adding a UI surface.
+       - planner.css: new .planner-card-canvas + .planner-canvas-line
+         + .planner-canvas-dot (origin / dest) classes. ~40 LOC delta,
+         all colour values re-used from the existing chip palette so
+         no theme regressions expected.
+       - index.html cache-busters: meta name="buseta-version"
+         content="41" → "42", app.js?v=41 → app.js?v=42,
+         planner.js?v=16 → planner.js?v=17, planner.css?v=16
+         → planner.css?v=17.
+       - sw.js: CACHE bumped buseta-v29 → buseta-v30 (forces clean
+         install). activate-handler keep-list updated to also keep
+         buseta-v30; drop buseta-vN for N < 30; the poisoned
+         buseta-eta-v1 cache continues to be explicitly dropped.
 -->
 <link rel="stylesheet" href="style.css?v=36" />
 <title>BusETA HK · 巴士到站</title>
@@ -644,7 +686,7 @@ window.__buseta = {
     if (this._plannerScript) return this._plannerScript;
     this._plannerScript = new Promise((resolve, reject) => {
       const s = document.createElement('script');
-      s.src = 'planner.js?v=16';
+      s.src = 'planner.js?v=17';
       s.async = false; // preserve execution order
       s.onload = () => resolve(window.Planner);
       s.onerror = () => reject(new Error('planner.js failed to load'));
@@ -658,7 +700,7 @@ window.__buseta = {
     this._plannerCss = new Promise((resolve, reject) => {
       const l = document.createElement('link');
       l.rel = 'stylesheet';
-      l.href = 'planner.css?v=16';
+      l.href = 'planner.css?v=17';
       l.setAttribute('data-planner-css', '1');
       l.media = 'print';
       l.onload = () => { l.media = 'all'; resolve(); };
@@ -669,7 +711,7 @@ window.__buseta = {
   },
 };
 </script>
-<script defer src="app.js?v=41"></script>
+<script defer src="app.js?v=42"></script>
 <script>
   // SW path must be RELATIVE — GitHub Pages serves this site under
   // /buseta-hk/ but a leading `/sw.js` would resolve to the site root

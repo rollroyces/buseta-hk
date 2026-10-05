@@ -613,3 +613,51 @@
 .planner-strategy-tag.is-bus   { background: linear-gradient(135deg, #F59E0B, #EA580C); }
 .planner-strategy-tag.is-rail  { background: linear-gradient(135deg, #DC2626, #991B1B); }
 .planner-strategy-tag.is-mixed { background: linear-gradient(135deg, #6366F1, #4338CA); }
+
+/* ---- v42 route-shape canvas ---- */
+.planner-card-canvas {
+  display: block;
+  width: 100%;
+  height: 80px;
+  margin-top: 10px;
+  background: var(--bg-soft);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  /* Canvas content might be larger than the box on cross-harbour routes;
+     preserveAspectRatio handles that, but cap the rendered height too. */
+  overflow: hidden;
+}
+.planner-card-canvas .planner-canvas-line {
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+}
+.planner-card-canvas .planner-canvas-line.co-KMB  { stroke: #F59E0B; }
+.planner-card-canvas .planner-canvas-line.co-LWB  { stroke: #14B8A6; }
+.planner-card-canvas .planner-canvas-line.co-CTB  { stroke: #0EA5E9; }
+.planner-card-canvas .planner-canvas-line.co-NWFB { stroke: #6366F1; }
+.planner-card-canvas .planner-canvas-line.co-GMB  { stroke: #84CC16; }
+.planner-card-canvas .planner-canvas-line.co-MTR  { stroke: #DC2626; }
+.planner-card-canvas .planner-canvas-line.co-LRT  { stroke: #F97316; }
+.planner-card-canvas .planner-canvas-line.co-BUS  { stroke: var(--muted); }
+.planner-card-canvas .planner-canvas-dot {
+  stroke: #fff;
+  stroke-width: 1.2;
+}
+.planner-card-canvas .planner-canvas-dot.dot--origin { fill: #10B981; }
+.planner-card-canvas .planner-canvas-dot.dot--dest   { fill: #EF4444; }
+.planner-card-canvas .planner-canvas-dot.co-KMB  { fill: #F59E0B; }
+.planner-card-canvas .planner-canvas-dot.co-LWB  { fill: #14B8A6; }
+.planner-card-canvas .planner-canvas-dot.co-CTB  { fill: #0EA5E9; }
+.planner-card-canvas .planner-canvas-dot.co-NWFB { fill: #6366F1; }
+.planner-card-canvas .planner-canvas-dot.co-GMB  { fill: #84CC16; }
+.planner-card-canvas .planner-canvas-dot.co-MTR  { fill: #DC2626; }
+.planner-card-canvas .planner-canvas-dot.co-LRT  { fill: #F97316; }
+
+/* ---- v42 km summary line ---- */
+.planner-summary-km {
+  margin-top: 2px;
+  color: var(--accent) !important;
+  font-weight: 700;
+}

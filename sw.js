@@ -4,12 +4,12 @@
  * upstream API calls. Static JSON in /assets/ is cached lazily on first
  * fetch via the same code path.
  *
- * CACHE bumped to v29: forces a clean install after v41's planner
- * route-strategies wire-up. App.js still fetches the Transport
- * Department's public-data XML feed; the dedicated SW cross-origin
- * branch below caches it under TD_DISRUPTION_CACHE with a 24h TTL +
- * If-Modified-Since so repeat visits stay O(1) and don't spam the
- * upstream on every home-view mount.
+ * CACHE bumped to v30: forces a clean install after v42's planner
+ * 乘車0m fix + route-shape canvas + km summary. App.js still fetches
+ * the Transport Department's public-data XML feed; the dedicated SW
+ * cross-origin branch below caches it under TD_DISRUPTION_CACHE with
+ * a 24h TTL + If-Modified-Since so repeat visits stay O(1) and don't
+ * spam the upstream on every home-view mount.
  *
  * v27 was the v39 cache-buster bump (disruption banner hide via
  * short-circuit). The dedicated /assets/disruptions.json SWR branch
@@ -28,7 +28,7 @@
  * v21 was the same forced-update after v32's QW-1 → QW-10 batch.
  * v20 was the same forced-update after the v30→v31 layout revert.
  */
-const CACHE = 'buseta-v29';
+const CACHE = 'buseta-v30';
 const SHELL = [
   '/',
   '/index.html',
@@ -99,7 +99,7 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys()
       .then((keys) => Promise.all(
-        // Drop legacy `buseta-vN` for N < 29; keep v29 + ASSET_CACHE
+        // Drop legacy `buseta-vN` for N < 30; keep v30 + ASSET_CACHE
         // + ETA_CACHE + TD_DISRUPTION_CACHE so existing offline data
         // survives. Also explicitly drop the poisoned `buseta-eta-v1`
         // cache (bumped to v2) so users on the v13-era poisoned SWR
@@ -107,7 +107,7 @@ self.addEventListener('activate', (event) => {
         keys.filter((k) => {
           if (k === 'buseta-eta-v1') return true;  // poisoned, drop
           const m = /^buseta-v(\d+)$/.exec(k);
-          if (m) return parseInt(m[1], 10) < 29;
+          if (m) return parseInt(m[1], 10) < 30;
           return k !== CACHE && k !== ASSET_CACHE && k !== ETA_CACHE && k !== TD_DISRUPTION_CACHE;
         }).map((k) => caches.delete(k))
       ))
