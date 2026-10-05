@@ -11,39 +11,42 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="BusETA" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="buseta-version" content="34" />
+<meta name="buseta-version" content="35" />
 <!-- Main stylesheet. The original style.css is what we ship today — a
      hand-rolled minifier produced a broken style.min.css earlier, so we
-     load the unminified bundle directly. v=34 ships the unresolvable-
-     stop UX on top of v=33's settings hardening:
-       - all 3 locales get four new strings: stopUnknownName (heading
-         fallback "未能識別的車站" / "Unknown stop" / "未能识别的车站"),
-         stopUnknownSub, stopUnknownIdLabel, stopUnknownCtaBack.
-       - renderBusStopView + renderGmbStopView + renderLrtStopView now
-         detect when the requested ID can't be resolved by the local
-         index, the operator-ID reverse map, OR the upstream /stop/{id}
-         endpoint, and render t_str('stopUnknownName') instead of the
-         raw 16-hex ID. The raw ID is surfaced as a small muted
-         monospace sub-line ("ID: 0C81107C…") so the user can still
-         copy / share / report it.
-       - new pruneRecentStops() helper drops every state.recent row whose
-         `stop` field fails any local lookup — poisons like
-         0C81107C4ABFCD7C stop re-suggesting themselves on the home
-         page after this v34 fix lands.
-       - new appendStopUnknownCTA() renders a "Back to home" pill in
-         the body so the user has somewhere to go from a dead-end
-         stop view. Wired into the bus, GMB, and LRT stop paths so
-         no operator ever shows a raw ID.
-       - refreshBusStopView now re-appends the back-to-home CTA on
-         every 60-second refresh via state._currentStopUnknown.
-       - new CSS block: .stop-name-id + .stop-unknown-cta + .stop-
-         unknown-back, appended to style.css as a single v34 section.
-       - SW bumped from buseta-v22 to buseta-v23 so the SHELL pre-cache
-         doesn't keep shipping the v33 app.js to first-load visitors.
-       - cache-buster bumped ?v=33 → ?v=34 on app.js + style.css, meta
-         name="buseta-version" content="33" → "34".
+     load the unminified bundle directly. v=35 ships the "show every
+     route serving the stop" fix on top of v=34's unresolvable-stop UX:
+       - refreshBusStopView now iterates over every entry returned by the
+         upstream /stop-eta (KMB) / /batch/stop-eta/CTB/{stop} feeds,
+         including rows where `eta === null`. Groups that ended up with
+         zero non-null ETAs render a new dimmed `.route-card--no-eta`
+         placeholder card so off-peak users see the full route index
+         instead of a single lonely card.
+       - new buildNoEtaCard(co, route, destTc, destEn, onSchedule)
+         helper renders the dimmed card (operator pill + route number +
+         TC/EN destination + "暫無到站時間" label + "睇時間表" CTA that
+         switches to the Schedule tab). Wired into refreshBusStopView.
+       - CTB parity: refreshBusStopView now also fetches
+         fetchCitybusBatchStopEta for 6-digit numeric stop IDs (was
+         previously a no-op that always showed the empty state). Both
+         operators flow through the same groupBy path; CTB's co is
+         hardcoded since classifyKmbOp is KMB-only.
+       - 3 new i18n keys × 3 locales: stopNoUpcomingEta
+         ("暫無到站時間" / "No upcoming buses" / "暂无到站时间"),
+         stopNoUpcomingEtaHint, stopNoUpcomingEtaCta.
+       - sort: live-ETA cards first (by primary arrival time), then
+         no-ETA placeholders alphabetically by route number. locale-
+         Compare with numeric: true so "1, 2, 10" reads in human order.
+       - new CSS block: .route-card + .route-card--no-eta + .stop-no-
+         upcoming-eta + .stop-no-upcoming-eta-hint + .stop-no-upcoming-
+         eta-cta appended to style.css as a single v35 section.
+       - SW NOT bumped: SHELL pre-cache still ships the same five
+         files; the v34 → v35 cycle only touches the user-visible live
+         panel so a forced-update is unnecessary. index.html cache-
+         buster ?v=34 → ?v=35 on app.js + style.css, meta
+         name="buseta-version" content="34" → "35".
 -->
-<link rel="stylesheet" href="style.css?v=34" />
+<link rel="stylesheet" href="style.css?v=35" />
 <title>BusETA HK · 巴士到站</title>
 <style id="critical-css">
 /* ============================================================
@@ -452,7 +455,7 @@ window.__buseta = {
   },
 };
 </script>
-<script defer src="app.js?v=34"></script>
+<script defer src="app.js?v=35"></script>
 <script>
   // SW path must be RELATIVE — GitHub Pages serves this site under
   // /buseta-hk/ but a leading `/sw.js` would resolve to the site root

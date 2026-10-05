@@ -3722,3 +3722,169 @@ a.row:focus-visible,
 }
 .stop-unknown-back:active { transform: translateY(1px); }
 :root[data-theme="light"] .stop-unknown-back { color: #fff; }
+
+/* ============================================================
+   v35 · Stop view: show all routes + no-ETA placeholder card
+   ============================================================
+   refreshBusStopView now iterates over every entry returned by the
+   upstream /stop-eta (KMB) or /batch/stop-eta/CTB/{stop} endpoint,
+   including rows where `eta === null` — i.e. routes that serve this
+   stop yet have no bus in the upstream horizon. Groups with at least
+   one live ETA keep the existing .arrival-card layout; groups with
+   zero live ETAs render a dimmed .route-card--no-eta placeholder with
+   a "暫無到站時間" label + a "睇時間表" link that switches the user
+   to the Schedule tab. Both lists live inside the same .arrival-list
+   container so the sort (live first, then alphabetical no-ETA) reads
+   top-down like a route index.
+
+   The placeholder reuses the same route/op/destination typography as
+   a live card so the user can scan each row; only the right column
+   dims and the "View schedule" CTA replaces the ETA stack. The two
+   selectors that mcp_browser uses for verification — .stop-no-upcoming-
+   eta and .stop-no-upcoming-eta-cta — correspond to the muted label and
+   the schedule pill respectively.
+*/
+.route-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  color: inherit;
+  transition: background 0.12s ease;
+}
+.route-card-left {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.route-card-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 0 6px;
+  flex-wrap: wrap;
+}
+.route-card-op {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+.route-card-num {
+  font-size: 24px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+}
+.route-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.route-card-dest {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.route-card-dest-en {
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.route-card-right {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+  min-width: 96px;
+  gap: 2px;
+  font-variant-numeric: tabular-nums;
+}
+.route-card-mins {
+  font-weight: 900;
+  color: var(--ink);
+  font-size: 17px;
+  white-space: nowrap;
+}
+.route-card--no-eta {
+  opacity: 0.7;
+  background: color-mix(in srgb, var(--card) 80%, var(--bg));
+  border-style: dashed;
+}
+.route-card--no-eta:hover { opacity: 0.92; }
+.route-card--no-eta .route-card-num {
+  color: var(--muted);
+}
+.route-card--no-eta .route-card-mins {
+  color: var(--muted-2);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.01em;
+}
+.route-card--no-eta .route-card-dest {
+  color: var(--muted);
+  font-weight: 500;
+}
+.route-card--no-eta .route-card-dest-en {
+  color: var(--muted-2);
+}
+.stop-no-upcoming-eta-hint {
+  font-size: 11px;
+  color: var(--muted-2);
+  max-width: 24ch;
+  line-height: 1.35;
+  margin-top: 1px;
+}
+.route-card-no-eta-link,
+.stop-no-upcoming-eta-cta {
+  margin-top: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 4px 12px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--accent-2);
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.route-card-no-eta-link:hover,
+.route-card-no-eta-link:focus-visible,
+.stop-no-upcoming-eta-cta:hover,
+.stop-no-upcoming-eta-cta:focus-visible {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  outline: none;
+}
+.route-card-no-eta-link:active,
+.stop-no-upcoming-eta-cta:active { transform: translateY(1px); }
+:root[data-theme="light"] .route-card-no-eta-link,
+:root[data-theme="light"] .stop-no-upcoming-eta-cta { color: var(--accent-2); }

@@ -258,6 +258,11 @@
       stopUnknownSub: '呢個編號嘅車站搵唔到，請喺主頁搜尋你嘅目的地。',
       stopUnknownIdLabel: 'ID',
       stopUnknownCtaBack: '返回主頁',
+      // v35: dimmed placeholder card on the stop view when a route serves
+      // the stop yet has no upcoming arrival in the upstream horizon.
+      stopNoUpcomingEta: '暫無到站時間',
+      stopNoUpcomingEtaHint: '該路線暫未有實時到站資料。',
+      stopNoUpcomingEtaCta: '睇時間表',
     },
     'en': {
       brandSub: 'Hong Kong Bus',
@@ -497,6 +502,11 @@
       stopUnknownSub: 'We could not find a stop with this code. Try searching from the home page.',
       stopUnknownIdLabel: 'ID',
       stopUnknownCtaBack: 'Back to home',
+      // v35: dimmed placeholder card on the stop view when a route serves
+      // the stop yet has no upcoming arrival in the upstream horizon.
+      stopNoUpcomingEta: 'No upcoming buses',
+      stopNoUpcomingEtaHint: 'No live arrivals for this route right now.',
+      stopNoUpcomingEtaCta: 'View schedule',
     },
     'zh-Hans': {
       brandSub: '香港巴士',
@@ -725,6 +735,11 @@
       stopUnknownSub: '呢个编号嘅车站揫唔到，请喺主页搜寻你嘅目的地。',
       stopUnknownIdLabel: 'ID',
       stopUnknownCtaBack: '返回主页',
+      // v35: dimmed placeholder card on the stop view when a route serves
+      // the stop yet has no upcoming arrival in the upstream horizon.
+      stopNoUpcomingEta: '暂无到站时间',
+      stopNoUpcomingEtaHint: '该路线暂无实时到站资料。',
+      stopNoUpcomingEtaCta: '睇时间表',
     },
   };
 
@@ -5904,6 +5919,13 @@
   // `mode` lets callers force a re-render of the live panel even when the
   // user is currently looking at the Schedule tab (used when switching back
   // to live so the board always shows fresh data).
+  //
+  // v35: now iterates over ALL entries returned by the upstream /stop-eta
+  // (KMB) / /batch/stop-eta/CTB/{stop} (CTB) feeds — including rows where
+  // `eta === null` — and renders a dimmed `.route-card--no-eta` placeholder
+  // for every (co, route, dir, service, dest) group that currently has no
+  // upcoming arrival. That fixes the long-standing UX bug where off-peak
+  // stops (where most routes are not running) only showed a single route.
   function refreshBusStopView(stateRef, mode) {
     if (!stateRef || !stateRef.panel) return;
     if (mode === 'schedule') return; // Schedule owns its own render path.
@@ -5915,7 +5937,16 @@
     body.appendChild(buildSkeletonList(4));
 
     const isCtb = typeof stopId === 'string' && /^[0-9]{6}$/.test(stopId);
-    const etaPromise = isCtb ? null : fetchKmbStopEta(stopId).catch(() => null);
+    // v35: enable the live fetch for CTB too — previously the CTB live
+    // panel always fell through to the empty state because etaPromise was
+    // hardcoded to null. Both operators now flow through the same groupBy
+    // path; the batch endpoint shape (route, dir, service_type, eta,
+    // dest_tc, dest_en, seq) is close enough to KMB's /stop-eta response
+    // that the same loop handles both. CTB's operator id is hardcoded
+    // since classifyKmbOp is KMB-only.
+    const etaPromise = isCtb
+      ? fetchCitybusBatchStopEta(stopId).catch(() => null)
+      : fetchKmbStopEta(stopId).catch(() => null);
 
     Promise.resolve(etaPromise).then((etaResp) => {
       const data = etaResp && Array.isArray(etaResp.data) ? etaResp.data : [];
@@ -5931,7 +5962,12 @@
       body.innerHTML = '';
 
       if (data.length === 0) {
-        // QW-5: rich empty state with CTAs.
+        // QW-5: rich empty state with CTAs. Triggered when the upstream
+        // returned *zero* entries (literal "no routes serve this stop").
+        // The new no-ETA placeholder path below handles the different
+        // case where the upstream returned entries but every one of them
+        // had `eta === null` — i.e. routes exist but no bus is running
+        // right now — so this branch keeps its original semantics.
         const emptyState = buildStopEmptyState({
           onSchedule: switchTo ? () => switchTo('schedule') : null,
           onRetry: () => {
@@ -5955,26 +5991,30 @@
       // Group arrivals by (co, route, dir, service, dest). Keep up to 3 ETAs
       // per group sorted by time. Just like justarrived.grok.me: one card
       // per route, primary arrival big + 2 more as secondary text.
+      //
+      // v35: iterate over every entry — not just the ones with a non-null
+      // ETA. Groups that ended up with zero non-null ETAs are rendered as
+      // a dimmed `.route-card--no-eta` placeholder further down.
       const routeMap = new Map();
-      data
-        .filter((e) => !!e.eta)
-        .forEach((e) => {
-          const co = classifyKmbOp(e.route, '', e.dest_tc || '');
-          const key = `${co}|${e.route}|${e.dir}|${e.service_type}|${e.dest_tc || ''}`;
-          if (!routeMap.has(key)) {
-            routeMap.set(key, {
-              co, route: e.route, dir: e.dir, service: e.service_type,
-              destTc: e.dest_tc, destEn: e.dest_en,
-              seq: e.seq,
-              arrivals: [],
-            });
-          }
+      for (const e of data) {
+        const co = isCtb ? 'CTB' : classifyKmbOp(e.route, '', e.dest_tc || '');
+        const key = `${co}|${e.route}|${e.dir}|${e.service_type}|${e.dest_tc || ''}`;
+        if (!routeMap.has(key)) {
+          routeMap.set(key, {
+            co, route: e.route, dir: e.dir, service: e.service_type,
+            destTc: e.dest_tc, destEn: e.dest_en,
+            seq: e.seq,
+            arrivals: [],
+          });
+        }
+        if (e.eta) {
           routeMap.get(key).arrivals.push({
             eta: e.eta,
             minutes: minutesUntil(e.eta),
             rmk: e.rmk_en,
           });
-        });
+        }
+      }
 
       routeMap.forEach((r) => {
         r.arrivals.sort((a, b) => (a.minutes ?? 9999) - (b.minutes ?? 9999));
@@ -5984,16 +6024,42 @@
         }
       });
 
+      // v35: sort so live-ETA groups come first (by primary arrival time),
+      // then no-ETA placeholder groups sorted alphabetically by route
+      // number. `localeCompare(..., { numeric: true })` keeps "1, 2, 10"
+      // in human order rather than lex order.
       const routes = Array.from(routeMap.values()).sort((a, b) => {
-        const aMin = a.arrivals[0]?.minutes ?? 9999;
-        const bMin = b.arrivals[0]?.minutes ?? 9999;
-        return aMin - bMin;
+        const aHas = a.arrivals.length > 0;
+        const bHas = b.arrivals.length > 0;
+        if (aHas && !bHas) return -1;
+        if (!aHas && bHas) return 1;
+        if (aHas && bHas) {
+          const aMin = a.arrivals[0]?.minutes ?? 9999;
+          const bMin = b.arrivals[0]?.minutes ?? 9999;
+          return aMin - bMin;
+        }
+        return String(a.route).localeCompare(String(b.route), undefined, { numeric: true });
       });
 
       body.appendChild(el('h2', { class: 'section-title' }, t_str('nextArrivals')));
       const list = el('div', { class: 'arrival-list' });
 
       routes.forEach((r) => {
+        if (r.arrivals.length === 0) {
+          // v35: route serves this stop but has no upcoming bus in the
+          // upstream horizon. Render the dimmed placeholder card so the
+          // user can still see the route; the "View schedule" CTA flips
+          // them to the Schedule tab where the timetable preview lives.
+          list.appendChild(buildNoEtaCard(
+            r.co,
+            r.route,
+            r.destTc,
+            r.destEn,
+            switchTo ? () => switchTo('schedule') : null,
+          ));
+          return;
+        }
+
         const anchor = r.seq != null ? `/${encodeURIComponent(String(r.seq))}` : '';
         const href = `#/route/${encodeURIComponent(r.co)}/${encodeURIComponent(r.route)}/${encodeURIComponent(r.dir)}/${encodeURIComponent(r.service)}${anchor}`;
         const card = el('a', { class: 'arrival-card', href });
@@ -6039,6 +6105,71 @@
       body.appendChild(list);
       if (mapEl) body.appendChild(mapEl);
     });
+  }
+
+  // v35: render a dimmed "no upcoming bus" placeholder card for routes
+  // that serve the stop but currently have no ETA in the upstream horizon.
+  // The card reuses the same operator pill + route number + destination
+  // layout as the live arrival card so the user can read each row at a
+  // glance; only the right column dims and the "View schedule" CTA replaces
+  // the ETA stack.
+  //
+  // Signature:
+  //   buildNoEtaCard(co, route, destTc, destEn, onSchedule)
+  //     co         - operator id ("KMB", "CTB", …) used to pick the pill
+  //                  label via t_str(opCoKey(co)).
+  //     route      - route number string ("1A", "KMB 970", …).
+  //     destTc     - Traditional-Chinese destination (may be '').
+  //     destEn     - English destination (may be '').
+  //     onSchedule - optional callback invoked when the "View schedule"
+  //                  pill is tapped. Pass `() => switchTo('schedule')` so
+  // the user lands on the Schedule tab.
+  function buildNoEtaCard(co, route, destTc, destEn, onSchedule) {
+    const card = el('div', { class: 'route-card route-card--no-eta' });
+
+    // ---- left: operator pill + route number + destination (TC + EN) ----
+    const left = el('div', { class: 'route-card-left' });
+    const head = el('div', { class: 'route-card-head' });
+    head.appendChild(el('span', { class: 'route-card-op' }, t_str(opCoKey(co))));
+    head.appendChild(el('span', { class: 'route-card-num' }, route));
+    left.appendChild(head);
+
+    const meta = el('div', { class: 'route-card-meta' });
+    const destStr = pickFirst(destTc, destEn);
+    if (destStr) meta.appendChild(el('span', { class: 'route-card-dest' }, `往 ${destStr}`));
+    if (destEn && destEn !== destStr) {
+      meta.appendChild(el('span', { class: 'route-card-dest-en' }, destEn));
+    }
+    left.appendChild(meta);
+    card.appendChild(left);
+
+    // ---- right: muted "暫無到站時間" + hint + "View schedule" link ----
+    const right = el('div', { class: 'route-card-right' });
+    const label = el('div', {
+      class: 'route-card-mins stop-no-upcoming-eta',
+    }, t_str('stopNoUpcomingEta'));
+    const hint = el('div', {
+      class: 'stop-no-upcoming-eta-hint',
+    }, t_str('stopNoUpcomingEtaHint'));
+    right.appendChild(label);
+    right.appendChild(hint);
+    if (typeof onSchedule === 'function') {
+      const cta = el('button', {
+        type: 'button',
+        class: 'route-card-no-eta-link stop-no-upcoming-eta-cta',
+        'aria-label': t_str('stopNoUpcomingEtaCta'),
+      });
+      cta.appendChild(document.createTextNode(t_str('stopNoUpcomingEtaCta')));
+      cta.appendChild(document.createTextNode(' ›'));
+      cta.addEventListener('click', (ev) => {
+        ev.preventDefault();
+        try { onSchedule(); } catch (_) { /* swallow: schedule panel may be missing */ }
+      });
+      right.appendChild(cta);
+    }
+    card.appendChild(right);
+
+    return card;
   }
 
   // Format an ETA ISO timestamp as "HH:MM" (24h).
