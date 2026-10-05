@@ -2273,8 +2273,18 @@
         a.appendChild(el('div', { class: 'from-to' },
           el('div', { class: 'pair' }, fromName, el('span', { class: 'sep' }, '→'), toName)));
         a.addEventListener('click', () => {
+          // Mirror the selectMatch() pattern: keep `field.dataset.stopId`
+          // in lock-step with `_selected`. Without this, runSearch()
+          // prefers the stale `dataset.stopId` left over from the
+          // initial-mount prefill and searches for the wrong stops,
+          // producing a phantom "暫時搵唔到合適嘅路線" every time the
+          // user clicks a recent row.
           originField.value = fromName;
+          originField.dataset.stopId = String(r.from);
+          originField.setAttribute('data-stop-id', String(r.from));
           destField.value = toName;
+          destField.dataset.stopId = String(r.to);
+          destField.setAttribute('data-stop-id', String(r.to));
           _selected.origin = r.from;
           _selected.dest = r.to;
           runSearch();

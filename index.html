@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="BusETA" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="buseta-version" content="45" />
+<meta name="buseta-version" content="46" />
 <!-- Main stylesheet. The original style.css is what we ship today — a
      hand-rolled minifier produced a broken style.min.css earlier, so we
      load the unminified bundle directly. v=35 ships the "show every
@@ -382,6 +382,33 @@
          touched on this ship (the LRT_STOPS line + overlay branch
          are best-effort and degrade to 0m if the file is missing,
          so no minification needed).
+
+     v=46 ships "fix planner recent-trip click leaves stale
+     data-stop-id" — the user report "always 暫時搵唔到合適嘅路線"
+     was caused by the planner's recent-trip <a> click handler
+     setting _selected.origin/_selected.dest without also writing
+     field.dataset.stopId. runSearch() prefers the latter, so the
+     stale value left over from the initial-mount prefill won every
+     time and the search ran for the wrong stops. v46 brings the
+     recent-row click in sync with the selectMatch() pattern
+     (writes BOTH _selected and data-stop-id atomically) so each
+     recent click actually searches for the stops the user clicked.
+       - planner.js: refreshRecent's click handler now mirrors
+         selectMatch() — sets originField.dataset.stopId,
+         originField.setAttribute('data-stop-id'), and the same on
+         dest, all before _selected.* are touched. Mirror of the
+         v44 swap-button pattern (swapField) which already handled
+         this correctly.
+       - index.html cache-busters: meta name="buseta-version"
+         content="45" → "46", planner.js?v=21 → planner.js?v=22,
+         planner.css?v=21 → planner.css?v=22. app.js not touched
+         on this ship (the bug was planner-only).
+       - sw.js: CACHE bumped buseta-v34 → buseta-v35 (forces clean
+         install). activate-handler drops buseta-vN for N < 35;
+         keeps new bucket + ASSET_CACHE + ETA_CACHE +
+         TD_DISRUPTION_CACHE.
+       - planner.min.js re-minified (115291 → 66909 bytes, 58.0%);
+         planner.min.css unchanged.
 -->
 <link rel="stylesheet" href="style.css?v=36" />
 <title>BusETA HK · 巴士到站</title>
@@ -767,7 +794,7 @@ window.__buseta = {
     if (this._plannerScript) return this._plannerScript;
     this._plannerScript = new Promise((resolve, reject) => {
       const s = document.createElement('script');
-      s.src = 'planner.js?v=21';
+      s.src = 'planner.js?v=22';
       s.async = false; // preserve execution order
       s.onload = () => resolve(window.Planner);
       s.onerror = () => reject(new Error('planner.js failed to load'));
@@ -781,7 +808,7 @@ window.__buseta = {
     this._plannerCss = new Promise((resolve, reject) => {
       const l = document.createElement('link');
       l.rel = 'stylesheet';
-      l.href = 'planner.css?v=21';
+      l.href = 'planner.css?v=22';
       l.setAttribute('data-planner-css', '1');
       l.media = 'print';
       l.onload = () => { l.media = 'all'; resolve(); };
