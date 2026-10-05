@@ -1107,6 +1107,13 @@
           stop: code,
           nameTc: s.nameTc || '',
           nameEn: s.nameEn || '',
+          // v45 — lat/lng pulled from state.index.lrt.stops, which is
+          // populated by buildIndex() merging assets/lrt-stops.json
+          // (a curated lat/lng table; lrt-routes.json has only route +
+          // stop names with no coordinates). railRoute()'s haversine
+          // helper uses these to compute km on LRT ride legs.
+          lat: Number.isFinite(s.lat) ? s.lat : null,
+          lng: Number.isFinite(s.lng) ? s.lng : null,
           routes: Array.isArray(s._routes) ? s._routes.slice() : [],
         });
       });
@@ -1220,11 +1227,11 @@
     for (let i = 0; i < steps.length; i++) {
       const s = steps[i];
       if (s.kind === 'ride') {
-        // v42 — compute real km via haversine between consecutive stations
-        // so the planner card's "乘車" meter is no longer 0m. Look up both
-        // ends in `reverseIdx` (populated by buildMtrGraph / buildLrtGraph
-        // with lat/lng for MTR stations; LRT stops have no coords yet, so
-        // those legs fall back to 0 — see TODO below).
+        // v45 — compute real km via haversine between consecutive stations
+        // so the planner card's "乘車" meter is no longer 0m. Both MTR
+        // (mtr-stops.json) and LRT (assets/lrt-stops.json curated table)
+        // now feed lat/lng into buildMtrGraph / buildLrtGraph, so this
+        // branch covers every ride regardless of operator.
         let rideMeters = 0;
         const fromMeta = reverseIdx.get(s.fromStop);
         const toMeta = reverseIdx.get(s.toStop);
@@ -1233,10 +1240,6 @@
             Number.isFinite(toMeta.lat) && Number.isFinite(toMeta.lng)) {
           rideMeters = haversine(fromMeta.lat, fromMeta.lng, toMeta.lat, toMeta.lng) * 1000;
         }
-        // TODO(v42.x): LRT stops in `state.index.lrt.stops` don't carry
-        // lat/lng today (lrt-routes.json is line + stop names only). Until
-        // we curate an LRT stops lat/lng table, LRT-only journeys still
-        // show 0m on the ride badge.
         legs.push({
           kind: 'ride',
           routeKey: co + '|' + s.seg,
@@ -1916,6 +1919,10 @@
     // segment is a visual cue "you walked here from outside the map".
     const firstLeg = legs[0];
     const lastLeg = legs[legs.length - 1];
+    // Origin / destination dots and walk-out line both read from the
+    // first/last ride dot's coords + operator. Declared once here so
+    // the walk-out `if` block can reference them and the origin-dot
+    // code below doesn't need to redeclare.
     const [ox, oy, oco] = firstPts;
     const lastLn = lines[lines.length - 1];
     if (firstLeg && firstLeg.kind === 'walk' && firstLeg.from === 'origin') {
@@ -1937,8 +1944,9 @@
       svg.appendChild(w);
     }
     // Origin / destination dots use the FIRST/LAST ride leg's operator
-    // colour so they blend with the polyline they belong to.
-    const [ox, oy, oco] = firstPts;
+    // colour so they blend with the polyline they belong to. (ox/oy/oco
+    // were declared above for the walk-out if-block; d/dy/dco are local
+    // to this section since the destination dot has its own slot.)
     const last = lines[lines.length - 1];
     const [dx, dy, dco] = [last.x2, last.y2, last.co];
     const oDot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');

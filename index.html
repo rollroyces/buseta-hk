@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="BusETA" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="buseta-version" content="44" />
+<meta name="buseta-version" content="45" />
 <!-- Main stylesheet. The original style.css is what we ship today — a
      hand-rolled minifier produced a broken style.min.css earlier, so we
      load the unminified bundle directly. v=35 ships the "show every
@@ -347,6 +347,41 @@
          install). activate-handler drops buseta-vN for N < 32;
          keeps new bucket + ASSET_CACHE + ETA_CACHE +
          TD_DISRUPTION_CACHE.
+
+     v=45 ships "LRT ride legs get real km" on top of v44, closing
+     the last 0m gap from the original 行程規劃 enhancement brief:
+       - New assets/lrt-stops.json?v=1 — a curated lat/lng table for
+         all 68 LRT stops. Sourced from OSM (Nominatim) cross-checked
+         against Wikipedia coords; each entry is a flat {lat, lng}
+         object keyed by the existing 3-letter LRT stop code (SAS,
+         SIL, TML, ...).
+       - app.js: API.LRT_STOPS added to the URL map. buildIndex()
+         now Promise.alls `fetchJSON(API.LRT_STOPS)` alongside the
+         other stops feeds and overlays lat/lng onto each entry in
+         lrt.stops after the existing route/stop build. Best-effort:
+         missing file or malformed entries degrade to null, leaving
+         the legacy 0m fallback path intact.
+       - app.js: INDEX_SCHEMA_VERSION bumped 4 → 5 so any cached
+         v42/v44-indexed state.index from prior visits gets discarded
+         and rebuilt with the new LRT coords.
+       - planner.js buildLrtGraph() reads `lat`/`lng` from
+         idx.lrt.stops (mirror of the buildMtrGraph pattern) so the
+         graph's `stops` entries now expose coordinates to
+         railRoute(). railRoute()'s existing haversine call (v42)
+         picks them up automatically — the TODO comment about LRT
+         legs falling back to 0m is removed.
+       - index.html cache-busters: meta name="buseta-version"
+         content="44" → "45", app.js?v=44 → app.js?v=45,
+         planner.js?v=19 → planner.js?v=20, planner.css?v=19
+         → planner.css?v=20.
+       - sw.js: CACHE bumped buseta-v32 → buseta-v33 (forces clean
+         install). activate-handler drops buseta-vN for N < 33;
+         keeps new bucket + ASSET_CACHE + ETA_CACHE +
+         TD_DISRUPTION_CACHE.
+       - planner.min.js + planner.min.css re-minified; app.js not
+         touched on this ship (the LRT_STOPS line + overlay branch
+         are best-effort and degrade to 0m if the file is missing,
+         so no minification needed).
 -->
 <link rel="stylesheet" href="style.css?v=36" />
 <title>BusETA HK · 巴士到站</title>
@@ -732,7 +767,7 @@ window.__buseta = {
     if (this._plannerScript) return this._plannerScript;
     this._plannerScript = new Promise((resolve, reject) => {
       const s = document.createElement('script');
-      s.src = 'planner.js?v=19';
+      s.src = 'planner.js?v=20';
       s.async = false; // preserve execution order
       s.onload = () => resolve(window.Planner);
       s.onerror = () => reject(new Error('planner.js failed to load'));
@@ -746,7 +781,7 @@ window.__buseta = {
     this._plannerCss = new Promise((resolve, reject) => {
       const l = document.createElement('link');
       l.rel = 'stylesheet';
-      l.href = 'planner.css?v=19';
+      l.href = 'planner.css?v=20';
       l.setAttribute('data-planner-css', '1');
       l.media = 'print';
       l.onload = () => { l.media = 'all'; resolve(); };

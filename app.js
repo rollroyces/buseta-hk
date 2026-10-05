@@ -756,6 +756,11 @@
     MTR_STOPS: 'assets/mtr-stops.json',
     MTR_LINES: 'assets/mtr-lines.json',
     LRT_ROUTES: 'assets/lrt-routes.json',
+    // v45 — curated LRT stop lat/lng. lrt-routes.json has route + stop
+    // names but no coordinates; this file bridges that gap so the trip
+    // planner can compute km for LRT ride legs (railRoute() uses the
+    // same haversine helper MTR ride legs use).
+    LRT_STOPS: 'assets/lrt-stops.json?v=1',
   };
 
   const STORAGE_KEYS = {
@@ -843,7 +848,7 @@
   // cached snapshots get discarded and rebuilt against the live APIs.
   // v4: index entries now carry `co` (KMB / MTR / GMB) so list rows render
   // a proper operator badge instead of the generic STOP placeholder.
-  const INDEX_SCHEMA_VERSION = 4;
+  const INDEX_SCHEMA_VERSION = 5; // v45 — adds lat/lng to lrt.stops
 
   const REFRESH_INTERVAL_MS = 60_000;
   const INDEX_MAX_AGE_MS = 12 * 60 * 60 * 1000;
@@ -1129,12 +1134,17 @@
   }
 
   async function buildIndex() {
-    const [kmbRoutes, kmbStops, ctbRoutes, mtrLines, lrtRoutes, hkStops, mtrStops] = await Promise.all([
+    const [kmbRoutes, kmbStops, ctbRoutes, mtrLines, lrtRoutes, lrtStops, hkStops, mtrStops] = await Promise.all([
       fetchJSON(`${API.KMB}/route/`).catch(() => null),
       fetchJSON(`${API.KMB}/stop/`).catch(() => null),
       fetchJSON(`${API.CITYBUS}/route/ctb`).catch(() => null),
       fetchJSON(API.MTR_LINES).catch(() => null),
       fetchJSON(API.LRT_ROUTES).catch(() => null),
+      // v45 — LRT stop coordinates; merged into lrt.stops below so the
+      // planner's railRoute() haversine helper can compute km for LRT
+      // ride legs. Best-effort: missing file or shape just leaves lat
+      // null (legacy behaviour: leg meters fall back to 0).
+      fetchJSON(API.LRT_STOPS).catch(() => null),
       fetchJSON(API.HK_STOPS).catch(() => null),
       fetchJSON(API.MTR_STOPS).catch(() => null),
     ]);
@@ -1332,6 +1342,21 @@
       }
       for (const st of stopMeta.values()) {
         st._routes = Array.from(st._routes);
+        // v45 — overlay lat/lng from the curated lrt-stops.json so the
+        // trip planner's haversine helper can compute km for LRT ride
+        // legs (railRoute()). Missing entries fall back to null and
+        // degrade gracefully to 0m on the badge.
+        if (lrtStops && typeof lrtStops === 'object') {
+          const coord = lrtStops[st.stop];
+          if (coord) {
+            const lat = Number(coord.lat);
+            const lng = Number(coord.lng);
+            if (Number.isFinite(lat) && Number.isFinite(lng)) {
+              st.lat = lat;
+              st.lng = lng;
+            }
+          }
+        }
         lrt.stops.set(st.stop, st);
       }
     }
