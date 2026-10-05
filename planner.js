@@ -1899,14 +1899,42 @@
     svg.setAttribute('viewBox', `0 0 ${CANVAS_W} ${CANVAS_H}`);
     svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
     svg.setAttribute('role', 'img');
-    // One polyline per ride leg, coloured by operator. Walking segments
-    // are omitted so the canvas focuses on the actual ride shape.
+    // One polyline per ride leg, coloured by operator.
     for (const ln of lines) {
       const polyline = document.createElementNS('http://www.w3.org/2000/svg', 'line');
       polyline.setAttribute('x1', ln.x1); polyline.setAttribute('y1', ln.y1);
       polyline.setAttribute('x2', ln.x2); polyline.setAttribute('y2', ln.y2);
       polyline.setAttribute('class', `planner-canvas-line co-${ln.co}`);
       svg.appendChild(polyline);
+    }
+    // v44 — draw the walk-out (first leg if it's a walk) and walk-in
+    // (last leg if it's a walk) as thin dashed lines from a canvas-edge
+    // anchor to the first / last ride dot. We use the canvas edge rather
+    // than the user's actual origin / destination coordinates because
+    // `origin.lat`/`origin.lng` in the algorithm is the same as the
+    // origin stop's lat/lng (no geolocation attached). The dashed
+    // segment is a visual cue "you walked here from outside the map".
+    const firstLeg = legs[0];
+    const lastLeg = legs[legs.length - 1];
+    const [ox, oy, oco] = firstPts;
+    const lastLn = lines[lines.length - 1];
+    if (firstLeg && firstLeg.kind === 'walk' && firstLeg.from === 'origin') {
+      // Anchor at the top-left corner — a "you came from off-canvas".
+      const ax = CANVAS_PAD, ay = CANVAS_PAD;
+      const w = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      w.setAttribute('x1', ax.toFixed(2)); w.setAttribute('y1', ay.toFixed(2));
+      w.setAttribute('x2', ox); w.setAttribute('y2', oy);
+      w.setAttribute('class', 'planner-canvas-walk');
+      svg.appendChild(w);
+    }
+    if (lastLeg && lastLeg.kind === 'walk' && lastLeg.to === 'dest' && lines.length > 0) {
+      // Anchor at the bottom-right corner.
+      const ax = CANVAS_W - CANVAS_PAD, ay = CANVAS_H - CANVAS_PAD;
+      const w = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      w.setAttribute('x1', lastLn.x2); w.setAttribute('y1', lastLn.y2);
+      w.setAttribute('x2', ax.toFixed(2)); w.setAttribute('y2', ay.toFixed(2));
+      w.setAttribute('class', 'planner-canvas-walk');
+      svg.appendChild(w);
     }
     // Origin / destination dots use the FIRST/LAST ride leg's operator
     // colour so they blend with the polyline they belong to.

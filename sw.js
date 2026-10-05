@@ -4,11 +4,10 @@
  * upstream API calls. Static JSON in /assets/ is cached lazily on first
  * fetch via the same code path.
  *
- * CACHE bumped to v31: forces a clean install after v43's planner
- * short-circuit on pure-rail queries (skips ~1100 wasted upstream
- * route-stop fetches when both origin and dest are MTR / LRT stations).
- * App.js still fetches the Transport Department's public-data XML
- * feed; the dedicated SW cross-origin branch below caches it under
+ * CACHE bumped to v32: forces a clean install after v44's
+ * planner walking-segments on the route-shape canvas. App.js still
+ * fetches the Transport Department's public-data XML feed; the
+ * dedicated SW cross-origin branch below caches it under
  * TD_DISRUPTION_CACHE with a 24h TTL + If-Modified-Since so repeat
  * visits stay O(1) and don't spam the upstream on every home-view
  * mount.
@@ -30,7 +29,7 @@
  * v21 was the same forced-update after v32's QW-1 → QW-10 batch.
  * v20 was the same forced-update after the v30→v31 layout revert.
  */
-const CACHE = 'buseta-v31';
+const CACHE = 'buseta-v32';
 const SHELL = [
   '/',
   '/index.html',
@@ -101,7 +100,7 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys()
       .then((keys) => Promise.all(
-        // Drop legacy `buseta-vN` for N < 31; keep v31 + ASSET_CACHE
+        // Drop legacy `buseta-vN` for N < 32; keep v32 + ASSET_CACHE
         // + ETA_CACHE + TD_DISRUPTION_CACHE so existing offline data
         // survives. Also explicitly drop the poisoned `buseta-eta-v1`
         // cache (bumped to v2) so users on the v13-era poisoned SWR
@@ -109,7 +108,7 @@ self.addEventListener('activate', (event) => {
         keys.filter((k) => {
           if (k === 'buseta-eta-v1') return true;  // poisoned, drop
           const m = /^buseta-v(\d+)$/.exec(k);
-          if (m) return parseInt(m[1], 10) < 31;
+          if (m) return parseInt(m[1], 10) < 32;
           return k !== CACHE && k !== ASSET_CACHE && k !== ETA_CACHE && k !== TD_DISRUPTION_CACHE;
         }).map((k) => caches.delete(k))
       ))

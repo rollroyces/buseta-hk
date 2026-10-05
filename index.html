@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="BusETA" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="buseta-version" content="43" />
+<meta name="buseta-version" content="44" />
 <!-- Main stylesheet. The original style.css is what we ship today — a
      hand-rolled minifier produced a broken style.min.css earlier, so we
      load the unminified bundle directly. v=35 ships the "show every
@@ -321,6 +321,30 @@
          → planner.css?v=18.
        - sw.js: CACHE bumped buseta-v30 → buseta-v31 (forces clean
          install). activate-handler drops buseta-vN for N < 31;
+         keeps new bucket + ASSET_CACHE + ETA_CACHE +
+         TD_DISRUPTION_CACHE.
+
+     v=44 ships "Trip planner — walking segments on route-shape
+     canvas" on top of v=43:
+       - planner.js: buildJourneyCanvas() now renders the walk-out
+         (first leg when kind === 'walk' && from === 'origin') and
+         walk-in (last leg when kind === 'walk' && to === 'dest')
+         as thin dashed lines from a canvas-edge anchor to the
+         first / last ride dot. Visually communicates "you walked
+         here from off-canvas" for journeys that have a walk at
+         either end. Transfer walks (between ride segments) are
+         intentionally still omitted — they connect two ride legs
+         already drawn and would add visual clutter for ~0 walkable
+         distance.
+       - planner.css: new .planner-canvas-walk class with
+         stroke-dasharray "3 2" + 0.6 opacity. Re-uses --muted
+         token so it pairs visually with the existing palette.
+       - index.html cache-busters: meta name="buseta-version"
+         content="43" → "44", app.js?v=43 → app.js?v=44,
+         planner.js?v=18 → planner.js?v=19, planner.css?v=18
+         → planner.css?v=19.
+       - sw.js: CACHE bumped buseta-v31 → buseta-v32 (forces clean
+         install). activate-handler drops buseta-vN for N < 32;
          keeps new bucket + ASSET_CACHE + ETA_CACHE +
          TD_DISRUPTION_CACHE.
 -->
@@ -708,7 +732,7 @@ window.__buseta = {
     if (this._plannerScript) return this._plannerScript;
     this._plannerScript = new Promise((resolve, reject) => {
       const s = document.createElement('script');
-      s.src = 'planner.js?v=18';
+      s.src = 'planner.js?v=19';
       s.async = false; // preserve execution order
       s.onload = () => resolve(window.Planner);
       s.onerror = () => reject(new Error('planner.js failed to load'));
@@ -722,7 +746,7 @@ window.__buseta = {
     this._plannerCss = new Promise((resolve, reject) => {
       const l = document.createElement('link');
       l.rel = 'stylesheet';
-      l.href = 'planner.css?v=18';
+      l.href = 'planner.css?v=19';
       l.setAttribute('data-planner-css', '1');
       l.media = 'print';
       l.onload = () => { l.media = 'all'; resolve(); };
@@ -733,7 +757,7 @@ window.__buseta = {
   },
 };
 </script>
-<script defer src="app.js?v=43"></script>
+<script defer src="app.js?v=44"></script>
 <script>
   // SW path must be RELATIVE — GitHub Pages serves this site under
   // /buseta-hk/ but a leading `/sw.js` would resolve to the site root

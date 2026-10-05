@@ -641,6 +641,13 @@
 .planner-card-canvas .planner-canvas-line.co-MTR  { stroke: #DC2626; }
 .planner-card-canvas .planner-canvas-line.co-LRT  { stroke: #F97316; }
 .planner-card-canvas .planner-canvas-line.co-BUS  { stroke: var(--muted); }
+.planner-card-canvas .planner-canvas-walk {
+  stroke: var(--muted);
+  stroke-width: 1.5;
+  stroke-dasharray: 3 2;
+  stroke-linecap: round;
+  opacity: 0.6;
+}
 .planner-card-canvas .planner-canvas-dot {
   stroke: #fff;
   stroke-width: 1.2;
