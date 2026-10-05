@@ -5625,7 +5625,7 @@
 
   // Build the schedule tab DOM (tablist + panels). Returns
   // { refresh, panel, switchTo } so renderBusStopView can wire it up.
-  function buildStopTabs(stopId, isCtb) {
+  function buildStopTabs(stopId, isCtb, fetchStopId) {
     const isLive = (state._stopViewMode !== 'schedule');
     const tablist = el('div', { class: 'stop-tabs', role: 'tablist', 'aria-label': 'View mode' });
 
@@ -5687,7 +5687,9 @@
         // Delegate back to the live view renderer.
         state._refreshStop && state._refreshStop({ mode: 'live' });
       } else {
-        renderSchedulePanel(schedulePanel, stopId, isCtb);
+        // v36: schedule fetch uses the resolved internal 16-hex ID so
+        // operator-facing codes (e.g. "MA973") don't 404 upstream.
+        renderSchedulePanel(schedulePanel, fetchStopId || stopId, isCtb);
       }
     };
 
@@ -5791,6 +5793,14 @@
     let seedNameEn = '';
     let seedNameSc = '';
     let seedUnknown = false;
+    // v36 · When the user navigates via a KMB operator-facing code (e.g.
+    // "#/stop/MA973"), the seed lookup falls through to `kmbOperatorId`
+    // and we capture the corresponding internal 16-hex ID (e.g.
+    // "0C81107C4ABFCD56") so subsequent ETA + schedule fetches go to
+    // upstream using the ID it actually understands. Without this, the
+    // heading resolves but the live panel always falls through to the
+    // empty state because KMB upstream rejects operator codes.
+    let seedInternalStopId = stopId;
     if (state.index && state.index.stops) {
       const idxMeta = state.index.stops.get(stopId);
       if (idxMeta) {
@@ -5803,6 +5813,7 @@
           seedNameTc = opMeta.nameTc || seedNameTc;
           seedNameEn = opMeta.nameEn || seedNameEn;
           seedNameSc = opMeta.nameSc || seedNameSc;
+          if (opMeta.internalId) seedInternalStopId = opMeta.internalId;
         } else {
           seedUnknown = true;
         }
@@ -5825,7 +5836,7 @@
 
     // Tab control + per-tab panels. Live panel keeps the existing
     // body element so the current rendering logic still works.
-    const tabs = buildStopTabs(stopId, isCtb);
+    const tabs = buildStopTabs(stopId, isCtb, seedInternalStopId);
     const livePanel = tabs.livePanel;
     // QW-2: skeleton placeholders replace the bare "載入緊資料…" text.
     livePanel.appendChild(buildSkeletonList(4));
@@ -5839,14 +5850,17 @@
       ? fetchCitybusStop(stopId).catch(() => null)
       : fetchKmbStop(stopId).catch(() => null);
 
-    const stateRef = { panel: livePanel, header, stopId, view, schedulePanel: tabs.schedulePanel, switchTo: tabs.switchTo };
+    const stateRef = { panel: livePanel, header, stopId, internalStopId: seedInternalStopId, view, schedulePanel: tabs.schedulePanel, switchTo: tabs.switchTo };
     state._refreshStop = (opts) => {
       const mode = (opts && opts.mode) || 'live';
       if (mode === 'schedule' && stateRef.schedulePanel) {
         // Bypass the cache and force a re-fetch of the timetable, then
-        // re-render the schedule panel.
-        scheduleCache.delete(`${isCtb ? 'CTB' : 'KMB'}|${stopId}`);
-        renderSchedulePanel(stateRef.schedulePanel, stopId, isCtb);
+        // re-render the schedule panel. v36: use the resolved internal
+        // 16-hex ID so the schedule fetch goes to upstream with the ID
+        // it understands (operator-facing codes like "MA973" 404 upstream).
+        const schedFetchStopId = stateRef.internalStopId || stopId;
+        scheduleCache.delete(`${isCtb ? 'CTB' : 'KMB'}|${schedFetchStopId}`);
+        renderSchedulePanel(stateRef.schedulePanel, schedFetchStopId, isCtb);
         return;
       }
       refreshBusStopView(stateRef, mode);
@@ -5929,14 +5943,19 @@
   function refreshBusStopView(stateRef, mode) {
     if (!stateRef || !stateRef.panel) return;
     if (mode === 'schedule') return; // Schedule owns its own render path.
-    const { stopId, panel: body, switchTo } = stateRef;
+    // v36 · Use the resolved internal 16-hex ID for upstream calls when
+    // the user navigated via a KMB operator-facing code (e.g. MA973).
+    // `internalStopId` falls back to `stopId` for stops reached by their
+    // 16-hex directly (the common case).
+    const { stopId, internalStopId, panel: body, switchTo } = stateRef;
+    const fetchStopId = internalStopId || stopId;
 
     // Body only — never wipe the header.
     body.innerHTML = '';
     // QW-2: skeleton placeholders replace the bare "載入緊資料…" text.
     body.appendChild(buildSkeletonList(4));
 
-    const isCtb = typeof stopId === 'string' && /^[0-9]{6}$/.test(stopId);
+    const isCtb = typeof fetchStopId === 'string' && /^[0-9]{6}$/.test(fetchStopId);
     // v35: enable the live fetch for CTB too — previously the CTB live
     // panel always fell through to the empty state because etaPromise was
     // hardcoded to null. Both operators now flow through the same groupBy
@@ -5945,15 +5964,15 @@
     // that the same loop handles both. CTB's operator id is hardcoded
     // since classifyKmbOp is KMB-only.
     const etaPromise = isCtb
-      ? fetchCitybusBatchStopEta(stopId).catch(() => null)
-      : fetchKmbStopEta(stopId).catch(() => null);
+      ? fetchCitybusBatchStopEta(fetchStopId).catch(() => null)
+      : fetchKmbStopEta(fetchStopId).catch(() => null);
 
     Promise.resolve(etaPromise).then((etaResp) => {
       const data = etaResp && Array.isArray(etaResp.data) ? etaResp.data : [];
 
       // Map element (bottom): only when we have lat/lng.
       const mapEl = (() => {
-        const meta = state.index.stops.get(stopId);
+        const meta = state.index.stops.get(fetchStopId) || state.index.stops.get(stopId);
         if (!meta || !Number.isFinite(meta.lat) || !Number.isFinite(meta.lng)) return null;
         const m = renderStopMap(meta.lat, meta.lng, nameFor(meta) || stopId);
         return m.firstChild ? m : null;

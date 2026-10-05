@@ -16,7 +16,7 @@
  * No SW logic changed in v23 — the SHELL pre-cache still holds the
  * same five files.
  */
-const CACHE = 'buseta-v23';
+const CACHE = 'buseta-v24';
 const SHELL = [
   '/',
   '/index.html',
@@ -69,7 +69,7 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys()
       .then((keys) => Promise.all(
-        // Drop legacy `buseta-vN` for N < 23; keep v23 + ASSET_CACHE
+        // Drop legacy `buseta-vN` for N < 24; keep v24 + ASSET_CACHE
         // + the new ETA_CACHE so existing offline data survives.
         // Also explicitly drop the poisoned `buseta-eta-v1` cache
         // (bumped to v2) so users on the v13-era poisoned SWR cache
@@ -77,7 +77,7 @@ self.addEventListener('activate', (event) => {
         keys.filter((k) => {
           if (k === 'buseta-eta-v1') return true;  // poisoned, drop
           const m = /^buseta-v(\d+)$/.exec(k);
-          if (m) return parseInt(m[1], 10) < 23;
+          if (m) return parseInt(m[1], 10) < 24;
           return k !== CACHE && k !== ASSET_CACHE && k !== ETA_CACHE;
         }).map((k) => caches.delete(k))
       ))

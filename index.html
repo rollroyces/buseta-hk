@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="BusETA" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="buseta-version" content="35" />
+<meta name="buseta-version" content="36" />
 <!-- Main stylesheet. The original style.css is what we ship today — a
      hand-rolled minifier produced a broken style.min.css earlier, so we
      load the unminified bundle directly. v=35 ships the "show every
@@ -45,8 +45,30 @@
          panel so a forced-update is unnecessary. index.html cache-
          buster ?v=34 → ?v=35 on app.js + style.css, meta
          name="buseta-version" content="34" → "35".
+
+     v=36 ships "operator-code → internal-ID resolution" on top of v=35:
+       - When the user navigates via a KMB operator-facing stop code
+         (e.g. "#/stop/MA973" → 利安巴士總站), the seed lookup captures
+         both the resolved name AND the internal 16-hex ID from the
+         `kmbOperatorId` reverse map. The internal ID is stored on
+         stateRef.internalStopId and used for the ETA fetch in
+         refreshBusStopView (KMB upstream returns empty for operator
+         codes, only accepts the 16-hex form).
+       - buildStopTabs now accepts a third `fetchStopId` parameter so
+         the Schedule tab switch also uses the internal ID; schedule
+         cache key + renderSchedulePanel call both updated.
+       - state._refreshStop({mode:'schedule'}) uses the same resolved
+         ID for the cache delete + renderSchedulePanel call, so the
+         schedule view goes to upstream with a valid ID too.
+       - Bug observed on live: opening "/stop/MA973" resolved the
+         heading to 利安巴士總站 correctly but the live panel was
+         empty because the upstream fetch used "MA973" instead of
+         "0C81107C4ABFCD56". Now both work in sync.
+       - SW bumped buseta-v23 → buseta-v24 to force a clean install.
+       - index.html cache-buster ?v=35 → ?v=36 on app.js + style.css,
+         meta name="buseta-version" content="35" → "36".
 -->
-<link rel="stylesheet" href="style.css?v=35" />
+<link rel="stylesheet" href="style.css?v=36" />
 <title>BusETA HK · 巴士到站</title>
 <style id="critical-css">
 /* ============================================================
@@ -455,7 +477,7 @@ window.__buseta = {
   },
 };
 </script>
-<script defer src="app.js?v=35"></script>
+<script defer src="app.js?v=36"></script>
 <script>
   // SW path must be RELATIVE — GitHub Pages serves this site under
   // /buseta-hk/ but a leading `/sw.js` would resolve to the site root
