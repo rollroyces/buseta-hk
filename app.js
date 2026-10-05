@@ -2480,9 +2480,12 @@
     else if (r.view === 'home') active = 'home';
     else if (r.view === 'route' || r.view === 'stop') active = null; // QW-9: no nav item lit on detail
     else if (r.view === 'settings') active = null; // QW-3: settings has its own header link
+    // QW-9: only the home nav item carries the "you're inside a sub-page"
+    // dot indicator when on /route/... or /stop/...
+    const onDetail = (r.view === 'route' || r.view === 'stop');
     $$('.nav-item').forEach((n) => {
       n.classList.toggle('is-active', n.dataset.route === active);
-      n.classList.toggle('is-detail', r.view === 'route' || r.view === 'stop');
+      n.classList.toggle('is-detail', onDetail && n.dataset.route === 'home');
     });
 
     // Hide splash once we navigate
@@ -3863,7 +3866,7 @@
     const update = () => {
       const ms = Math.max(0, refreshAtMs - Date.now());
       const sec = Math.ceil(ms / 1000);
-      text.textContent = t_str('refreshProgressLabel')(sec);
+      text.textContent = t_str('refreshProgressLabel', sec);
       bar.style.setProperty('--refresh-progress', String(Math.max(0, Math.min(1, ms / 60_000))));
     };
     update();
@@ -6482,7 +6485,7 @@
       const bar = wrap.querySelector('.refresh-progress-bar');
       const ms = Math.max(0, next - Date.now());
       const sec = Math.ceil(ms / 1000);
-      if (text) text.textContent = t_str('refreshProgressLabel')(sec);
+      if (text) text.textContent = t_str('refreshProgressLabel', sec);
       if (bar) bar.style.setProperty('--refresh-progress', String(Math.max(0, Math.min(1, ms / REFRESH_INTERVAL_MS))));
     });
   }
