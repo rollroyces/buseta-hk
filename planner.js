@@ -1418,14 +1418,36 @@
       return { direct: [], oneTransfer: [], twoTransfer: [], sameStop: true };
     }
 
+    // v43 — short-circuit the bus sub-planners when both stops are MTR or
+    // LRT stations. Without this, findDirect() falls back to
+    // collapseRouteVariants() and iterates ALL ~1,100 KMB/CTB routes
+    // checking whether each one's stop list contains both stops — a pure
+    // waste because no bus route serves two MTR stations. Skipping the
+    // bus work makes pure-rail searches effectively instant (Dijkstra
+    // over the 97-station graph is sub-millisecond) and avoids polluting
+    // the localStorage route-stop cache with entries we will never use.
+    const originIsRail = !!(idx.mtr && idx.mtr.has(origin.stop)) ||
+                          !!(idx.lrt && idx.lrt.stops && idx.lrt.stops.has(origin.stop));
+    const destIsRail = !!(idx.mtr && idx.mtr.has(dest.stop)) ||
+                        !!(idx.lrt && idx.lrt.stops && idx.lrt.stops.has(dest.stop));
+    const pureRail = originIsRail && destIsRail;
+
     // Direct first: this prefills `_routeStopsCache` for every candidate
     // route so the transfer searches can use the reverse index without
     // firing another batch of upstream calls.
-    let busDirect = await findDirect(idx, origin, dest);
-    const [busOneTransfer, busTwoTransfer] = await Promise.all([
-      findOneTransfer(idx, origin, dest),
-      findTwoTransfer(idx, origin, dest),
-    ]);
+    let busDirect, busTwoTransfer;
+    let busOneTransfer;
+    if (pureRail) {
+      busDirect = [];
+      busOneTransfer = [];
+      busTwoTransfer = [];
+    } else {
+      busDirect = await findDirect(idx, origin, dest);
+      [busOneTransfer, busTwoTransfer] = await Promise.all([
+        findOneTransfer(idx, origin, dest),
+        findTwoTransfer(idx, origin, dest),
+      ]);
+    }
 
     // ---- Rail (MTR / LRT) routes ------------------------------------
     // The bus planner cannot connect two MTR stations because no bus

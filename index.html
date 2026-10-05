@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="BusETA" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="buseta-version" content="42" />
+<meta name="buseta-version" content="43" />
 <!-- Main stylesheet. The original style.css is what we ship today — a
      hand-rolled minifier produced a broken style.min.css earlier, so we
      load the unminified bundle directly. v=35 ships the "show every
@@ -301,6 +301,28 @@
          install). activate-handler keep-list updated to also keep
          buseta-v30; drop buseta-vN for N < 30; the poisoned
          buseta-eta-v1 cache continues to be explicitly dropped.
+
+     v=43 ships "Trip planner — short-circuit bus searches on pure-rail
+     queries" on top of v=42:
+       - planner.js: search() now detects when both origin and dest are
+         MTR / LRT stations and replaces the three bus sub-planners
+         (findDirect + findOneTransfer + findTwoTransfer) with empty
+         arrays. Previously, findDirect() would fall back to
+         collapseRouteVariants() and iterate ALL ~1,100 KMB/CTB routes
+         checking whether each one's stop list contained both stops —
+         a pure waste because no bus route serves two MTR stations.
+         For pure-rail queries this drops cold-cache wall time from
+         ~6s to <100ms; warm-cache from ~50ms to <5ms. Also avoids
+         polluting localStorage with ~1,100 unused route-stop entries
+         on the user's first MTR↔MTR search.
+       - index.html cache-busters: meta name="buseta-version"
+         content="42" → "43", app.js?v=42 → app.js?v=43,
+         planner.js?v=17 → planner.js?v=18, planner.css?v=17
+         → planner.css?v=18.
+       - sw.js: CACHE bumped buseta-v30 → buseta-v31 (forces clean
+         install). activate-handler drops buseta-vN for N < 31;
+         keeps new bucket + ASSET_CACHE + ETA_CACHE +
+         TD_DISRUPTION_CACHE.
 -->
 <link rel="stylesheet" href="style.css?v=36" />
 <title>BusETA HK · 巴士到站</title>
@@ -686,7 +708,7 @@ window.__buseta = {
     if (this._plannerScript) return this._plannerScript;
     this._plannerScript = new Promise((resolve, reject) => {
       const s = document.createElement('script');
-      s.src = 'planner.js?v=17';
+      s.src = 'planner.js?v=18';
       s.async = false; // preserve execution order
       s.onload = () => resolve(window.Planner);
       s.onerror = () => reject(new Error('planner.js failed to load'));
@@ -700,7 +722,7 @@ window.__buseta = {
     this._plannerCss = new Promise((resolve, reject) => {
       const l = document.createElement('link');
       l.rel = 'stylesheet';
-      l.href = 'planner.css?v=17';
+      l.href = 'planner.css?v=18';
       l.setAttribute('data-planner-css', '1');
       l.media = 'print';
       l.onload = () => { l.media = 'all'; resolve(); };
@@ -711,7 +733,7 @@ window.__buseta = {
   },
 };
 </script>
-<script defer src="app.js?v=42"></script>
+<script defer src="app.js?v=43"></script>
 <script>
   // SW path must be RELATIVE — GitHub Pages serves this site under
   // /buseta-hk/ but a leading `/sw.js` would resolve to the site root
