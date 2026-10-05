@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="BusETA" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="buseta-version" content="32" />
+<meta name="buseta-version" content="33" />
 <!-- Main stylesheet. The original style.css is what we ship today — a
      hand-rolled minifier produced a broken style.min.css earlier, so we
      load the unminified bundle directly. v=32 ships the QW-2 → SR-7
@@ -41,7 +41,7 @@
                button already on the header).
        - SR-7  Offline-mode onboarding toast on first SW activation.
 -->
-<link rel="stylesheet" href="style.css?v=32" />
+<link rel="stylesheet" href="style.css?v=33" />
 <title>BusETA HK · 巴士到站</title>
 <style id="critical-css">
 /* ============================================================
@@ -450,7 +450,7 @@ window.__buseta = {
   },
 };
 </script>
-<script defer src="app.js?v=32"></script>
+<script defer src="app.js?v=33"></script>
 <script>
   // SW path must be RELATIVE — GitHub Pages serves this site under
   // /buseta-hk/ but a leading `/sw.js` would resolve to the site root
