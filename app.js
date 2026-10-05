@@ -254,6 +254,10 @@
       vehiclePosition: '車輛位置',
       vehiclePlaceholder: '預估',
       vehicleRefreshing: '更新緊…',
+      stopUnknownName: '未能識別的車站',
+      stopUnknownSub: '呢個編號嘅車站搵唔到，請喺主頁搜尋你嘅目的地。',
+      stopUnknownIdLabel: 'ID',
+      stopUnknownCtaBack: '返回主頁',
     },
     'en': {
       brandSub: 'Hong Kong Bus',
@@ -489,6 +493,10 @@
       vehiclePosition: 'Vehicle position',
       vehiclePlaceholder: 'Estimated',
       vehicleRefreshing: 'Refreshing…',
+      stopUnknownName: 'Unknown stop',
+      stopUnknownSub: 'We could not find a stop with this code. Try searching from the home page.',
+      stopUnknownIdLabel: 'ID',
+      stopUnknownCtaBack: 'Back to home',
     },
     'zh-Hans': {
       brandSub: '香港巴士',
@@ -713,6 +721,10 @@
       vehiclePosition: '车辆位置',
       vehiclePlaceholder: '预估',
       vehicleRefreshing: '更新紧…',
+      stopUnknownName: '未能识别的车站',
+      stopUnknownSub: '呢个编号嘅车站揫唔到，请喺主页搜寻你嘅目的地。',
+      stopUnknownIdLabel: 'ID',
+      stopUnknownCtaBack: '返回主页',
     },
   };
 
@@ -5755,9 +5767,15 @@
     // doesn't have this stop we still render with the ID, but only as a
     // last-resort fallback — and we re-render below the moment the fetch
     // resolves.
+    //
+    // v34: when BOTH the local-index lookup AND the operator-ID reverse
+    // map miss, the seed falls back to t_str('stopUnknownName') instead
+    // of the raw ID. The raw ID is still surfaced as a muted paragraph
+    // (see buildStopHeader's stopUnknown branch) so the user can debug.
     let seedNameTc = stopId;
     let seedNameEn = '';
     let seedNameSc = '';
+    let seedUnknown = false;
     if (state.index && state.index.stops) {
       const idxMeta = state.index.stops.get(stopId);
       if (idxMeta) {
@@ -5770,15 +5788,25 @@
           seedNameTc = opMeta.nameTc || seedNameTc;
           seedNameEn = opMeta.nameEn || seedNameEn;
           seedNameSc = opMeta.nameSc || seedNameSc;
+        } else {
+          seedUnknown = true;
         }
+      } else {
+        seedUnknown = true;
       }
+    } else {
+      seedUnknown = true;
     }
-    header.appendChild(buildStopHeader(stopId, seedNameTc, seedNameEn, opGuess, seedNameSc));
+    if (seedUnknown) seedNameTc = t_str('stopUnknownName');
+    header.appendChild(buildStopHeader(stopId, seedNameTc, seedNameEn, opGuess, seedNameSc, seedUnknown));
 
     // Stop view mode lives on the bus-stop view only. Default to 'live'
     // every time the user opens a new stop so they get the familiar arrival
     // board first; they can opt into the Schedule tab from there.
     state._stopViewMode = 'live';
+    // v34: tracks whether the current stop is unresolvable so refreshBusStopView
+    // can re-append the back-to-home CTA after its body-wipe on every refresh.
+    state._currentStopUnknown = seedUnknown;
 
     // Tab control + per-tab panels. Live panel keeps the existing
     // body element so the current rendering logic still works.
@@ -5812,13 +5840,15 @@
     stopPromise.then((stopResp) => {
       let nameTc = stopId, nameSc = '', nameEn = '';
       let stop = null;
+      let upstreamResolved = false;
       if (stopResp && stopResp.data) {
         stop = stopResp.data;
         if (Array.isArray(stop)) stop = stop[0];
-        if (stop) {
+        if (stop && (stop.name_tc || stop.name_en)) {
           nameTc = stop.name_tc || nameTc;
           nameSc = stop.name_sc || '';
           nameEn = stop.name_en || '';
+          upstreamResolved = true;
         }
       }
       // Fall back to the local index (hk-stops.json) for both names and lat/lng.
@@ -5840,12 +5870,30 @@
           nameEn = opMeta.nameEn || nameEn;
         }
       }
-      header.replaceChildren(...buildStopHeader(stopId, nameTc, nameEn, opGuess, nameSc).childNodes);
+      // v34: if upstream, the local index, AND the operator-ID reverse map
+      // all missed, the stop is unresolvable. Drop the raw ID from the
+      // heading, surface t_str('stopUnknownName'), append a "Back to home"
+      // CTA so the user has somewhere to go, and prune any poisoned recent
+      // entries (e.g. a stale 16-hex ID carried over from an old session).
+      const opMap = state.index && state.index.kmbOperatorId;
+      const stopUnknown = !upstreamResolved && !idxMeta && !(opMap && opMap.get(stopId));
+      if (stopUnknown) {
+        nameTc = t_str('stopUnknownName');
+        nameSc = '';
+        nameEn = '';
+        state._currentStopUnknown = true;
+        pruneRecentStops();
+        appendStopUnknownCTA(livePanel, stopId);
+      } else {
+        state._currentStopUnknown = false;
+      }
+      header.replaceChildren(...buildStopHeader(stopId, nameTc, nameEn, opGuess, nameSc, stopUnknown).childNodes);
       state._lastStopName = nameFor({ nameTc, nameSc, nameEn });
       state._lastStopNameEn = nameEn;
       // Cache the resolved name on the recent entry so 最近查過 shows the
       // real stop name on the home page instead of just the operator ID.
-      enrichRecentStop(stopId, nameTc, nameSc, nameEn);
+      // Skip for unresolvable stops — we'd just be re-poisoning the list.
+      if (!stopUnknown) enrichRecentStop(stopId, nameTc, nameSc, nameEn);
     });
 
     refreshBusStopView(stateRef, 'live');
@@ -5896,6 +5944,10 @@
           hint.appendChild(document.createTextNode(t_str('ctbNoEtaHint') || ''));
           body.appendChild(hint);
         }
+        // v34: if renderBusStopView flagged the stop as unresolvable,
+        // append the back-to-home CTA so the user has somewhere to go
+        // after every refresh (refreshBusStopView wipes the body).
+        if (state._currentStopUnknown) appendStopUnknownCTA(body, stopId);
         if (mapEl) body.appendChild(mapEl);
         return;
       }
@@ -6011,15 +6063,26 @@
     header.innerHTML = '';
     body.innerHTML = '';
     const stop = state.index.lrt.stops.get(stopCode);
-    const nameTc = stop ? stop.nameTc : stopCode;
+    // v34: when the LRT stop lookup misses, fall back to a friendly name
+    // + the raw ID sub-line instead of dumping the operator code as the
+    // heading. Prune any poisoned recent entry as well.
+    const stopUnknown = !stop;
+    const nameTc = stop ? stop.nameTc : t_str('stopUnknownName');
     const nameEn = stop ? stop.nameEn : '';
     if (stop) enrichRecentStop(stopCode, nameTc, stop.nameSc || '', nameEn);
-    header.appendChild(buildStopHeader(stopCode, nameFor(stop || { nameTc, nameEn }) || nameTc, nameEn, 'LRT'));
+    if (stopUnknown) pruneRecentStops();
+    header.appendChild(buildStopHeader(stopCode, nameTc, nameEn, 'LRT', '', stopUnknown));
     body.appendChild(el('p', { class: 'muted' }, t_str('loading')));
 
     const stationId = stop && stop.id ? stop.id : null;
     if (!stationId) {
-      body.replaceChildren(el('p', { class: 'empty' }, t_str('stopNotFound')));
+      // v34: a poisoned/unknown stop gets the rich empty state via
+      // buildStopEmptyState's CTAs + the new back-to-home pill so the
+      // user has somewhere to go from this dead-end page.
+      body.replaceChildren(
+        el('p', { class: 'empty' }, t_str('stopNotFound')),
+      );
+      appendStopUnknownCTA(body, stopCode);
       return;
     }
 
@@ -6029,6 +6092,9 @@
     fetchLrtSchedule(stationId).then((resp) => {
       if (!resp || !Array.isArray(resp.platform_list)) {
         body.replaceChildren(el('p', { class: 'empty' }, t_str('noEta')));
+        // v34: same back-to-home CTA pattern as the bus + GMB stop
+        // views so the user always has somewhere to go.
+        appendStopUnknownCTA(body, stopCode);
         return;
       }
       const wrap = el('div', { class: 'eta-list-wrap' });
@@ -6078,16 +6144,27 @@
     // QW-1: Seed the GMB stop header from the local stop index so the
     // heading never sits on the raw numeric operator ID while waiting
     // for primeGmbStopCoord to enrich.
+    //
+    // v34: when the local GMB stop index has nothing for this ID, fall
+    // back to t_str('stopUnknownName') and surface the raw ID as a muted
+    // sub-line — same UX as the bus + LRT paths. Prune any poisoned
+    // recent entry on the off-chance this ID is no longer valid.
     const gmbSeed = (state.index && state.index.stops && state.index.stops.get(stopId)) || null;
-    const gmbSeedNameTc = (gmbSeed && gmbSeed.nameTc) || stopId;
+    const gmbSeedUnknown = !gmbSeed;
+    const gmbSeedNameTc = (gmbSeed && gmbSeed.nameTc) || t_str('stopUnknownName');
     const gmbSeedNameEn = (gmbSeed && gmbSeed.nameEn) || '';
     const gmbSeedNameSc = (gmbSeed && gmbSeed.nameSc) || '';
-    header.appendChild(buildStopHeader(stopId, gmbSeedNameTc, gmbSeedNameEn, 'GMB', gmbSeedNameSc));
+    if (gmbSeedUnknown) pruneRecentStops();
+    header.appendChild(buildStopHeader(stopId, gmbSeedNameTc, gmbSeedNameEn, 'GMB', gmbSeedNameSc, gmbSeedUnknown));
     body.appendChild(el('p', { class: 'muted' }, t_str('loading')));
 
     // Try to enrich the stop with a real name + coordinates.
     primeGmbStopCoord(stopId).then((meta) => {
-      if (meta) header.replaceChildren(...buildStopHeader(stopId, meta.nameTc || stopId, meta.nameEn || '', 'GMB').childNodes);
+      // v34: if primeGmbStopCoord returned no meta AND the seed didn't
+      // have it either, keep the friendly fallback + ID sub-line. If
+      // meta came back, the unknown flag is cleared and the ID sub-line
+      // disappears in the next render.
+      if (meta) header.replaceChildren(...buildStopHeader(stopId, meta.nameTc || stopId, meta.nameEn || '', 'GMB', meta.nameSc || '', false).childNodes);
       // Stash for the map append after the routes list renders.
       state._lastGmbStopMeta = meta || null;
       // Cache the resolved name on the recent entry so 最近查過 shows the
@@ -6099,6 +6176,9 @@
       const list = (resp && Array.isArray(resp.data)) ? resp.data : [];
       if (list.length === 0) {
         body.replaceChildren(el('p', { class: 'empty' }, t_str('noEta')));
+        // v34: surface the back-to-home CTA so they have somewhere to go
+        // when the GMB upstream returns nothing for this ID.
+        appendStopUnknownCTA(body, stopId);
         return;
       }
       // Fetch ETA per route×stop_seq for first route only, then show others as "schedule only".
@@ -6156,7 +6236,13 @@
   // Stop view header — modeled on justarrived.grok.me:
   // back chevron + language toggle (top bar), small operator pill, big stop name,
   // red accent rule, "剛剛更新 · HH:MM" sub-line.
-  function buildStopHeader(stopId, nameTc, nameEn, co, nameSc) {
+  //
+  // v34: when `stopUnknown` is true (neither the local index, the operator-ID
+  // reverse map, nor the upstream API could resolve a name), the heading
+  // falls back to t_str('stopUnknownName') and a muted sub-line surfaces the
+  // raw ID (e.g. "ID: 0C81107C…") so the user can still copy / share /
+  // debug a poisoned 16-hex ID like 0C81107C4ABFCD7C.
+  function buildStopHeader(stopId, nameTc, nameEn, co, nameSc, stopUnknown) {
     const head = el('div', { class: 'stop-header' });
 
     // ---- top action bar ----
@@ -6194,7 +6280,7 @@
       'aria-pressed': String(isFav),
       onclick: () => {
         toggleSaveStop({ stop: stopId });
-        head.replaceChildren(...buildStopHeader(stopId, nameTc, nameEn, co).childNodes);
+        head.replaceChildren(...buildStopHeader(stopId, nameTc, nameEn, co, undefined, stopUnknown).childNodes);
       },
     });
     star.appendChild(starIconSVG(isFav));
@@ -6209,6 +6295,15 @@
 
     // ---- main stop name ----
     head.appendChild(el('h1', { class: 'stop-name' }, nameFor({ nameTc, nameSc: nameSc || '', nameEn }) || stopId));
+    // v34: When the stop is unresolvable, surface the raw ID as a muted
+    // sub-line so the user can still copy / share / debug it. Truncated
+    // to 8 chars + an ellipsis — long enough to identify the bug, short
+    // enough not to crowd the heading on mobile.
+    if (stopUnknown) {
+      const raw = String(stopId || '');
+      const short = raw.length > 8 ? raw.slice(0, 8) + '…' : raw;
+      head.appendChild(el('p', { class: 'stop-name-id' }, `${t_str('stopUnknownIdLabel')}: ${short}`));
+    }
     if (nameEn) head.appendChild(el('p', { class: 'stop-name-en' }, nameEn));
 
     // ---- red accent rule ----
@@ -6251,6 +6346,25 @@
     head.appendChild(meta);
 
     return head;
+  }
+
+  // v34: Append a small "Back to home" CTA into the stop view when the
+  // requested stop cannot be resolved by any local lookup or the upstream
+  // API. The rich QW-5 empty state already provides Schedule + Retry
+  // buttons (refreshBusStopView renders it), but for a truly poisoned ID
+  // those don't help — the user needs somewhere to go. The CTA is a
+  // secondary accent pill so it doesn't fight the empty state visually.
+  function appendStopUnknownCTA(panel, stopId) {
+    if (!panel) return;
+    const wrap = el('div', { class: 'stop-unknown-cta' });
+    wrap.appendChild(el('p', { class: 'stop-unknown-sub' }, t_str('stopUnknownSub')));
+    const cta = el('a', {
+      class: 'stop-unknown-back',
+      href: '#/',
+      role: 'button',
+    }, t_str('stopUnknownCtaBack'));
+    wrap.appendChild(cta);
+    panel.appendChild(wrap);
   }
 
   function toggleSaveStop(s) {
@@ -6458,6 +6572,39 @@
       changed = true;
     });
     if (changed) persist();
+  }
+
+  // v34 · Prune poisoned recent stop entries.
+  //
+  // When a stop view opens an ID that the local index, the operator-ID
+  // reverse map, AND the upstream endpoint cannot name, the entry is almost
+  // certainly stale (e.g. a 16-hex KMB ID from an old session that's no
+  // longer in the upstream list). Drop every `state.recent` row whose
+  // `stop` field fails to resolve via any local source so the home page
+  // stops re-suggesting dead links.
+  //
+  // - KMB / CTB / GMB stops live in `state.index.stops`.
+  // - LRT stops live in `state.index.lrt.stops`.
+  // - KMB operator-facing IDs (e.g. "ST905") live in the
+  //   `state.index.kmbOperatorId` reverse map built at index time.
+  //
+  // Route-only recent entries (no `stop` field) are always kept.
+  function pruneRecentStops() {
+    if (!state.recent || state.recent.length === 0) return;
+    const stops = (state.index && state.index.stops) || null;
+    const opMap = (state.index && state.index.kmbOperatorId) || null;
+    const lrtStops = (state.index && state.index.lrt && state.index.lrt.stops) || null;
+    const filtered = state.recent.filter((x) => {
+      if (!x || !x.stop) return true; // keep route entries
+      if (x.co === 'LRT') return !!(lrtStops && lrtStops.get(x.stop));
+      if (stops && stops.get(x.stop)) return true;
+      if (opMap && opMap.get(x.stop)) return true;
+      return false;
+    });
+    if (filtered.length !== state.recent.length) {
+      state.recent = filtered;
+      persist();
+    }
   }
 
   // ------------------------------------------------------------------

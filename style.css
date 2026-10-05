@@ -3661,3 +3661,64 @@ a.row:focus-visible,
 }
 :root[data-theme="light"] .row-eta.is-soon { color: var(--warn); }
 :root[data-theme="light"] .row-eta.is-now { color: var(--danger); }
+
+/* ============================================================
+   v34 · Unresolvable stop UX
+   ============================================================
+   Replaces the previous fallback (raw 16-hex ID as the heading) with
+   a friendly "Unknown stop" title + a muted ID sub-line + a back-
+   to-home CTA in the body. Triggered when the requested ID can't be
+   resolved by state.index.stops, state.index.kmbOperatorId, OR the
+   upstream /stop/{id} endpoint (see app.js renderBusStopView et al.).
+
+   Styles mirror the .stop-name / .stop-name-en pattern so the visual
+   hierarchy is preserved (heading > small EN sub-line > small muted
+   debug ID > red accent rule). The back-to-home CTA mirrors the
+   .stop-empty-cta pattern so users get a familiar pill shape. */
+.stop-name-id {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--muted-2);
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  letter-spacing: 0.01em;
+  word-break: break-all;
+}
+.stop-unknown-cta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 18px 16px 8px;
+  text-align: center;
+}
+.stop-unknown-sub {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+  max-width: 32ch;
+  line-height: 1.5;
+}
+.stop-unknown-back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: var(--r-pill);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.01em;
+  border: 1px solid var(--line);
+  background: var(--accent);
+  color: #fff;
+  text-decoration: none;
+  transition: background 0.15s ease, transform 0.12s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.stop-unknown-back:hover,
+.stop-unknown-back:focus-visible {
+  background: var(--accent-2);
+  outline: none;
+}
+.stop-unknown-back:active { transform: translateY(1px); }
+:root[data-theme="light"] .stop-unknown-back { color: #fff; }

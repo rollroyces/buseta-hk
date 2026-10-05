@@ -11,37 +11,39 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="BusETA" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="buseta-version" content="33" />
+<meta name="buseta-version" content="34" />
 <!-- Main stylesheet. The original style.css is what we ship today — a
      hand-rolled minifier produced a broken style.min.css earlier, so we
-     load the unminified bundle directly. v=32 ships the QW-2 → SR-7
-     UX review batch on top of v31's iframe-only layout:
-       - QW-1  Stop name resolves from local index synchronously — no
-               more raw 16-hex IDs (e.g. "0C81107C4ABFCD7C") as headings.
-       - QW-2  Skeleton placeholders replace bare "載入緊資料…" text on
-               every route / stop / MTR / LRT / GMB loading state.
-       - QW-3  Dedicated /settings view (Theme + Notifications + About),
-               linked from Home via a gear card.
-       - QW-4  Refresh / share / star icon buttons keep aria-label; new
-               settings buttons follow the same pattern.
-       - QW-5  Rich stop-detail empty state with schedule + retry CTAs.
-       - QW-6  Tap targets bumped to ≥ 48 dp (stop-tab, pills, header
-               icon buttons).
-       - QW-7  Focus-visible rings + tabindex on bus / MTR / LRT row
-               anchors for keyboard + screen-reader users.
-       - QW-8  Refresh countdown chip ("下次更新：12 秒後") + linear
-               progress bar on route + stop detail.
-       - QW-9  Bottom nav lights "Home" with a "·" dot indicator on
-               route / stop detail so users see they're inside a sub-page.
-       - QW-10 prefers-reduced-motion media block disables non-essential
-               motion (skeleton shimmer, nav pulse).
-       - SR-3  Light-theme cyan accent retuned (#0369A1 / #075985) for
-               WCAG AA on white backgrounds.
-       - SR-4  Stop heading now shows the resolved TC + EN name (share
-               button already on the header).
-       - SR-7  Offline-mode onboarding toast on first SW activation.
+     load the unminified bundle directly. v=34 ships the unresolvable-
+     stop UX on top of v=33's settings hardening:
+       - all 3 locales get four new strings: stopUnknownName (heading
+         fallback "未能識別的車站" / "Unknown stop" / "未能识别的车站"),
+         stopUnknownSub, stopUnknownIdLabel, stopUnknownCtaBack.
+       - renderBusStopView + renderGmbStopView + renderLrtStopView now
+         detect when the requested ID can't be resolved by the local
+         index, the operator-ID reverse map, OR the upstream /stop/{id}
+         endpoint, and render t_str('stopUnknownName') instead of the
+         raw 16-hex ID. The raw ID is surfaced as a small muted
+         monospace sub-line ("ID: 0C81107C…") so the user can still
+         copy / share / report it.
+       - new pruneRecentStops() helper drops every state.recent row whose
+         `stop` field fails any local lookup — poisons like
+         0C81107C4ABFCD7C stop re-suggesting themselves on the home
+         page after this v34 fix lands.
+       - new appendStopUnknownCTA() renders a "Back to home" pill in
+         the body so the user has somewhere to go from a dead-end
+         stop view. Wired into the bus, GMB, and LRT stop paths so
+         no operator ever shows a raw ID.
+       - refreshBusStopView now re-appends the back-to-home CTA on
+         every 60-second refresh via state._currentStopUnknown.
+       - new CSS block: .stop-name-id + .stop-unknown-cta + .stop-
+         unknown-back, appended to style.css as a single v34 section.
+       - SW bumped from buseta-v22 to buseta-v23 so the SHELL pre-cache
+         doesn't keep shipping the v33 app.js to first-load visitors.
+       - cache-buster bumped ?v=33 → ?v=34 on app.js + style.css, meta
+         name="buseta-version" content="33" → "34".
 -->
-<link rel="stylesheet" href="style.css?v=33" />
+<link rel="stylesheet" href="style.css?v=34" />
 <title>BusETA HK · 巴士到站</title>
 <style id="critical-css">
 /* ============================================================
@@ -450,7 +452,7 @@ window.__buseta = {
   },
 };
 </script>
-<script defer src="app.js?v=33"></script>
+<script defer src="app.js?v=34"></script>
 <script>
   // SW path must be RELATIVE — GitHub Pages serves this site under
   // /buseta-hk/ but a leading `/sw.js` would resolve to the site root
