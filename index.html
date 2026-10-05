@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="BusETA" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="buseta-version" content="40" />
+<meta name="buseta-version" content="41" />
 <!-- Main stylesheet. The original style.css is what we ship today — a
      hand-rolled minifier produced a broken style.min.css earlier, so we
      load the unminified bundle directly. v=35 ships the "show every
@@ -214,6 +214,51 @@
        - index.html cache-buster ?v=39 → ?v=40 on app.js (style.css
          unchanged — no CSS shipped this round), meta
          name="buseta-version" content="39" → "40".
+
+     v=41 ships "Trip planner route strategies (Bus / Rail / Mixed)"
+     on top of v=40:
+       - planner.js: search() now captures three parallel feeds so
+         each strategy is genuinely different routing rather than
+         a re-ranking of one merged bucket.
+           * busDirect / busOneTransfer / busTwoTransfer = the
+             output of findDirect / findOneTransfer / findTwoTransfer
+             BEFORE the rail merge (lines 1412–1419 in v40).
+           * railDirect / railOneTransfer = findMtrRoutes +
+             findLrtRoutes BEFORE the rail merge too.
+           * direct / oneTransfer / twoTransfer = the legacy merged
+             buckets, unchanged from v40 so external callers see the
+             same shape.
+         New STRATEGY_LIMIT = 2 tunable next to DIRECT_LIMIT.
+         New module-scope strategyOf(j) helper classifies each
+         journey by ride-leg mode composition (KMB / LWB / CTB /
+         NWFB / GMB → bus; MTR / LRT → rail; both → mixed; pure
+         walk → mixed fallback for a future findWalk feature).
+         Buckets bus / rail / mixed are sorted by totalMin and
+         sliced to STRATEGY_LIMIT; result gains a `strategies`
+         field with `{ bus, rail, mixed }` each holding
+         `{ journeys, best }`.
+       - planner.js: renderPlanner() swaps the three
+         direct / 1-hop / 2-hop sections for three coloured
+         STRATEGY_LABELS sections (Bus → accent orange, Rail →
+         accent-2 red, Mixed → muted indigo). Sections with
+         zero journeys are silently absent. Strategy tag
+         badge next to the rank-1 chip uses the new
+         .planner-strategy-tag class (orange / red / indigo
+         gradients) so each card identifies its strategy at a
+         glance.
+       - planner.js: patchPlannerStrings() extended with three
+         new section-title keys (plannerStrategyBus / Rail /
+         Mixed) and three short tag-label keys (plannerStrategy
+         TagBus / TagRail / TagMixed) × three locales = 18 new
+         string entries. Zero edits to app.js (matches the v37
+         planner convention).
+       - planner.css: new .planner-strategy-tag + .is-bus /
+         .is-rail / .is-mixed variants. ≤ 20 LOC delta. No new
+         theme tokens; colours re-use the existing palette.
+       - index.html cache-busters: meta name="buseta-version"
+         content="40" → "41", app.js?v=40 → app.js?v=41,
+         planner.js?v=15 → planner.js?v=16, planner.css?v=15
+         → planner.css?v=16.
 -->
 <link rel="stylesheet" href="style.css?v=36" />
 <title>BusETA HK · 巴士到站</title>
@@ -599,7 +644,7 @@ window.__buseta = {
     if (this._plannerScript) return this._plannerScript;
     this._plannerScript = new Promise((resolve, reject) => {
       const s = document.createElement('script');
-      s.src = 'planner.js?v=15';
+      s.src = 'planner.js?v=16';
       s.async = false; // preserve execution order
       s.onload = () => resolve(window.Planner);
       s.onerror = () => reject(new Error('planner.js failed to load'));
@@ -613,7 +658,7 @@ window.__buseta = {
     this._plannerCss = new Promise((resolve, reject) => {
       const l = document.createElement('link');
       l.rel = 'stylesheet';
-      l.href = 'planner.css?v=15';
+      l.href = 'planner.css?v=16';
       l.setAttribute('data-planner-css', '1');
       l.media = 'print';
       l.onload = () => { l.media = 'all'; resolve(); };
@@ -624,7 +669,7 @@ window.__buseta = {
   },
 };
 </script>
-<script defer src="app.js?v=40"></script>
+<script defer src="app.js?v=41"></script>
 <script>
   // SW path must be RELATIVE — GitHub Pages serves this site under
   // /buseta-hk/ but a leading `/sw.js` would resolve to the site root

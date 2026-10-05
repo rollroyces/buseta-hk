@@ -594,3 +594,22 @@
   border-color: var(--accent);
   box-shadow: 0 0 0 4px var(--accent-soft, transparent);
 }
+
+/* ---- v41 strategy tag (Bus / Rail / Mixed) ---- */
+.planner-strategy-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 8px;
+  margin-left: 4px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  line-height: 1;
+  color: #fff;
+  background: var(--muted);
+}
+.planner-strategy-tag.is-bus   { background: linear-gradient(135deg, #F59E0B, #EA580C); }
+.planner-strategy-tag.is-rail  { background: linear-gradient(135deg, #DC2626, #991B1B); }
+.planner-strategy-tag.is-mixed { background: linear-gradient(135deg, #6366F1, #4338CA); }

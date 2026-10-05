@@ -37,6 +37,12 @@
   const DIRECT_LIMIT           = 5;
   const ONE_TRANSFER_LIMIT     = 5;
   const TWO_TRANSFER_LIMIT     = 3;
+  // v41 — route strategies (Bus / Rail / Mixed). Each strategy is computed
+  // by a different sub-planner running on different candidate sets, so
+  // showing the top N of each gives the user genuinely different routes
+  // to compare. We slice the per-strategy bucket down to STRATEGY_LIMIT so
+  // the results view stays scannable (top 1–2 per strategy is plenty).
+  const STRATEGY_LIMIT         = 2;
 
   // ---- Module state ----------------------------------------------------
   // Per-stop route list cache. We don't pre-build the whole graph (≈600
@@ -1393,36 +1399,90 @@
     // Direct first: this prefills `_routeStopsCache` for every candidate
     // route so the transfer searches can use the reverse index without
     // firing another batch of upstream calls.
-    let direct = await findDirect(idx, origin, dest);
-    const [oneTransfer, twoTransfer] = await Promise.all([
+    let busDirect = await findDirect(idx, origin, dest);
+    const [busOneTransfer, busTwoTransfer] = await Promise.all([
       findOneTransfer(idx, origin, dest),
       findTwoTransfer(idx, origin, dest),
     ]);
 
     // ---- Rail (MTR / LRT) routes ------------------------------------
     // The bus planner cannot connect two MTR stations because no bus
-    // route serves both. We run a separate graph router in parallel and
-    // merge the results so MTR↔MTR and LRT↔LRT queries get sensible
-    // answers. Cost is in-memory and bounded (~97 stations / 11 LRT
-    // routes) so this is fast even on cold start.
+    // route serves both. We run a separate graph router in parallel.
+    // Cost is in-memory and bounded (~97 stations / 11 LRT routes) so
+    // this is fast even on cold start.
     const [mtrRoutes, lrtRoutes] = await Promise.all([
       findMtrRoutes(idx, origin, dest),
       findLrtRoutes(idx, origin, dest),
     ]);
-    if (mtrRoutes.direct.length > 0 || mtrRoutes.oneTransfer.length > 0) {
-      direct = direct.concat(mtrRoutes.direct);
-      oneTransfer.push(...mtrRoutes.oneTransfer);
-    }
-    if (lrtRoutes.direct.length > 0 || lrtRoutes.oneTransfer.length > 0) {
-      direct = direct.concat(lrtRoutes.direct);
-      oneTransfer.push(...lrtRoutes.oneTransfer);
-    }
-    // Re-rank because we appended rail options after the bus search
-    // already sorted. Cap with the same limits the bus planner uses.
+    // Capture rail-only arrays before we merge them with bus results so
+    // v41's strategy view can show "rail-only" alternatives separately.
+    const railDirect = [].concat(mtrRoutes.direct, lrtRoutes.direct);
+    const railOneTransfer = [].concat(mtrRoutes.oneTransfer, lrtRoutes.oneTransfer);
+
+    // ---- Mixed (current default) merge ------------------------------
+    // Keep the legacy behaviour where rail legs are appended into the
+    // direct + oneTransfer buckets so older callers of `Planner.search`
+    // see the same shape. The Mixed strategy bucket reuses these arrays.
+    let direct = busDirect.concat(railDirect);
+    let oneTransfer = busOneTransfer.concat(railOneTransfer);
+    const twoTransfer = busTwoTransfer;
     direct.sort((a, b) => a.totalMin - b.totalMin);
     oneTransfer.sort((a, b) => a.totalMin - b.totalMin);
     if (direct.length > DIRECT_LIMIT) direct = direct.slice(0, DIRECT_LIMIT);
     if (oneTransfer.length > ONE_TRANSFER_LIMIT) oneTransfer.length = ONE_TRANSFER_LIMIT;
+
+    // ---- v41 route strategies (Bus / Rail / Mixed) -----------------
+    // Each strategy is its own candidate set:
+    //   - Bus: only journeys from findDirect / findOneTransfer (no rail)
+    //   - Rail: only journeys from findMtrRoutes / findLrtRoutes (no bus)
+    //   - Mixed: everything (the legacy default)
+    // We classify each journey by mode composition and bucket into the
+    // three strategies, then keep the top STRATEGY_LIMIT per bucket
+    // sorted by totalMin. A `best` pointer lets the UI mark the rank-1
+    // card in each section.
+    const strategyOf = (j) => {
+      let hasBus = false, hasRail = false;
+      const legs = (j && j.legs) || [];
+      for (const leg of legs) {
+        if (leg.kind !== 'ride' || !leg.routeMeta) continue;
+        const co = leg.routeMeta.co;
+        if (co === 'MTR' || co === 'LRT') hasRail = true;
+        else if (co === 'KMB' || co === 'LWB' ||
+                 co === 'CTB' || co === 'NWFB' ||
+                 co === 'GMB') hasBus = true;
+      }
+      if (hasRail && hasBus) return 'mixed';
+      if (hasRail) return 'rail';
+      if (hasBus) return 'bus';
+      return 'mixed'; // pure-walk fallback (deferred feature)
+    };
+    const bucketOf = (j) => {
+      const s = strategyOf(j);
+      if (s === 'bus')   return 'bus';
+      if (s === 'rail')  return 'rail';
+      return 'mixed';
+    };
+    const buckets = { bus: [], rail: [], mixed: [] };
+    // Bus-only feed draws from the bus sub-planners (no rail merge).
+    for (const j of busDirect)      buckets[bucketOf(j)].push(j);
+    for (const j of busOneTransfer)  buckets[bucketOf(j)].push(j);
+    for (const j of busTwoTransfer)  buckets[bucketOf(j)].push(j);
+    // Rail-only feed draws from the rail sub-planners (no bus merge).
+    for (const j of railDirect)      buckets[bucketOf(j)].push(j);
+    for (const j of railOneTransfer) buckets[bucketOf(j)].push(j);
+    // Mixed feed draws from the fully-merged legacy arrays.
+    for (const j of direct)          buckets[bucketOf(j)].push(j);
+    for (const j of oneTransfer)     buckets[bucketOf(j)].push(j);
+    for (const j of twoTransfer)     buckets[bucketOf(j)].push(j);
+
+    const strategies = { bus: { journeys: [], best: null }, rail: { journeys: [], best: null }, mixed: { journeys: [], best: null } };
+    for (const k of Object.keys(buckets)) {
+      const arr = buckets[k]
+        .slice()
+        .sort((a, b) => a.totalMin - b.totalMin)
+        .slice(0, STRATEGY_LIMIT);
+      strategies[k] = { journeys: arr, best: arr[0] || null };
+    }
 
     const t1 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
     const elapsed = Math.round(t1 - t0);
@@ -1432,13 +1492,16 @@
       console.log(
         `planner.search | req=${_reqCounter} | ${elapsed}ms ` +
         `| direct=${direct.length} one=${oneTransfer.length} two=${twoTransfer.length} ` +
+        `| strategy bus=${strategies.bus.journeys.length} ` +
+        `rail=${strategies.rail.journeys.length} ` +
+        `mixed=${strategies.mixed.journeys.length} ` +
         `| cache rs=${_routeStopsCache.size} sr=${_stopRoutesCache.size} ` +
         `| rail mtr=${mtrRoutes.direct.length + mtrRoutes.oneTransfer.length} ` +
         `lrt=${lrtRoutes.direct.length + lrtRoutes.oneTransfer.length}`
       );
     } catch (e) { /* console may be missing */ }
 
-    return { direct, oneTransfer, twoTransfer, origin, dest };
+    return { direct, oneTransfer, twoTransfer, origin, dest, strategies };
   }
 
   // ---- UI helpers (depend on the parent's el()/t_str() helpers) -----
@@ -1506,6 +1569,26 @@
     ensure('zh-Hant', 'plannerNeedLeaveBy', (hhmm) => `需 ${hhmm} 出發`);
     ensure('en',      'plannerNeedLeaveBy', (hhmm) => `Leave by ${hhmm}`);
     ensure('zh-Hans', 'plannerNeedLeaveBy', (hhmm) => `需 ${hhmm} 出发`);
+    // v41 — route strategy sections (Bus / Rail / Mixed).
+    ensure('zh-Hant', 'plannerStrategyBus',   '巴士');
+    ensure('en',      'plannerStrategyBus',   'Bus');
+    ensure('zh-Hans', 'plannerStrategyBus',   '巴士');
+    ensure('zh-Hant', 'plannerStrategyRail',  '港鐵 / 輕鐵');
+    ensure('en',      'plannerStrategyRail',  'Rail');
+    ensure('zh-Hans', 'plannerStrategyRail',  '港铁 / 轻铁');
+    ensure('zh-Hant', 'plannerStrategyMixed', '混合');
+    ensure('en',      'plannerStrategyMixed', 'Mixed');
+    ensure('zh-Hans', 'plannerStrategyMixed', '混合');
+    // Per-strategy card tag labels — short, ≤4 glyphs.
+    ensure('zh-Hant', 'plannerStrategyTagBus',   '巴士');
+    ensure('en',      'plannerStrategyTagBus',   'BUS');
+    ensure('zh-Hans', 'plannerStrategyTagBus',   '巴士');
+    ensure('zh-Hant', 'plannerStrategyTagRail',  '港鐵');
+    ensure('en',      'plannerStrategyTagRail',  'RAIL');
+    ensure('zh-Hans', 'plannerStrategyTagRail',  '港铁');
+    ensure('zh-Hant', 'plannerStrategyTagMixed', '混合');
+    ensure('en',      'plannerStrategyTagMixed', 'MIX');
+    ensure('zh-Hans', 'plannerStrategyTagMixed', '混合');
   }
   patchPlannerStrings();
 
@@ -1715,6 +1798,25 @@
     if (opts.bestBadge) {
       head.appendChild(el('span', { class: 'planner-chip', style: 'background: var(--accent); color:#fff; margin-left: 4px;' },
         t_str('plannerBest')));
+    }
+    if (opts.strategyTag) {
+      // v41 — strategy badge next to the best-badge (or in its place if no
+      // best-badge). Coloured to match the strategy section header.
+      const tagKey = ({
+        bus:   'plannerStrategyTagBus',
+        rail:  'plannerStrategyTagRail',
+        mixed: 'plannerStrategyTagMixed',
+      })[opts.strategyTag] || null;
+      if (tagKey) {
+        head.appendChild(el('span', {
+          class: `planner-strategy-tag is-${opts.strategyTag}`,
+          title: t_str({
+            bus:   'plannerStrategyBus',
+            rail:  'plannerStrategyRail',
+            mixed: 'plannerStrategyMixed',
+          }[opts.strategyTag]),
+        }, t_str(tagKey)));
+      }
     }
     main.appendChild(head);
 
@@ -2279,40 +2381,37 @@
 
         results.appendChild(buildSummary(result.direct, origin, dest));
 
-        // ---- direct ----
-        if (result.direct.length > 0) {
-          const sec = buildSection(t_str('plannerDirect'), result.direct.length, 'var(--accent)');
+        // ---- v41 — route strategies (Bus / Rail / Mixed) ------------
+        // Render each strategy as its own coloured section so the user
+        // sees genuinely different ways to get from A to B side-by-side.
+        // Strategies with zero journeys are silently absent.
+        const STRATEGY_LABELS = {
+          bus:   { key: 'plannerStrategyBus',   color: 'var(--accent)' },
+          rail:  { key: 'plannerStrategyRail',  color: 'var(--accent-2)' },
+          mixed: { key: 'plannerStrategyMixed', color: 'var(--muted)' },
+        };
+        const STRATEGY_ORDER = ['bus', 'rail', 'mixed'];
+        const strategies = result.strategies || {};
+        STRATEGY_ORDER.forEach((s) => {
+          const bucket = strategies[s];
+          if (!bucket || bucket.journeys.length === 0) return;
+          const meta = STRATEGY_LABELS[s];
+          const sec = buildSection(t_str(meta.key), bucket.journeys.length, meta.color);
           results.appendChild(sec);
-          result.direct.forEach((j, i) => {
-            const o = Object.assign({}, cardOpts);
+          bucket.journeys.forEach((j, i) => {
+            const o = Object.assign({}, cardOpts, { strategyTag: s });
             if (i === 0) o.bestBadge = true;
             results.appendChild(buildJourneyCard(i + 1, j, o));
           });
-        }
-
-        // ---- 1-transfer ----
-        if (result.oneTransfer.length > 0) {
-          const sec = buildSection(t_str('planner1Hop'), result.oneTransfer.length, 'var(--accent-2)');
-          results.appendChild(sec);
-          result.oneTransfer.forEach((j, i) => {
-            results.appendChild(buildJourneyCard(i + 1, j, Object.assign({}, cardOpts)));
-          });
-        }
-
-        // ---- 2-transfer ----
-        if (result.twoTransfer.length > 0) {
-          const sec = buildSection(t_str('planner2Hop'), result.twoTransfer.length, 'var(--muted)');
-          results.appendChild(sec);
-          result.twoTransfer.forEach((j, i) => {
-            results.appendChild(buildJourneyCard(i + 1, j, Object.assign({}, cardOpts)));
-          });
-        }
+        });
 
         // The journey calc has produced renderable output; remember that
         // for the depart-by mode + time picker so subsequent changes re-run.
         _hasRunOnce = true;
 
-        if (result.direct.length === 0 && result.oneTransfer.length === 0 && result.twoTransfer.length === 0) {
+        const totalStrategyJourneys = STRATEGY_ORDER.reduce(
+          (s, k) => s + ((strategies[k] && strategies[k].journeys.length) || 0), 0);
+        if (totalStrategyJourneys === 0) {
           results.appendChild(el('div', { class: 'planner-empty' },
             el('p', {}, t_str('plannerNoResults'))));
         }
