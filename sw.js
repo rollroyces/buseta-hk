@@ -4,19 +4,19 @@
  * upstream API calls. Static JSON in /assets/ is cached lazily on first
  * fetch via the same code path.
  *
- * CACHE bumped to v23: forced SW update after v34's unresolvable-stop
- * UX shipped. Same logic as the previous forced-update bumps — a tab
- * holding a v22 install while index.html flipped from ?v=33 to ?v=34
- * would otherwise keep serving the v33 app.js (which still renders the
- * raw 16-hex ID for poisoned entries like 0C81107C4ABFCD7C) until
- * the user did a hard reload.
+ * CACHE bumped to v24: forced SW update after v36's operator-code →
+ * internal-ID resolution shipped. Same logic as the previous forced-
+ * update bumps — a tab holding a v23 install while index.html flipped
+ * from ?v=35 to ?v=36 would otherwise keep serving the v35 app.js
+ * until the user did a hard reload.
+ * v23 was v35's cache-buster bump (.route-card--no-eta placeholder).
  * v22 was the v33 cache-buster bump (settings view + hardenings).
  * v21 was the same forced-update after v32's QW-1 → QW-10 batch.
  * v20 was the same forced-update after the v30→v31 layout revert.
- * No SW logic changed in v23 — the SHELL pre-cache still holds the
+ * No SW logic changed in v24 — the SHELL pre-cache still holds the
  * same five files.
  */
-const CACHE = 'buseta-v24';
+const CACHE = 'buseta-v25';
 const SHELL = [
   '/',
   '/index.html',
@@ -69,7 +69,7 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys()
       .then((keys) => Promise.all(
-        // Drop legacy `buseta-vN` for N < 24; keep v24 + ASSET_CACHE
+        // Drop legacy `buseta-vN` for N < 25; keep v25 + ASSET_CACHE
         // + the new ETA_CACHE so existing offline data survives.
         // Also explicitly drop the poisoned `buseta-eta-v1` cache
         // (bumped to v2) so users on the v13-era poisoned SWR cache
@@ -77,7 +77,7 @@ self.addEventListener('activate', (event) => {
         keys.filter((k) => {
           if (k === 'buseta-eta-v1') return true;  // poisoned, drop
           const m = /^buseta-v(\d+)$/.exec(k);
-          if (m) return parseInt(m[1], 10) < 24;
+          if (m) return parseInt(m[1], 10) < 25;
           return k !== CACHE && k !== ASSET_CACHE && k !== ETA_CACHE;
         }).map((k) => caches.delete(k))
       ))

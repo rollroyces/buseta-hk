@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="BusETA" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="buseta-version" content="36" />
+<meta name="buseta-version" content="37" />
 <!-- Main stylesheet. The original style.css is what we ship today — a
      hand-rolled minifier produced a broken style.min.css earlier, so we
      load the unminified bundle directly. v=35 ships the "show every
@@ -67,6 +67,44 @@
        - SW bumped buseta-v23 → buseta-v24 to force a clean install.
        - index.html cache-buster ?v=35 → ?v=36 on app.js + style.css,
          meta name="buseta-version" content="35" → "36".
+
+     v=37 ships "off-peak routes visible" on top of v=36:
+       - The live panel now augments the upstream `/stop-eta` (KMB) /
+         `/batch/stop-eta/CTB/{stop}` (CTB) route set with terminus-
+         style matches from `state.index.routes`, so routes that serve
+         the stop but aren't running right now appear as dimmed
+         `.route-card--no-eta` placeholders instead of disappearing.
+       - New helper `findTerminusRoutesForStop(stopNameTc)` walks
+         `state.index.routes`, strips operator-suffix artefacts from
+         both the candidate and the resolved stop name, and returns
+         KMB / LWB / CTB / NWFB routes whose `origTc` OR `destTc`
+         matches exactly (substring match would let 利安 swallow
+         利安山). GMB / LRT / MTR are excluded — they enumerate stops
+         per-route rather than at bus-stop level.
+       - Terminology: this is a "terminus" scan only — it catches
+         routes that *terminate* at the stop. Via-stops (routes that
+         pass through without terminating) still won't appear.
+       - Real-world case: opening "#/stop/MA973" (利安巴士總站) at
+         11:31 AM previously showed only 680 + 87K (the two routes
+         with an imminent bus). KMB's static route index lists 5
+         distinct routes terminating at 利安: 680, 86C, 87K, 87P,
+         286C. With the terminus scan, all 5 appear: 680 with live
+         ETAs, the other 4 as dimmed `.route-card--no-eta` cards.
+       - Existing groupBy loop runs first; live-ETA cards are
+         unaffected. Terminus scan only inserts entries that aren't
+         already in `routeMap`, so a route returned by upstream is
+         never double-counted.
+       - The scan uses `state._lastStopName` (resolved TC name stored
+         by `renderBusStopView`) with a fallback to local-index
+         `nameTc`. If both are empty, the scan is skipped to avoid
+         false positives.
+       - TODO(v38): build a true `routesByStop` map at index time by
+         querying `/route-stop/{route}/{dir}/{service}` for every
+         route so via-stops also show up.
+       - SW bumped buseta-v24 → buseta-v25 to force a clean install.
+       - index.html cache-buster ?v=36 → ?v=37 on app.js (style.css
+         unchanged — no CSS shipped this round), meta
+         name="buseta-version" content="36" → "37".
 -->
 <link rel="stylesheet" href="style.css?v=36" />
 <title>BusETA HK · 巴士到站</title>
@@ -477,7 +515,7 @@ window.__buseta = {
   },
 };
 </script>
-<script defer src="app.js?v=36"></script>
+<script defer src="app.js?v=37"></script>
 <script>
   // SW path must be RELATIVE — GitHub Pages serves this site under
   // /buseta-hk/ but a leading `/sw.js` would resolve to the site root

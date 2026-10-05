@@ -5929,6 +5929,55 @@
     startEtaRefresh(renderStopDetail);
   }
 
+  // v37: terminus-style match against the local route index.
+  //
+  // KMB's `/stop-eta` (and CTB's `/batch/stop-eta/CTB/{stop}`) endpoints
+  // only return rows for routes with an imminent bus. Off-peak routes
+  // that serve the same stop don't appear in the live panel — e.g. at
+  // 利安巴士總站 (MA973) the upstream returns only 680 + 87K at 11:31 AM
+  // even though 86C / 87P / 286C also terminate there. Approximate the
+  // missing route set by walking `state.index.routes` and matching routes
+  // whose origTc OR destTc equals the resolved stop name (TC, exact match
+  // after stripping operator-suffix artefacts). Returns an array of route
+  // descriptors shaped like the entries inserted into the `routeMap`
+  // downstream (co, route, dir, service, origTc, origEn, destTc, destEn).
+  //
+  // Excludes GMB / LRT / MTR — those operators enumerate stops per-route
+  // rather than at bus-stop level, and their routes never terminate at
+  // a KMB-style 巴士總站. Exact match (not substring) so 利安 matches 利安
+  // but NOT 利安山.
+  //
+  // TODO(v38): build a true `routesByStop` map at index time by querying
+  // `/route-stop/{route}/{dir}/{service}` for every route, so via-stops
+  // (routes that pass through without terminating) also show up in the
+  // live panel. The current scan only catches terminus routes.
+  function findTerminusRoutesForStop(stopNameTc) {
+    const want = stripKmbOpSuffix(stopNameTc);
+    if (!want) return [];
+    const matches = [];
+    state.index.routes.forEach((r) => {
+      // GMB / LRT / MTR are kept out of state.index.routes for KMB/LWB/CTB,
+      // but GMB routes live there too — filter explicitly so a GMB route
+      // whose orig/dest happens to match the stop name never leaks into
+      // the live panel of a KMB bus stop.
+      if (r.co !== 'KMB' && r.co !== 'LWB' && r.co !== 'CTB' && r.co !== 'NWFB') return;
+      const o = stripKmbOpSuffix(r.origTc || '');
+      const d = stripKmbOpSuffix(r.destTc || '');
+      if (o !== want && d !== want) return;
+      matches.push({
+        co: r.co,
+        route: r.route,
+        dir: r.dir,
+        service: r.service,
+        origTc: r.origTc,
+        origEn: r.origEn,
+        destTc: r.destTc,
+        destEn: r.destEn,
+      });
+    });
+    return matches;
+  }
+
   // Fetch the latest ETAs for the current bus stop and re-render the body.
   // `mode` lets callers force a re-render of the live panel even when the
   // user is currently looking at the Schedule tab (used when switching back
@@ -5940,6 +5989,13 @@
   // for every (co, route, dir, service, dest) group that currently has no
   // upcoming arrival. That fixes the long-standing UX bug where off-peak
   // stops (where most routes are not running) only showed a single route.
+  //
+  // v37: after the upstream-driven groupBy completes, augments the
+  // `routeMap` with terminus-style matches from the local route index so
+  // off-peak routes still show up as dimmed `.route-card--no-eta`
+  // placeholders. Existing live-ETA cards are unaffected — the existing
+  // groupBy runs first, and the terminus scan only inserts entries that
+  // aren't already present.
   function refreshBusStopView(stateRef, mode) {
     if (!stateRef || !stateRef.panel) return;
     if (mode === 'schedule') return; // Schedule owns its own render path.
@@ -6031,6 +6087,48 @@
             eta: e.eta,
             minutes: minutesUntil(e.eta),
             rmk: e.rmk_en,
+          });
+        }
+      }
+
+      // v37: augment the upstream-driven route set with terminus-style
+      // matches from the local route index. KMB's /stop-eta (and CTB's
+      // /batch/stop-eta) only return rows for routes with an imminent
+      // bus, so off-peak routes that serve the same stop never appear.
+      // Approximate the missing route set by matching routes whose
+      // origTc / destTc equals the resolved stop name. Live-ETA cards
+      // are unaffected — the existing groupBy above already populated
+      // `routeMap` with everything upstream returned, and the terminus
+      // scan only inserts entries that aren't already present.
+      //
+      // Prefer the resolved TC name written by `renderBusStopView`
+      // (`state._lastStopName` is `nameFor(...)` in the current UI
+      // language — for zh-Hant it's TC, which is what we need to match
+      // against route origTc/destTc). Fall back to the local-index
+      // stop metadata if the metadata enrichment hasn't completed yet
+      // (the upstream ETA fetch can resolve before the metadata fetch
+      // on a cold load). If both are empty, skip the scan entirely so
+      // we don't add false positives — terminus matching without a
+      // resolved stop name would match every route in the index whose
+      // orig/dest happens to be empty.
+      const resolvedStopTc = (() => {
+        const fromState = state._lastStopName && String(state._lastStopName).trim();
+        if (fromState) return fromState;
+        const meta = state.index.stops.get(fetchStopId)
+          || state.index.stops.get(stopId);
+        return meta ? String(meta.nameTc || '').trim() : '';
+      })();
+      if (resolvedStopTc) {
+        for (const t of findTerminusRoutesForStop(resolvedStopTc)) {
+          const key = `${t.co}|${t.route}|${t.dir}|${t.service}|${t.destTc || ''}`;
+          if (routeMap.has(key)) continue;
+          routeMap.set(key, {
+            co: t.co, route: t.route, dir: t.dir, service: t.service,
+            destTc: t.destTc, destEn: t.destEn,
+            // Terminus scan has no upstream seq; leave null so the
+            // route-detail anchor falls back to the route's first stop.
+            seq: null,
+            arrivals: [],
           });
         }
       }
