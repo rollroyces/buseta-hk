@@ -542,6 +542,23 @@
   }
 
   function stopLatLng(idx, stopId) {
+    // v48.3 — prefer idx.mtr over idx.stops for an MTR station code.
+    // hk-stops.json (curated) and mtr-stops.json (official) disagree on a
+    // few lat/lng values (e.g. MOS: mtr=22.424979/114.231492 vs
+    // hk=22.42491/114.23198, a 60 m discrepancy). When a station appears
+    // in both, the MTR router uses the idx.mtr entry (built from
+    // mtr-lines.json + mtr-stops.json) and expects the matching
+    // destLL/railDest lat/lng — but stopMeta historically checked
+    // idx.stops first. Letting idx.mtr take over for MTR codes keeps the
+    // router's geometry in lock-step with the ride graph.
+    if (idx.mtr && idx.mtr.has(stopId)) {
+      const s = idx.mtr.get(stopId);
+      if (s._isLine) {
+        // fall through to idx.stops
+      } else if (Number.isFinite(s.lat) && Number.isFinite(s.lng)) {
+        return { lat: s.lat, lng: s.lng };
+      }
+    }
     const s = stopMeta(idx, stopId);
     if (!s) return null;
     if (Number.isFinite(s.lat) && Number.isFinite(s.lng)) return { lat: s.lat, lng: s.lng };
@@ -1484,7 +1501,6 @@
     const walkIn  = (destLL && Number.isFinite(dest.lat) && Number.isFinite(dest.lng))
       ? await walkLeg(dest.lat, dest.lng, destLL.lat, destLL.lng)
       : { meters: 0, minutes: 0, geometry: null, routed: false };
-    try { console.log('[v48.3-debug] railRoute dest=', dest.stop, dest.lat, dest.lng, 'destLL=', destLL && destLL.lat, destLL && destLL.lng, 'walkIn=', walkIn.meters, walkIn.routed); } catch (e) {}
     const includeWalkOut = walkOut.meters > 0 && walkOut.meters <= ORIGIN_WALK_LIMIT_M;
     const includeWalkIn  = walkIn.meters > 0  && walkIn.meters  <= DEST_WALK_LIMIT_M;
 
