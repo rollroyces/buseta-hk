@@ -1535,6 +1535,12 @@
     // walking leg from that station to dest via walkLeg() (v47 GraphHopper
     // demo or haversine fallback). Same symmetric path for origin when
     // the user starts from a KMB / CTB / NWFB / GMB stop.
+    //
+    // We zero out the user-typed coords on the railDestination so railRoute's
+    // internal walkIn is 0 — the appended cross-mode walk is the only
+    // user-facing walk-in. Otherwise we'd get TWO: railRoute's walk from
+    // the bus stop to the rail station (wrong direction), plus our
+    // appended walk from the rail station to the bus stop.
     let railDest = dest;
     let railOrigin = origin;
     let crossWalkStart = null;  // { stop, lat, lng } — start of stitched walk
@@ -1542,12 +1548,14 @@
     if (!idx.mtr.has(dest.stop) && Number.isFinite(dest.lat) && Number.isFinite(dest.lng)) {
       const n = findNearestMtrStop(idx, dest.lat, dest.lng);
       if (!n || n.length === 0) return { direct: [], oneTransfer: [] };
+      // Zero out coords so railRoute's internal walkIn resolves to 0.
       railDest = { stop: n[0].code, lat: n[0].lat, lng: n[0].lng };
       crossWalkEnd = { stop: n[0].code, lat: n[0].lat, lng: n[0].lng };
     }
     if (!idx.mtr.has(origin.stop) && Number.isFinite(origin.lat) && Number.isFinite(origin.lng)) {
       const n = findNearestMtrStop(idx, origin.lat, origin.lng);
       if (!n || n.length === 0) return { direct: [], oneTransfer: [] };
+      // Zero out coords so railRoute's internal walkOut resolves to 0.
       railOrigin = { stop: n[0].code, lat: n[0].lat, lng: n[0].lng };
       crossWalkStart = { stop: n[0].code, lat: n[0].lat, lng: n[0].lng };
     }
@@ -1559,18 +1567,20 @@
 
     // v48 — bridge cross-mode transitions with a real walking leg.
     if (crossWalkStart && result.direct.length + result.oneTransfer.length > 0) {
+      // walkOut leg: from user's actual origin → nearest MTR station.
       await appendCrossModeWalk(
         [].concat(result.direct, result.oneTransfer),
-        { stop: crossWalkStart.code || crossWalkStart.stop, lat: origin.lat, lng: origin.lng },
+        { stop: 'origin', lat: origin.lat, lng: origin.lng },
         crossWalkStart,
         origin.stop,
       );
     }
     if (crossWalkEnd && result.direct.length + result.oneTransfer.length > 0) {
+      // walkIn leg: from nearest MTR station → user's actual destination.
       await appendCrossModeWalk(
         [].concat(result.direct, result.oneTransfer),
         crossWalkEnd,
-        { stop: dest.stop, lat: dest.lat, lng: dest.lng },
+        { stop: 'dest', lat: dest.lat, lng: dest.lng },
         dest.stop,
       );
     }
@@ -1611,6 +1621,11 @@
     // user picks a KMB / CTB / MTR stop as one side, route the LRT side
     // to the nearest LRT platform and stitch a walkLeg from the LRT
     // stop to the actual destination.
+    //
+    // railDest / railOrigin use the LRT stop's own coords (not the user's)
+    // so railRoute's internal walkIn / walkOut resolve to 0 — the appended
+    // cross-mode walks are the only user-facing walk legs. Otherwise we'd
+    // get duplicate walks in opposite directions.
     let railDest = dest;
     let railOrigin = origin;
     let crossWalkStart = null;
@@ -1634,18 +1649,20 @@
     const result = await railRoute(graph, railOrigin, railDest, idx, opts);
 
     if (crossWalkStart && result.direct.length + result.oneTransfer.length > 0) {
+      // walkOut leg: from user's actual origin → nearest LRT platform.
       await appendCrossModeWalk(
         [].concat(result.direct, result.oneTransfer),
-        { stop: crossWalkStart.code || crossWalkStart.stop, lat: origin.lat, lng: origin.lng },
+        { stop: 'origin', lat: origin.lat, lng: origin.lng },
         crossWalkStart,
         origin.stop,
       );
     }
     if (crossWalkEnd && result.direct.length + result.oneTransfer.length > 0) {
+      // walkIn leg: from nearest LRT platform → user's actual destination.
       await appendCrossModeWalk(
         [].concat(result.direct, result.oneTransfer),
         crossWalkEnd,
-        { stop: dest.stop, lat: dest.lat, lng: dest.lng },
+        { stop: 'dest', lat: dest.lat, lng: dest.lng },
         dest.stop,
       );
     }
