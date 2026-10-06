@@ -567,6 +567,89 @@
     return walkMinutes(haversine(lat, lng, ll.lat, ll.lng) * 1000);
   }
 
+  // ---- v48 — cross-mode nearest-rail-station lookup ------------------
+  // v43 relaxed the bus sub-planners to fire only when one or both stops
+  // are non-rail; v47 added real walking paths via walkLeg. v48 stitches
+  // them together: when the user types MTR↔KMB (or LRT↔KMB), route the
+  // rail side to the *nearest* rail station to the KMB side and append
+  // a walkLeg from that station to the actual destination. Returns
+  // { code, lat, lng, distMeters } sorted ascending, capped to within
+  // maxMeters of the requested coordinate. `null` if nothing's close.
+  //
+  // Cached by rounded coords (~1 m precision) and operator so a back-to-
+  // back planner query (e.g. swap button) doesn't re-scan the index.
+  const _nearestRailCache = new Map();  // key → array
+  function _railCacheKey(marker, lat, lng, maxM) {
+    // ~1 m precision at HK latitudes — adequate for station selection.
+    return `${marker}|${Math.round(lat * 10000) / 10000}|${Math.round(lng * 10000) / 10000}|${Math.round(maxM)}`;
+  }
+  function findNearestMtrStop(idx, lat, lng, maxMeters) {
+    if (!idx || !idx.mtr) return null;
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+    const max = Number.isFinite(maxMeters) ? maxMeters : DEST_WALK_LIMIT_M;
+    const cacheKey = _railCacheKey('MTR', lat, lng, max);
+    if (_nearestRailCache.has(cacheKey)) return _nearestRailCache.get(cacheKey);
+    const out = [];
+    idx.mtr.forEach((s, code) => {
+      if (s._isLine) return;
+      const sLat = Number.isFinite(s.lat) ? s.lat : null;
+      const sLng = Number.isFinite(s.lng) ? s.lng : null;
+      if (sLat == null || sLng == null) return;
+      const d = haversine(lat, lng, sLat, sLng) * 1000;
+      if (d > max) return;
+      out.push({ code, lat: sLat, lng: sLng, distMeters: d });
+    });
+    out.sort((a, b) => a.distMeters - b.distMeters);
+    _nearestRailCache.set(cacheKey, out);
+    return out;
+  }
+  function findNearestLrtStop(idx, lat, lng, maxMeters) {
+    if (!idx || !idx.lrt || !idx.lrt.stops) return null;
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+    const max = Number.isFinite(maxMeters) ? maxMeters : DEST_WALK_LIMIT_M;
+    const cacheKey = _railCacheKey('LRT', lat, lng, max);
+    if (_nearestRailCache.has(cacheKey)) return _nearestRailCache.get(cacheKey);
+    const out = [];
+    idx.lrt.stops.forEach((s, code) => {
+      if (s._isLine) return;
+      const sLat = Number.isFinite(s.lat) ? s.lat : null;
+      const sLng = Number.isFinite(s.lng) ? s.lng : null;
+      if (sLat == null || sLng == null) return;
+      const d = haversine(lat, lng, sLat, sLng) * 1000;
+      if (d > max) return;
+      out.push({ code, lat: sLat, lng: sLng, distMeters: d });
+    });
+    out.sort((a, b) => a.distMeters - b.distMeters);
+    _nearestRailCache.set(cacheKey, out);
+    return out;
+  }
+
+  // Stitch a real walking leg onto the end (or start) of an array of
+  // rail-router journeys. Used by v48 to bridge cross-mode destinations
+  // (e.g. HOK → MOS rail ride → 350 m walk to MA180 KMB stop). Recomputes
+  // totalMin and reclassifies the journey kind so the merged buckets in
+  // search() stay accurate.
+  async function appendCrossModeWalk(journeys, fromLL, toLL, toStop) {
+    if (!fromLL || !toLL || !Number.isFinite(toLL.lat) || !Number.isFinite(toLL.lng)) return;
+    const w = await walkLeg(fromLL.lat, fromLL.lng, toLL.lat, toLL.lng);
+    const leg = {
+      kind: 'walk',
+      from: fromLL.stop,
+      to: toStop,
+      meters: w.meters,
+      minutes: w.minutes,
+      geometry: w.geometry,
+      routed: w.routed,
+    };
+    journeys.forEach((j) => {
+      if (!j || !j.legs) return;
+      j.legs.push(leg);
+      j.totalMin = j.legs.reduce((s, l) => s + (Number.isFinite(l.minutes) ? l.minutes : 0), 0);
+      const transfers = j.legs.filter((l) => l.kind === 'walk' && l.transfer).length;
+      j.kind = transfers === 0 ? 'direct' : (transfers === 1 ? 'one' : 'two');
+    });
+  }
+
   // ---- ETA hint (live arrivals at a stop, for the first hop) ----------
   // Try to enrich the first ride with a live ETA hint. Returns minutes
   // until the *next* arrival matching `route`, or null.
@@ -1434,9 +1517,7 @@
 
   async function findMtrRoutes(idx, origin, dest) {
     if (!idx || !idx.mtr) return { direct: [], oneTransfer: [] };
-    if (!idx.mtr.has(origin.stop) || !idx.mtr.has(dest.stop)) {
-      return { direct: [], oneTransfer: [] };
-    }
+    if (!idx.mtr.has(origin.stop)) return { direct: [], oneTransfer: [] };
     const graph = await ensureMtrGraph(idx);
     if (!graph || !graph.lines || graph.lines.size === 0) {
       return { direct: [], oneTransfer: [] };
@@ -1446,9 +1527,54 @@
       if (m) return { co: 'MTR', route: lineCode, origTc: m.origTc, origEn: m.origEn, destTc: m.destTc, destEn: m.destEn };
       return { co: 'MTR', route: lineCode };
     };
-    const result = await railRoute(graph, origin, dest, idx, {
-      co: 'MTR', perStationMin: MTR_PER_STATION_MIN, transferMin: RAIL_TRANSFER_MIN, routeMetaFor,
-    });
+    const opts = { co: 'MTR', perStationMin: MTR_PER_STATION_MIN, transferMin: RAIL_TRANSFER_MIN, routeMetaFor };
+
+    // v48 — cross-mode handling. If dest.stop is not an MTR station (e.g.
+    // it's a KMB bus stop like MA180 馬鞍山警署), route the MTR Dijkstra to
+    // the *nearest* MTR station to dest's lat/lng and stitch a real
+    // walking leg from that station to dest via walkLeg() (v47 GraphHopper
+    // demo or haversine fallback). Same symmetric path for origin when
+    // the user starts from a KMB / CTB / NWFB / GMB stop.
+    let railDest = dest;
+    let railOrigin = origin;
+    let crossWalkStart = null;  // { stop, lat, lng } — start of stitched walk
+    let crossWalkEnd   = null;
+    if (!idx.mtr.has(dest.stop) && Number.isFinite(dest.lat) && Number.isFinite(dest.lng)) {
+      const n = findNearestMtrStop(idx, dest.lat, dest.lng);
+      if (!n || n.length === 0) return { direct: [], oneTransfer: [] };
+      railDest = { stop: n[0].code, lat: n[0].lat, lng: n[0].lng };
+      crossWalkEnd = { stop: n[0].code, lat: n[0].lat, lng: n[0].lng };
+    }
+    if (!idx.mtr.has(origin.stop) && Number.isFinite(origin.lat) && Number.isFinite(origin.lng)) {
+      const n = findNearestMtrStop(idx, origin.lat, origin.lng);
+      if (!n || n.length === 0) return { direct: [], oneTransfer: [] };
+      railOrigin = { stop: n[0].code, lat: n[0].lat, lng: n[0].lng };
+      crossWalkStart = { stop: n[0].code, lat: n[0].lat, lng: n[0].lng };
+    }
+    if (!idx.mtr.has(railOrigin.stop) || !idx.mtr.has(railDest.stop)) {
+      return { direct: [], oneTransfer: [] };
+    }
+
+    const result = await railRoute(graph, railOrigin, railDest, idx, opts);
+
+    // v48 — bridge cross-mode transitions with a real walking leg.
+    if (crossWalkStart && result.direct.length + result.oneTransfer.length > 0) {
+      await appendCrossModeWalk(
+        [].concat(result.direct, result.oneTransfer),
+        { stop: crossWalkStart.code || crossWalkStart.stop, lat: origin.lat, lng: origin.lng },
+        crossWalkStart,
+        origin.stop,
+      );
+    }
+    if (crossWalkEnd && result.direct.length + result.oneTransfer.length > 0) {
+      await appendCrossModeWalk(
+        [].concat(result.direct, result.oneTransfer),
+        crossWalkEnd,
+        { stop: dest.stop, lat: dest.lat, lng: dest.lng },
+        dest.stop,
+      );
+    }
+
     // Attach MTR fares to ride legs (curated station-to-station lookup in
     // assets/mtr-fares.json). For multi-leg rides the fare is the per-leg
     // O/D fare — accurate enough to give the user a sensible budget number.
@@ -1469,9 +1595,7 @@
 
   async function findLrtRoutes(idx, origin, dest) {
     if (!idx || !idx.lrt || !idx.lrt.stops) return { direct: [], oneTransfer: [] };
-    if (!idx.lrt.stops.has(origin.stop) || !idx.lrt.stops.has(dest.stop)) {
-      return { direct: [], oneTransfer: [] };
-    }
+    if (!idx.lrt.stops.has(origin.stop)) return { direct: [], oneTransfer: [] };
     const graph = await ensureLrtGraph(idx);
     if (!graph || !graph.routes || graph.routes.size === 0) {
       return { direct: [], oneTransfer: [] };
@@ -1481,9 +1605,51 @@
       if (m) return { co: 'LRT', route: routeNo, origTc: m.origTc, origEn: m.origEn, destTc: m.destTc, destEn: m.destEn };
       return { co: 'LRT', route: routeNo };
     };
-    const result = await railRoute(graph, origin, dest, idx, {
-      co: 'LRT', perStationMin: LRT_PER_STATION_MIN, transferMin: LRT_TRANSFER_MIN, routeMetaFor,
-    });
+    const opts = { co: 'LRT', perStationMin: LRT_PER_STATION_MIN, transferMin: LRT_TRANSFER_MIN, routeMetaFor };
+
+    // v48 — cross-mode handling (mirror of findMtrRoutes above). When the
+    // user picks a KMB / CTB / MTR stop as one side, route the LRT side
+    // to the nearest LRT platform and stitch a walkLeg from the LRT
+    // stop to the actual destination.
+    let railDest = dest;
+    let railOrigin = origin;
+    let crossWalkStart = null;
+    let crossWalkEnd   = null;
+    if (!idx.lrt.stops.has(dest.stop) && Number.isFinite(dest.lat) && Number.isFinite(dest.lng)) {
+      const n = findNearestLrtStop(idx, dest.lat, dest.lng);
+      if (!n || n.length === 0) return { direct: [], oneTransfer: [] };
+      railDest = { stop: n[0].code, lat: n[0].lat, lng: n[0].lng };
+      crossWalkEnd = { stop: n[0].code, lat: n[0].lat, lng: n[0].lng };
+    }
+    if (!idx.lrt.stops.has(origin.stop) && Number.isFinite(origin.lat) && Number.isFinite(origin.lng)) {
+      const n = findNearestLrtStop(idx, origin.lat, origin.lng);
+      if (!n || n.length === 0) return { direct: [], oneTransfer: [] };
+      railOrigin = { stop: n[0].code, lat: n[0].lat, lng: n[0].lng };
+      crossWalkStart = { stop: n[0].code, lat: n[0].lat, lng: n[0].lng };
+    }
+    if (!idx.lrt.stops.has(railOrigin.stop) || !idx.lrt.stops.has(railDest.stop)) {
+      return { direct: [], oneTransfer: [] };
+    }
+
+    const result = await railRoute(graph, railOrigin, railDest, idx, opts);
+
+    if (crossWalkStart && result.direct.length + result.oneTransfer.length > 0) {
+      await appendCrossModeWalk(
+        [].concat(result.direct, result.oneTransfer),
+        { stop: crossWalkStart.code || crossWalkStart.stop, lat: origin.lat, lng: origin.lng },
+        crossWalkStart,
+        origin.stop,
+      );
+    }
+    if (crossWalkEnd && result.direct.length + result.oneTransfer.length > 0) {
+      await appendCrossModeWalk(
+        [].concat(result.direct, result.oneTransfer),
+        crossWalkEnd,
+        { stop: dest.stop, lat: dest.lat, lng: dest.lng },
+        dest.stop,
+      );
+    }
+
     // LRT fares are flat per-route (assets/lrt-fares.json). Same fare on
     // every ride leg of a journey since they're all on the same line.
     const fares = await ensureLrtFares();

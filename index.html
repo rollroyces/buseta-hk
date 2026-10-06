@@ -449,6 +449,31 @@
          install). activate-handler drops buseta-vN for N < 36.
        - planner.min.js re-minified (124879 → 71577 bytes, 57.3%);
          planner.min.css re-minified (17986 → 13237 bytes, 73.6%).
+
+     v=48 ships "cross-mode routing" on top of v47's walk-time. The
+     user's report "● 香港 → 馬鞍山警署 (MA180) 冇直達路線，需要轉車"
+     was caused by findMtrRoutes requiring both `origin.stop` and
+     `dest.stop` to be in `idx.mtr`. With a KMB dest like MA180, the
+     strict check yielded an empty result and the planner fell back
+     to "no route found" even though MTR from HOK to 馬鞍山 + a
+     350 m walk gets the user there. v48 relaxes that check on both
+     ends: when the rail-side stop isn't a station, route MTR / LRT
+     to the *nearest* station to the dest's lat/lng and stitch a
+     real walking leg from that station to the actual stop via
+     walkLeg() (the v47 GraphHopper demo or haversine fallback).
+       - planner.js: findNearestMtrStop() / findNearestLrtStop()
+         helpers (~1 m precision cache keyed by rounded coords);
+         appendCrossModeWalk() stitches a real walking leg onto
+         the end of each rail-router journey. findMtrRoutes +
+         findLrtRoutes now substitute the nearest station when the
+         strict check fails and call appendCrossModeWalk() to
+         bridge the gap. Symmetric for both origin and dest.
+       - index.html cache-busters: meta 47 → 48, planner.js?v=26 →
+         27, planner.css?v=26 → 27. app.js not touched (planner-only).
+       - sw.js: buseta-v36 → buseta-v37 (forces clean install).
+         activate-handler drops buseta-vN for N < 37.
+       - planner.min.js re-minified (133008 → 76323 bytes, 57.4%);
+         planner.min.css unchanged.
 -->
 <link rel="stylesheet" href="style.css?v=36" />
 <title>BusETA HK · 巴士到站</title>
@@ -834,7 +859,7 @@ window.__buseta = {
     if (this._plannerScript) return this._plannerScript;
     this._plannerScript = new Promise((resolve, reject) => {
       const s = document.createElement('script');
-      s.src = 'planner.js?v=26';
+      s.src = 'planner.js?v=27';
       s.async = false; // preserve execution order
       s.onload = () => resolve(window.Planner);
       s.onerror = () => reject(new Error('planner.js failed to load'));
@@ -848,7 +873,7 @@ window.__buseta = {
     this._plannerCss = new Promise((resolve, reject) => {
       const l = document.createElement('link');
       l.rel = 'stylesheet';
-      l.href = 'planner.css?v=26';
+      l.href = 'planner.css?v=27';
       l.setAttribute('data-planner-css', '1');
       l.media = 'print';
       l.onload = () => { l.media = 'all'; resolve(); };
