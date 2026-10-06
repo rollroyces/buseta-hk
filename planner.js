@@ -1484,6 +1484,7 @@
     const walkIn  = (destLL && Number.isFinite(dest.lat) && Number.isFinite(dest.lng))
       ? await walkLeg(dest.lat, dest.lng, destLL.lat, destLL.lng)
       : { meters: 0, minutes: 0, geometry: null, routed: false };
+    try { console.log('[v48.3-debug] railRoute dest=', dest.stop, dest.lat, dest.lng, 'destLL=', destLL && destLL.lat, destLL && destLL.lng, 'walkIn=', walkIn.meters, walkIn.routed); } catch (e) {}
     const includeWalkOut = walkOut.meters > 0 && walkOut.meters <= ORIGIN_WALK_LIMIT_M;
     const includeWalkIn  = walkIn.meters > 0  && walkIn.meters  <= DEST_WALK_LIMIT_M;
 
