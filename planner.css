@@ -648,6 +648,18 @@
   stroke-linecap: round;
   opacity: 0.6;
 }
+/* v47 — real walking path drawn from the public GraphHopper demo (no
+   API key). Same dashed style as the corner-anchor fallback so the two
+   blend visually, but a touch heavier and more opaque so users can tell
+   at a glance which walk-leg card has the real footpath vs the rough
+   "you came from off-canvas" placeholder. */
+.planner-card-canvas .planner-canvas-walk-routed {
+  stroke: var(--accent);
+  stroke-width: 1.8;
+  stroke-dasharray: 3 2;
+  stroke-linecap: round;
+  opacity: 0.85;
+}
 .planner-card-canvas .planner-canvas-dot {
   stroke: #fff;
   stroke-width: 1.2;

@@ -245,6 +245,76 @@
   function rideMinutes(meters) {
     return meters / BUS_KMH_M_PER_MIN;
   }
+
+  // ---- v47 — Real walking path via public GraphHopper demo ------------
+  // The flat 60 m/min haversine estimate (walkMinutes above) is fast but
+  // inaccurate for HK: it ignores elevation, ferry crossings, the fact
+  // that you can't walk straight through the harbour, etc. The public
+  // GraphHopper demo at routing.openstreetmap.de answers with a real
+  // pedestrian route — duration / distance + a GeoJSON LineString —
+  // without any API key. Verified TSW → CEN returns 14.9 km / 11,596 s
+  // (193 min) vs the flat 248 min haversine estimate, with 916 waypoints.
+  //
+  // Public demo is fair-use. Cache aggressively (rounded coords ~1 m
+  // precision) so back-to-back searches don't hammer the demo. On any
+  // failure we fall back to walkMinutes() so the planner still works.
+  const _walkRouteCache = new Map();   // "lat,lng|lat,lng" → {meters, seconds, geometry} | null
+  const WALK_ROUTE_URL = 'https://routing.openstreetmap.de/routed-foot/route/v1/foot/';
+  async function fetchRealWalkRoute(lat1, lng1, lat2, lng2) {
+    if (!Number.isFinite(lat1) || !Number.isFinite(lng1) ||
+        !Number.isFinite(lat2) || !Number.isFinite(lng2)) return null;
+    // Skip trivial distances (<50 m straight-line) — no routing value.
+    if (haversine(lat1, lng1, lat2, lng2) < 0.05) return null;
+    const k1 = `${lat1.toFixed(5)},${lng1.toFixed(5)}`;
+    const k2 = `${lat2.toFixed(5)},${lng2.toFixed(5)}`;
+    const key = `${k1}>${k2}`;
+    if (_walkRouteCache.has(key)) return _walkRouteCache.get(key);
+    try {
+      const url = `${WALK_ROUTE_URL}${lng1.toFixed(5)},${lat1.toFixed(5)};${lng2.toFixed(5)},${lat2.toFixed(5)}` +
+                  `?overview=full&geometries=geojson&steps=false&alternatives=false`;
+      const ctl = new AbortController();
+      const timer = setTimeout(() => ctl.abort(), 2500);
+      let resp;
+      try {
+        resp = await fetch(url, { signal: ctl.signal });
+      } finally { clearTimeout(timer); }
+      if (!resp.ok) { _walkRouteCache.set(key, null); return null; }
+      const j = await resp.json();
+      if (j.code !== 'Ok' || !j.routes || !j.routes[0]) {
+        _walkRouteCache.set(key, null); return null;
+      }
+      const route = j.routes[0];
+      const out = {
+        meters: route.distance,
+        seconds: route.duration,
+        // GeoJSON: each coord is [lng, lat] — flip to {lat, lng} for the
+        // canvas projector, which expects lat-first.
+        geometry: (route.geometry && route.geometry.coordinates || []).map((c) => ({ lat: c[1], lng: c[0] })),
+      };
+      _walkRouteCache.set(key, out);
+      return out;
+    } catch (e) {
+      _walkRouteCache.set(key, null);
+      return null;
+    }
+  }
+  // Wraps fetchRealWalkRoute with the existing haversine fallback so the
+  // walk-leg construction in every router is one line:
+  //   const w = await walkLeg(lat1, lng1, lat2, lng2);
+  //   // w.meters  {w.minutes  {w.geometry: [{lat,lng}...] | null}  {w.routed: bool}
+  async function walkLeg(lat1, lng1, lat2, lng2) {
+    const real = await fetchRealWalkRoute(lat1, lng1, lat2, lng2);
+    if (real) {
+      return {
+        meters: real.meters,
+        minutes: real.seconds / 60,
+        geometry: real.geometry,
+        routed: true,
+      };
+    }
+    const m = haversine(lat1, lng1, lat2, lng2) * 1000;
+    return { meters: m, minutes: walkMinutes(m), geometry: null, routed: false };
+  }
   function totalKm(legs) {
     let m = 0;
     legs.forEach((l) => {
@@ -609,24 +679,28 @@
       if (oIdx < 0 || dIdx < 0 || dIdx <= oIdx) return null;
       const rideKm = routeDistanceKm(stops, oIdx, dIdx);
       const rideMin = rideMinutes(rideKm * 1000);
-      // We charge the walk-in only when the user is NOT physically at the
-      // boarding stop. Same for walk-out at the destination.
-      const walkOutM = stopLatLng(idx, origin.stop)
-        ? haversine(origin.lat, origin.lng, stopLatLng(idx, origin.stop).lat, stopLatLng(idx, origin.stop).lng) * 1000
-        : 0;
-      const walkInM = stopLatLng(idx, dest.stop)
-        ? haversine(dest.lat, dest.lng, stopLatLng(idx, dest.stop).lat, stopLatLng(idx, dest.stop).lng) * 1000
-        : 0;
-      if (walkOutM > ORIGIN_WALK_LIMIT_M) return null;
-      if (walkInM  > DEST_WALK_LIMIT_M)   return null;
+      // v47 — real walking path via walkLeg() (GraphHopper demo, haversine
+      // fallback). Each router awaits its own walks; routers run in parallel
+      // via Promise.all in search(), so the GraphHopper RTT (~250 ms)
+      // stacks with the slowest router, not every router.
+      const oLL = stopLatLng(idx, origin.stop);
+      const dLL = stopLatLng(idx, dest.stop);
+      const walkOut = oLL ? await walkLeg(origin.lat, origin.lng, oLL.lat, oLL.lng) : { meters: 0, minutes: 0, geometry: null, routed: false };
+      const walkIn  = dLL ? await walkLeg(dest.lat, dest.lng, dLL.lat, dLL.lng) : { meters: 0, minutes: 0, geometry: null, routed: false };
+      if (walkOut.meters > ORIGIN_WALK_LIMIT_M) return null;
+      if (walkIn.meters  > DEST_WALK_LIMIT_M)   return null;
       const legs = [
-        { kind: 'walk', from: 'origin', to: origin.stop, meters: walkOutM, minutes: walkMinutes(walkOutM) },
+        { kind: 'walk', from: 'origin', to: origin.stop,
+          meters: walkOut.meters, minutes: walkOut.minutes,
+          geometry: walkOut.geometry, routed: walkOut.routed },
         { kind: 'ride', routeKey: key, from: origin.stop, to: dest.stop, meters: rideKm * 1000, minutes: rideMin },
-        { kind: 'walk', from: dest.stop, to: 'dest', meters: walkInM, minutes: walkMinutes(walkInM) },
+        { kind: 'walk', from: dest.stop, to: 'dest',
+          meters: walkIn.meters, minutes: walkIn.minutes,
+          geometry: walkIn.geometry, routed: walkIn.routed },
       ];
       return {
         kind: 'direct',
-        totalMin: walkMinutes(walkOutM) + rideMin + walkMinutes(walkInM),
+        totalMin: walkOut.minutes + rideMin + walkIn.minutes,
         legs,
         routeKey: key,
         routeMeta: meta,
@@ -684,9 +758,10 @@
     });
 
     const candidates = [];
-    enriched
-      .filter((x) => x && x.ok && x.value)
-      .forEach((x) => {
+    // v47 — converted from `.forEach` to a `for..of` loop so the inner
+    // `await walkLeg(...)` is legal. forEach doesn't propagate async; the
+    // `await` token threw a SyntaxError on parse.
+    for (const x of enriched.filter((x) => x && x.ok && x.value)) {
         const { rk, meta, stops, oIdx } = x.value;
         // Walk every alight stop strictly after origin (we don't accept
         // back-tracking on a single route — same as a "direct" route).
@@ -708,15 +783,18 @@
             const ride1Km = routeDistanceKm(stops, oIdx, i);
             const ride2Km = routeDistanceKm(stops2, a2, d2);
             // Walking from alight to the boarding stop of leg 2 = 0
-            // when they're the same physical stop. Approximate the
-            // transfer walk via haversine otherwise.
+            // when they're the same physical stop. Use the real walking
+            // path otherwise (v47 — GraphHopper demo with haversine
+            // fallback inside walkLeg()).
             const aLL = (Number.isFinite(alight.lat) && Number.isFinite(alight.lng))
               ? { lat: alight.lat, lng: alight.lng } : null;
             const board2 = stops2[a2];
             const bLL = (Number.isFinite(board2.lat) && Number.isFinite(board2.lng))
               ? { lat: board2.lat, lng: board2.lng } : null;
-            const xferM = (aLL && bLL) ? haversine(aLL.lat, aLL.lng, bLL.lat, bLL.lng) * 1000 : 0;
-            if (xferM > TRANSFER_WALK_LIMIT_M) continue;
+            const xfer = (aLL && bLL)
+              ? await walkLeg(aLL.lat, aLL.lng, bLL.lat, bLL.lng)
+              : { meters: 0, minutes: 0, geometry: null, routed: false };
+            if (xfer.meters > TRANSFER_WALK_LIMIT_M) continue;
             candidates.push({
               legs: [
                 {
@@ -728,7 +806,8 @@
                 },
                 {
                   kind: 'walk', from: alight.stop, to: board2.stop,
-                  meters: xferM, minutes: walkMinutes(xferM),
+                  meters: xfer.meters, minutes: xfer.minutes,
+                  geometry: xfer.geometry, routed: xfer.routed,
                   transfer: true,
                 },
                 {
@@ -742,14 +821,15 @@
             });
           }
         }
-      });
+    }
 
     // Walk-out at origin and walk-in at dest.
     const originLL = stopLatLng(idx, originStop);
     const destLL = stopLatLng(idx, destStop);
-    const walkOutM = originLL ? haversine(origin.lat, origin.lng, originLL.lat, originLL.lng) * 1000 : 0;
-    const walkInM = destLL ? haversine(dest.lat, dest.lng, destLL.lat, destLL.lng) * 1000 : 0;
-    if (walkOutM > ORIGIN_WALK_LIMIT_M || walkInM > DEST_WALK_LIMIT_M) return [];
+    // v47 — use real walking path; same pattern as findDirect.
+    const walkOut = originLL ? await walkLeg(origin.lat, origin.lng, originLL.lat, originLL.lng) : { meters: 0, minutes: 0, geometry: null, routed: false };
+    const walkIn  = destLL   ? await walkLeg(dest.lat, dest.lng, destLL.lat, destLL.lng) : { meters: 0, minutes: 0, geometry: null, routed: false };
+    if (walkOut.meters > ORIGIN_WALK_LIMIT_M || walkIn.meters > DEST_WALK_LIMIT_M) return [];
 
     const seen = new Set();
     const out = [];
@@ -758,9 +838,13 @@
       // of leg 1. If originStop !== board1 (which is originStop, by
       // construction) the walk is 0.
       const fullLegs = [
-        { kind: 'walk', from: 'origin', to: originStop, meters: walkOutM, minutes: walkMinutes(walkOutM) },
+        { kind: 'walk', from: 'origin', to: originStop,
+          meters: walkOut.meters, minutes: walkOut.minutes,
+          geometry: walkOut.geometry, routed: walkOut.routed },
         ...c.legs,
-        { kind: 'walk', from: destStop, to: 'dest', meters: walkInM, minutes: walkMinutes(walkInM) },
+        { kind: 'walk', from: destStop, to: 'dest',
+          meters: walkIn.meters, minutes: walkIn.minutes,
+          geometry: walkIn.geometry, routed: walkIn.routed },
       ];
       const totalMin = fullLegs.reduce((s, l) => s + l.minutes, 0);
       const sig = fullLegs.map((l) => `${l.kind}:${l.routeKey || l.from}:${l.to}`).join('|');
@@ -832,9 +916,16 @@
               const meta2 = idx.routes.get(rk2) || idx.ctbRoutes.get(rk2);
               const meta3 = idx.routes.get(rk3) || idx.ctbRoutes.get(rk3);
 
-              const xfer1M = xferMeters(alight1, stops2[a2]);
-              const xfer2M = xferMeters(alight2, stops3[a3]);
-              if (xfer1M > TRANSFER_WALK_LIMIT_M || xfer2M > TRANSFER_WALK_LIMIT_M) continue;
+              // v47 — real walking path for transfer walks via walkLeg(); xfersM/haver
+              // becomes the haversine fallback when the public GraphHopper
+              // demo is unreachable.
+              const xfer1 = (alight1.lat != null && stops2[a2].lat != null)
+                ? await walkLeg(alight1.lat, alight1.lng, stops2[a2].lat, stops2[a2].lng)
+                : { meters: 0, minutes: 0, geometry: null, routed: false };
+              const xfer2 = (alight2.lat != null && stops3[a3].lat != null)
+                ? await walkLeg(alight2.lat, alight2.lng, stops3[a3].lat, stops3[a3].lng)
+                : { meters: 0, minutes: 0, geometry: null, routed: false };
+              if (xfer1.meters > TRANSFER_WALK_LIMIT_M || xfer2.meters > TRANSFER_WALK_LIMIT_M) continue;
               const ride1Km = routeDistanceKm(stops1, oIdx, i);
               const ride2Km = routeDistanceKm(stops2, a2, j);
               const ride3Km = routeDistanceKm(stops3, a3, d3);
@@ -845,12 +936,16 @@
                       from: originStop, to: alight1.stop,
                       meters: ride1Km * 1000, minutes: rideMinutes(ride1Km * 1000) },
                     { kind: 'walk', from: alight1.stop, to: stops2[a2].stop,
-                      meters: xfer1M, minutes: walkMinutes(xfer1M), transfer: true },
+                      meters: xfer1.meters, minutes: xfer1.minutes,
+                      geometry: xfer1.geometry, routed: xfer1.routed,
+                      transfer: true },
                     { kind: 'ride', routeKey: rk2, routeMeta: meta2,
                       from: stops2[a2].stop, to: alight2.stop,
                       meters: ride2Km * 1000, minutes: rideMinutes(ride2Km * 1000) },
                     { kind: 'walk', from: alight2.stop, to: stops3[a3].stop,
-                      meters: xfer2M, minutes: walkMinutes(xfer2M), transfer: true },
+                      meters: xfer2.meters, minutes: xfer2.minutes,
+                      geometry: xfer2.geometry, routed: xfer2.routed,
+                      transfer: true },
                     { kind: 'ride', routeKey: rk3, routeMeta: meta3,
                       from: stops3[a3].stop, to: destStop,
                       meters: ride3Km * 1000, minutes: rideMinutes(ride3Km * 1000) },
@@ -864,17 +959,23 @@
 
     const originLL = stopLatLng(idx, originStop);
     const destLL = stopLatLng(idx, destStop);
-    const walkOutM = originLL ? haversine(origin.lat, origin.lng, originLL.lat, originLL.lng) * 1000 : 0;
-    const walkInM = destLL ? haversine(dest.lat, dest.lng, destLL.lat, destLL.lng) * 1000 : 0;
-    if (walkOutM > ORIGIN_WALK_LIMIT_M || walkInM > DEST_WALK_LIMIT_M) return [];
+    // v47 — real walking path (walkLeg) for the outer walk-out/walk-in;
+    // transfer walks inside c.legs already routed via walkLeg above.
+    const walkOut = originLL ? await walkLeg(origin.lat, origin.lng, originLL.lat, originLL.lng) : { meters: 0, minutes: 0, geometry: null, routed: false };
+    const walkIn  = destLL   ? await walkLeg(dest.lat, dest.lng, destLL.lat, destLL.lng) : { meters: 0, minutes: 0, geometry: null, routed: false };
+    if (walkOut.meters > ORIGIN_WALK_LIMIT_M || walkIn.meters > DEST_WALK_LIMIT_M) return [];
 
     const seen = new Set();
     const out = [];
     candidates.forEach((c) => {
       const fullLegs = [
-        { kind: 'walk', from: 'origin', to: originStop, meters: walkOutM, minutes: walkMinutes(walkOutM) },
+        { kind: 'walk', from: 'origin', to: originStop,
+          meters: walkOut.meters, minutes: walkOut.minutes,
+          geometry: walkOut.geometry, routed: walkOut.routed },
         ...c.legs,
-        { kind: 'walk', from: destStop, to: 'dest', meters: walkInM, minutes: walkMinutes(walkInM) },
+        { kind: 'walk', from: destStop, to: 'dest',
+          meters: walkIn.meters, minutes: walkIn.minutes,
+          geometry: walkIn.geometry, routed: walkIn.routed },
       ];
       const totalMin = fullLegs.reduce((s, l) => s + l.minutes, 0);
       const sig = fullLegs.map((l) => `${l.kind}:${l.routeKey || l.from}:${l.to}`).join('|');
@@ -1124,7 +1225,7 @@
   // Generic rail router (Dijkstra). State = (segmentId, stopId).
   // Returns { direct: [journey], oneTransfer: [journey] } so the result
   // slots into the same `direct`/`oneTransfer` buckets the bus planner uses.
-  function railRoute(graph, origin, dest, idx, opts) {
+  async function railRoute(graph, origin, dest, idx, opts) {
     const { co, perStationMin, transferMin, routeMetaFor } = opts;
     const segments = co === 'MTR' ? graph.lines : graph.routes;
     const reverseIdx = co === 'MTR' ? graph.stations : graph.stops;
@@ -1293,20 +1394,27 @@
     // away — we still offer the MTR route but cap the walk cost).
     const originLL = stopLatLng(idx, origin.stop);
     const destLL   = stopLatLng(idx, dest.stop);
-    const walkOutM = (originLL && Number.isFinite(origin.lat) && Number.isFinite(origin.lng))
-      ? haversine(origin.lat, origin.lng, originLL.lat, originLL.lng) * 1000 : 0;
-    const walkInM  = (destLL && Number.isFinite(dest.lat) && Number.isFinite(dest.lng))
-      ? haversine(dest.lat, dest.lng, destLL.lat, destLL.lng) * 1000 : 0;
-    const includeWalkOut = walkOutM > 0 && walkOutM <= ORIGIN_WALK_LIMIT_M;
-    const includeWalkIn  = walkInM > 0  && walkInM  <= DEST_WALK_LIMIT_M;
+    // v47 — real walking path for the rail planner's outer walk legs.
+    const walkOut = (originLL && Number.isFinite(origin.lat) && Number.isFinite(origin.lng))
+      ? await walkLeg(origin.lat, origin.lng, originLL.lat, originLL.lng)
+      : { meters: 0, minutes: 0, geometry: null, routed: false };
+    const walkIn  = (destLL && Number.isFinite(dest.lat) && Number.isFinite(dest.lng))
+      ? await walkLeg(dest.lat, dest.lng, destLL.lat, destLL.lng)
+      : { meters: 0, minutes: 0, geometry: null, routed: false };
+    const includeWalkOut = walkOut.meters > 0 && walkOut.meters <= ORIGIN_WALK_LIMIT_M;
+    const includeWalkIn  = walkIn.meters > 0  && walkIn.meters  <= DEST_WALK_LIMIT_M;
 
     const fullLegs = [];
     if (includeWalkOut) {
-      fullLegs.push({ kind: 'walk', from: 'origin', to: origin.stop, meters: walkOutM, minutes: walkMinutes(walkOutM) });
+      fullLegs.push({ kind: 'walk', from: 'origin', to: origin.stop,
+        meters: walkOut.meters, minutes: walkOut.minutes,
+        geometry: walkOut.geometry, routed: walkOut.routed });
     }
     for (const l of merged) fullLegs.push(l);
     if (includeWalkIn) {
-      fullLegs.push({ kind: 'walk', from: dest.stop, to: 'dest', meters: walkInM, minutes: walkMinutes(walkInM) });
+      fullLegs.push({ kind: 'walk', from: dest.stop, to: 'dest',
+        meters: walkIn.meters, minutes: walkIn.minutes,
+        geometry: walkIn.geometry, routed: walkIn.routed });
     }
 
     const totalMin = fullLegs.reduce((s, l) => s + l.minutes, 0);
@@ -1622,6 +1730,10 @@
     ensure('zh-Hant', 'plannerNeedLeaveBy', (hhmm) => `需 ${hhmm} 出發`);
     ensure('en',      'plannerNeedLeaveBy', (hhmm) => `Leave by ${hhmm}`);
     ensure('zh-Hans', 'plannerNeedLeaveBy', (hhmm) => `需 ${hhmm} 出发`);
+    // v47 — meta-row walk-minute prefix. Reads as "步行 0.3 km · 約 4 分鐘".
+    ensure('zh-Hant', 'plannerWalkMinPrefix', '約 ');
+    ensure('en',      'plannerWalkMinPrefix', '~');
+    ensure('zh-Hans', 'plannerWalkMinPrefix', '约 ');
     // v41 — route strategy sections (Bus / Rail / Mixed).
     ensure('zh-Hant', 'plannerStrategyBus',   '巴士');
     ensure('en',      'plannerStrategyBus',   'Bus');
@@ -1784,7 +1896,17 @@
       const textEl = el('div', { class: 'leg-text' }, label);
       text.appendChild(textEl);
       if (l.kind === 'walk') {
-        text.appendChild(el('div', { class: 'leg-sub' }, fmtDistance(l.meters || 0)));
+        // v47 — show walk minutes alongside distance so users see how
+        // long the walk actually takes. Falls back to distance-only when
+        // minutes is missing (legacy journeys from a stale cache).
+        const dist = fmtDistance(l.meters || 0);
+        if (Number.isFinite(l.minutes) && l.minutes > 0) {
+          const walkMin = mins(l.minutes);
+          const sub = l.routed ? `${dist} · ${walkMin}` : `${dist} · ≈ ${walkMin}`;
+          text.appendChild(el('div', { class: 'leg-sub' }, sub));
+        } else {
+          text.appendChild(el('div', { class: 'leg-sub' }, dist));
+        }
       } else {
         const rm = l.routeMeta || {};
         const co = rm.co || '';
@@ -1851,6 +1973,23 @@
       if (fromLL) pts.push({ lat: fromLL.lat, lng: fromLL.lng, co });
       if (toLL) pts.push({ lat: toLL.lat, lng: toLL.lng, co });
     }
+    // v47 — also seed the bounding box with real walking geometry when
+    // present, so the canvas doesn't clip the walk lines. We only need
+    // the geometry for the bbox here; the actual walk polylines are
+    // drawn later in the function.
+    for (const l of legs) {
+      if (l.kind !== 'walk') continue;
+      if (!l.geometry) continue;
+      // Sample a subset of points to keep the bbox pass cheap for very
+      // long paths (TSW→CEN returns ~916 waypoints).
+      const step = Math.max(1, Math.floor(l.geometry.length / 24));
+      for (let i = 0; i < l.geometry.length; i += step) {
+        pts.push({ lat: l.geometry[i].lat, lng: l.geometry[i].lng, co: '__walk__' });
+      }
+      // Always include the last waypoint so the bbox closes correctly.
+      const last = l.geometry[l.geometry.length - 1];
+      if (last) pts.push({ lat: last.lat, lng: last.lng, co: '__walk__' });
+    }
     // Dedupe consecutive identical points (back-to-back legs on same stop).
     const uniq = [];
     for (const p of pts) {
@@ -1910,13 +2049,43 @@
       polyline.setAttribute('class', `planner-canvas-line co-${ln.co}`);
       svg.appendChild(polyline);
     }
-    // v44 — draw the walk-out (first leg if it's a walk) and walk-in
-    // (last leg if it's a walk) as thin dashed lines from a canvas-edge
-    // anchor to the first / last ride dot. We use the canvas edge rather
-    // than the user's actual origin / destination coordinates because
-    // `origin.lat`/`origin.lng` in the algorithm is the same as the
-    // origin stop's lat/lng (no geolocation attached). The dashed
-    // segment is a visual cue "you walked here from outside the map".
+    // v47 — draw real walking paths for any walk leg that has geometry.
+    // We render these BEFORE the dashed corner-anchor lines so the
+    // dashed corner anchor only fires for legs without geometry (the
+    // current-state fallback when GraphHopper is unreachable).
+    let drewWalkPolyline = false;
+    for (const l of legs) {
+      if (l.kind !== 'walk') continue;
+      if (!l.geometry || l.geometry.length < 2) continue;
+      // Build the polyline points; downsample very long geometries so the
+      // SVG doesn't blow up with thousands of <line> segments.
+      const step = Math.max(1, Math.floor(l.geometry.length / 32));
+      const pts2 = [];
+      for (let i = 0; i < l.geometry.length; i += step) {
+        pts2.push(project(l.geometry[i].lat, l.geometry[i].lng));
+      }
+      const last = l.geometry[l.geometry.length - 1];
+      if (last) pts2.push(project(last.lat, last.lng));
+      // Emit one <line> per consecutive pair so the existing
+      // .planner-canvas-walk-routed CSS styling lights up uniformly.
+      for (let i = 0; i < pts2.length - 1; i++) {
+        const [x1, y1] = pts2[i];
+        const [x2, y2] = pts2[i + 1];
+        const seg = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        seg.setAttribute('x1', x1.toFixed(2));
+        seg.setAttribute('y1', y1.toFixed(2));
+        seg.setAttribute('x2', x2.toFixed(2));
+        seg.setAttribute('y2', y2.toFixed(2));
+        seg.setAttribute('class', 'planner-canvas-walk planner-canvas-walk-routed');
+        svg.appendChild(seg);
+      }
+      drewWalkPolyline = true;
+    }
+    // v44 — keep the dashed corner-anchor walk line as the fallback when
+    // no real geometry is available (or the leg's walk is short and we
+    // didn't bother to fetch). We only fall back per-leg, so a journey
+    // with one routed walk and one unrouted walk draws the routed walk
+    // polyline AND a dashed line for the unrouted one.
     const firstLeg = legs[0];
     const lastLeg = legs[legs.length - 1];
     // Origin / destination dots and walk-out line both read from the
@@ -1925,7 +2094,8 @@
     // code below doesn't need to redeclare.
     const [ox, oy, oco] = firstPts;
     const lastLn = lines[lines.length - 1];
-    if (firstLeg && firstLeg.kind === 'walk' && firstLeg.from === 'origin') {
+    if (firstLeg && firstLeg.kind === 'walk' && firstLeg.from === 'origin' &&
+        !(firstLeg.geometry && firstLeg.geometry.length > 1)) {
       // Anchor at the top-left corner — a "you came from off-canvas".
       const ax = CANVAS_PAD, ay = CANVAS_PAD;
       const w = document.createElementNS('http://www.w3.org/2000/svg', 'line');
@@ -1934,7 +2104,8 @@
       w.setAttribute('class', 'planner-canvas-walk');
       svg.appendChild(w);
     }
-    if (lastLeg && lastLeg.kind === 'walk' && lastLeg.to === 'dest' && lines.length > 0) {
+    if (lastLeg && lastLeg.kind === 'walk' && lastLeg.to === 'dest' && lines.length > 0 &&
+        !(lastLeg.geometry && lastLeg.geometry.length > 1)) {
       // Anchor at the bottom-right corner.
       const ax = CANVAS_W - CANVAS_PAD, ay = CANVAS_H - CANVAS_PAD;
       const w = document.createElementNS('http://www.w3.org/2000/svg', 'line');
@@ -2013,12 +2184,24 @@
     const canvas = buildJourneyCanvas(journey.legs);
     if (canvas) main.appendChild(canvas);
 
-    // Summary meta row (total walk, total ride, transfer count).
-    const totalWalkM = journey.legs.filter((l) => l.kind === 'walk').reduce((s, l) => s + (l.meters || 0), 0);
+    // Summary meta row (total walk + walk minutes, total ride, transfer count).
+    const walkLegs = journey.legs.filter((l) => l.kind === 'walk');
+    const totalWalkM = walkLegs.reduce((s, l) => s + (l.meters || 0), 0);
+    const totalWalkMin = walkLegs.reduce((s, l) => s + (Number.isFinite(l.minutes) ? l.minutes : 0), 0);
     const totalRideM = journey.legs.filter((l) => l.kind === 'ride').reduce((s, l) => s + (l.meters || 0), 0);
     const transfers = rideLegs.length - 1;
     const meta = el('div', { class: 'planner-card-meta' });
-    meta.appendChild(el('span', { class: 'item' }, `${t_str('plannerWalk')} `, el('strong', {}, fmtDistance(totalWalkM))));
+    // v47 — append walk minutes alongside the distance ("步行 0.3 km · 約 4 分鐘").
+    // Omit the minutes when totalWalkM is 0 (no walk at all) to keep the
+    // header compact for straight bus / rail pairs.
+    if (totalWalkM > 0 && totalWalkMin > 0) {
+      meta.appendChild(el('span', { class: 'item' },
+        `${t_str('plannerWalk')} `,
+        el('strong', {}, fmtDistance(totalWalkM)),
+        ` · ${t_str('plannerWalkMinPrefix')}${mins(totalWalkMin)}`));
+    } else {
+      meta.appendChild(el('span', { class: 'item' }, `${t_str('plannerWalk')} `, el('strong', {}, fmtDistance(totalWalkM))));
+    }
     meta.appendChild(el('span', { class: 'item' }, `${t_str('plannerRide')} `, el('strong', {}, fmtDistance(totalRideM))));
     if (transfers > 0) {
       meta.appendChild(el('span', { class: 'item' }, `${t_str('plannerTransfers')} `,

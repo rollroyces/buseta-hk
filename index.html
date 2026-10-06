@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="BusETA" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="buseta-version" content="46" />
+<meta name="buseta-version" content="47" />
 <!-- Main stylesheet. The original style.css is what we ship today — a
      hand-rolled minifier produced a broken style.min.css earlier, so we
      load the unminified bundle directly. v=35 ships the "show every
@@ -409,6 +409,46 @@
          TD_DISRUPTION_CACHE.
        - planner.min.js re-minified (115291 → 66909 bytes, 58.0%);
          planner.min.css unchanged.
+
+     v=47 ships "real walking paths + walk-time on every card" on
+     top of v46's planner. Two follow-ups from the Google Maps
+     discussion, done with NO API key:
+       - planner.js fetchRealWalkRoute() queries the public GraphHopper
+         demo at routing.openstreetmap.de/routed-foot/route/v1/foot/
+         for a real pedestrian route — duration, distance, and a
+         GeoJSON LineString. Verified TSW→CEN returns 14.9 km / 193 min
+         / 916 waypoints in ~250 ms. Cached in _walkRouteCache keyed
+         by rounded coords (~1 m precision) so back-to-back searches
+         don't hammer the demo. On any failure we fall back to the
+         existing flat 60 m/min haversine walkMinutes() so the planner
+         still works offline.
+       - walkLeg() wraps fetchRealWalkRoute + the haversine fallback so
+         every router (findDirect, findOneTransfer, findTwoTransfer,
+         railRoute) is one line: `const w = await walkLeg(...)`.
+         Walk legs now carry `geometry` and `routed` so the canvas can
+         draw the real footpath.
+       - buildJourneyCanvas draws the routed walk as a dashed polyline
+         through the geometry coords (downsampled to ~32 segments for
+         very long paths). The dashed corner-anchor fallback from v44
+         still fires for unrouted legs so the visual stays consistent
+         when GraphHopper is unreachable.
+       - Card meta row now reads "步行 0.3 km · 約 4 分鐘" instead of
+         just distance. Legs strip shows walk minutes alongside
+         distance for the same reason. New i18n key
+         `plannerWalkMinPrefix` (約 / ~ / 约) localised for all three
+         locales.
+       - planner.css .planner-canvas-walk-routed picks up a heavier
+         accent-coloured dashed stroke (var(--accent) at 1.8 / 0.85
+         opacity) so users can tell the routed walk from the
+         corner-anchor fallback at a glance.
+       - index.html cache-busters: meta name="buseta-version"
+         content="46" → "47", planner.js?v=22 → planner.js?v=23,
+         planner.css?v=22 → planner.css?v=23. app.js not touched
+         (no logic change; planner-only enhancement).
+       - sw.js: CACHE bumped buseta-v35 → buseta-v36 (forces clean
+         install). activate-handler drops buseta-vN for N < 36.
+       - planner.min.js re-minified (124879 → 71577 bytes, 57.3%);
+         planner.min.css re-minified (17986 → 13237 bytes, 73.6%).
 -->
 <link rel="stylesheet" href="style.css?v=36" />
 <title>BusETA HK · 巴士到站</title>
@@ -794,7 +834,7 @@ window.__buseta = {
     if (this._plannerScript) return this._plannerScript;
     this._plannerScript = new Promise((resolve, reject) => {
       const s = document.createElement('script');
-      s.src = 'planner.js?v=22';
+      s.src = 'planner.js?v=26';
       s.async = false; // preserve execution order
       s.onload = () => resolve(window.Planner);
       s.onerror = () => reject(new Error('planner.js failed to load'));
@@ -808,7 +848,7 @@ window.__buseta = {
     this._plannerCss = new Promise((resolve, reject) => {
       const l = document.createElement('link');
       l.rel = 'stylesheet';
-      l.href = 'planner.css?v=22';
+      l.href = 'planner.css?v=26';
       l.setAttribute('data-planner-css', '1');
       l.media = 'print';
       l.onload = () => { l.media = 'all'; resolve(); };
@@ -831,7 +871,7 @@ window.__buseta = {
   // bumps take effect within one navigation.
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).then((reg) => {
+      navigator.serviceWorker.register('./sw.js?v=36', { updateViaCache: 'none' }).then((reg) => {
         // SR-7 · Offline-mode onboarding. After a successful SW install
         // (first time only), tell the user the app can now be used offline.
         // We fire the toast when the very first install completes — that
