@@ -1534,7 +1534,17 @@
 
   async function findMtrRoutes(idx, origin, dest) {
     if (!idx || !idx.mtr) return { direct: [], oneTransfer: [] };
-    if (!idx.mtr.has(origin.stop)) return { direct: [], oneTransfer: [] };
+    // v48 — cross-mode handling for the *origin* side. The previous
+    // early-return `if (!idx.mtr.has(origin.stop)) return …` made the
+    // cross-mode block below unreachable for any user who started from
+    // a KMB / CTB / NWFB / GMB stop (e.g. MA309 馬鞍山市中心 → KT924
+    // 觀塘(裕民坊)總站 — both pure bus stops). The bus sub-planners
+    // had no KMB↔KMB route and findMtrRoutes returned empty, so the
+    // UI surfaced "暫時搵唔到合適嘅路線" despite a perfectly valid
+    // bus → walk → MTR → walk → bus journey. We now fall through and
+    // let the cross-mode block resolve the origin to its nearest MTR
+    // station. The dest-side cross-mode block was already reachable
+    // because the v48 entry-point didn't early-return on dest.
     const graph = await ensureMtrGraph(idx);
     if (!graph || !graph.lines || graph.lines.size === 0) {
       return { direct: [], oneTransfer: [] };
@@ -1622,7 +1632,10 @@
 
   async function findLrtRoutes(idx, origin, dest) {
     if (!idx || !idx.lrt || !idx.lrt.stops) return { direct: [], oneTransfer: [] };
-    if (!idx.lrt.stops.has(origin.stop)) return { direct: [], oneTransfer: [] };
+    // v48 — mirror the findMtrRoutes fix: drop the early-return on
+    // non-LRT origin so the cross-mode block (origin → nearest LRT
+    // platform) actually runs. Same UI symptom (spurious "no results")
+    // for any origin that's a KMB / MTR stop rather than an LRT stop.
     const graph = await ensureLrtGraph(idx);
     if (!graph || !graph.routes || graph.routes.size === 0) {
       return { direct: [], oneTransfer: [] };

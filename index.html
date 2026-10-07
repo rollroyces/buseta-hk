@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="BusETA" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="buseta-version" content="49" />
+<meta name="buseta-version" content="50" />
 <!-- Main stylesheet. The original style.css is what we ship today — a
      hand-rolled minifier produced a broken style.min.css earlier, so we
      load the unminified bundle directly. v=35 ships the "show every
@@ -485,6 +485,31 @@
        - No planner-side changes in this release, so planner.min.js /
          planner.min.css are unchanged from v48.3.
 
+     v=50 ships "cross-mode origin fix" on top of v49.1. The user's
+     report "why most of the route 暫時搵唔到合適嘅路線，試吓其他車
+     站啦" traced back to two early-returns the v48 commit accidentally
+     left in front of the cross-mode logic it was adding:
+       - findMtrRoutes() bailed out the moment origin.stop wasn't in
+         idx.mtr, so the cross-mode block that was supposed to bridge
+         non-MTR origins (KMB / CTB / NWFB / GMB stops) to the nearest
+         MTR station was unreachable for any origin like MA309 馬鞍山
+         市中心 → KT924 觀塘(裕民坊)總站.
+       - findLrtRoutes() had the same bug for non-LRT origins.
+     With the early-returns gone, both functions now fall through to
+     the existing cross-mode resolver and return valid bus → MTR → bus
+     (or bus → LRT → bus) journeys. The user's working 香港 →
+     MA180 case is unaffected — origin "HOK" was already in idx.mtr so
+     the cross-mode block was never reached in the first place.
+       - index.html cache-busters: meta 49 → 50, planner.js?v=30 →
+         ?v=31, planner.css?v=30 → ?v=31. app.js / style.css not
+         touched (UX-only release was v49 / v49.1).
+       - sw.js: CACHE bumped buseta-v38 → buseta-v39 (forces clean
+         install). activate-handler drops buseta-vN for N < 39;
+         keeps new bucket + ASSET_CACHE + ETA_CACHE +
+         TD_DISRUPTION_CACHE.
+       - planner.min.js re-minified (76323 → ~75 KB expected);
+         planner.min.css unchanged (no CSS shipped this round).
+
      v=48 ships "cross-mode routing" on top of v47's walk-time. The
      user's report "● 香港 → 馬鞍山警署 (MA180) 冇直達路線，需要轉車"
      was caused by findMtrRoutes requiring both `origin.stop` and
@@ -894,7 +919,7 @@ window.__buseta = {
     if (this._plannerScript) return this._plannerScript;
     this._plannerScript = new Promise((resolve, reject) => {
       const s = document.createElement('script');
-      s.src = 'planner.js?v=30';
+      s.src = 'planner.js?v=31';
       s.async = false; // preserve execution order
       s.onload = () => resolve(window.Planner);
       s.onerror = () => reject(new Error('planner.js failed to load'));
@@ -908,7 +933,7 @@ window.__buseta = {
     this._plannerCss = new Promise((resolve, reject) => {
       const l = document.createElement('link');
       l.rel = 'stylesheet';
-      l.href = 'planner.css?v=30';
+      l.href = 'planner.css?v=31';
       l.setAttribute('data-planner-css', '1');
       l.media = 'print';
       l.onload = () => { l.media = 'all'; resolve(); };
@@ -931,7 +956,7 @@ window.__buseta = {
   // bumps take effect within one navigation.
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js?v=37', { updateViaCache: 'none' }).then((reg) => {
+      navigator.serviceWorker.register('./sw.js?v=38', { updateViaCache: 'none' }).then((reg) => {
         // SR-7 · Offline-mode onboarding. After a successful SW install
         // (first time only), tell the user the app can now be used offline.
         // We fire the toast when the very first install completes — that
