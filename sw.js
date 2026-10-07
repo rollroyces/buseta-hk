@@ -29,7 +29,7 @@
  * v21 was the same forced-update after v32's QW-1 → QW-10 batch.
  * v20 was the same forced-update after the v30→v31 layout revert.
  */
-const CACHE = 'buseta-v37';
+const CACHE = 'buseta-v38';
 const SHELL = [
   '/',
   '/index.html',
@@ -100,7 +100,7 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys()
       .then((keys) => Promise.all(
-        // Drop legacy `buseta-vN` for N < 37; keep v37 + ASSET_CACHE
+        // Drop legacy `buseta-vN` for N < 38; keep v38 + ASSET_CACHE
         // + ETA_CACHE + TD_DISRUPTION_CACHE so existing offline data
         // survives. Also explicitly drop the poisoned `buseta-eta-v1`
         // cache (bumped to v2) so users on the v13-era poisoned SWR
@@ -108,7 +108,7 @@ self.addEventListener('activate', (event) => {
         keys.filter((k) => {
           if (k === 'buseta-eta-v1') return true;  // poisoned, drop
           const m = /^buseta-v(\d+)$/.exec(k);
-          if (m) return parseInt(m[1], 10) < 37;
+          if (m) return parseInt(m[1], 10) < 38;
           return k !== CACHE && k !== ASSET_CACHE && k !== ETA_CACHE && k !== TD_DISRUPTION_CACHE;
         }).map((k) => caches.delete(k))
       ))

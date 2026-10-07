@@ -2958,6 +2958,193 @@ h1, h2, h3 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 }
 
 /* ===========================================================
+   v49 — First-run onboarding tip card + empty-state CTAs
+   ===========================================================
+   The onboarding card sits at the very top of the home view the
+   first time a user opens the app. It gives a 3-step primer
+   (planner / search / nearby) and a single "知道了" dismiss
+   action that persists into localStorage so returning users
+   never see it again. Visual style mirrors the existing
+   home-empty CTA palette so the card reads as part of the same
+   welcome flow rather than a foreign widget.
+   The empty-state blocks re-skin the `<p class="empty">`
+   placeholders under each section with a context-aware CTA that
+   takes the user to the right place to populate that section. */
+
+.onboard-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 8px 0 4px;
+  padding: 22px 18px 18px;
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--accent) 8%, var(--card)),
+    var(--card));
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-md);
+}
+.onboard-card__close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: var(--r-pill);
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.15s ease, color 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.onboard-card__close:hover,
+.onboard-card__close:focus-visible {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--ink);
+  outline: none;
+}
+.onboard-card__title {
+  margin: 4px 30px 0 0;       /* leave room for the close button */
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: 0.2px;
+}
+.onboard-card__lead {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+.onboard-card__list {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.onboard-card__row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--bg-soft);
+  border-radius: var(--r-md);
+  border: 1px solid var(--line);
+}
+.onboard-card__icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--r-pill);
+  background: var(--accent-soft);
+  color: var(--accent-2);
+}
+.onboard-card__row-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.onboard-card__row-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.4;
+}
+.onboard-card__row-body {
+  margin-top: 2px;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+.onboard-card__dismiss {
+  align-self: flex-end;
+  margin-top: 4px;
+  padding: 9px 22px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 70%, transparent);
+  border-radius: var(--r-pill);
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.12s ease, box-shadow 0.15s ease;
+  box-shadow: var(--shadow-sm);
+  -webkit-tap-highlight-color: transparent;
+}
+.onboard-card__dismiss:hover,
+.onboard-card__dismiss:focus-visible {
+  background: var(--accent-2);
+  outline: none;
+}
+.onboard-card__dismiss:active { transform: translateY(1px); }
+
+/* Empty-state CTAs (re-skin of the old <p class="empty">). The
+   `.empty` base class still provides the dashed-border surface;
+   `.empty-state-block` extends it with a centered CTA + tip
+   line so the user gets both the "nothing here yet" message
+   AND a clear next step. Reuses the accent-soft palette so
+   the empty sections visually pair with the onboarding card. */
+.empty-state-block {
+  background: var(--card);
+  border: 1px dashed var(--line);
+  border-radius: var(--r-md);
+  padding: 20px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+}
+.empty-state-block__text {
+  margin: 0;
+  font-size: 14px;
+  color: var(--muted);
+}
+.empty-state-block__tip {
+  margin: -4px 0 0;
+  font-size: 12px;
+  color: var(--muted-2);
+  line-height: 1.4;
+}
+.empty-state-block__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent-2);
+  background: var(--accent-soft);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  border-radius: var(--r-pill);
+  text-decoration: none;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.12s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.empty-state-block__cta:hover,
+.empty-state-block__cta:focus-visible {
+  background: color-mix(in srgb, var(--accent) 18%, var(--accent-soft));
+  color: var(--accent-2);
+  outline: none;
+}
+.empty-state-block__cta:active { transform: translateY(1px); }
+.empty-state-block__cta svg {
+  color: currentColor;
+  flex: 0 0 auto;
+}
+
+/* ===========================================================
    Bound-swap control on the route detail header
    ===========================================================
    A single full-width button placed just under the bound pills row.

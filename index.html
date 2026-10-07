@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="BusETA" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="buseta-version" content="47" />
+<meta name="buseta-version" content="49" />
 <!-- Main stylesheet. The original style.css is what we ship today — a
      hand-rolled minifier produced a broken style.min.css earlier, so we
      load the unminified bundle directly. v=35 ships the "show every
@@ -450,6 +450,39 @@
        - planner.min.js re-minified (124879 → 71577 bytes, 57.3%);
          planner.min.css re-minified (17986 → 13237 bytes, 73.6%).
 
+     v=49 ships "first-run onboarding + empty-state CTAs" on top of
+     v48.3's stop-coords fix. Two UX gaps the user flagged:
+       (1) a brand-new user has no idea what BusETA HK can do — the
+           home view just shows three "未有收藏…" placeholders; and
+       (2) even those placeholders only show text, not a way out.
+       We fix both:
+       - Onboarding tip card. buildOnboardCard() renders a 3-row
+         primer (行程 / 搜尋 / 啟用定位) at the top of the home view
+         with an inline × and a "知道了" dismiss button. Both write
+         `buseta.onboarded = 1` to localStorage so returning users
+         never see it again. Pure structural component: every
+         visible string lives in the STRINGS table (zh-Hant / en /
+         zh-Hans) and is picked up by the existing applyI18n() pass.
+       - Empty-state CTAs. The three `<p class="empty">` placeholders
+         under 收藏路線 / 收藏車站 / 最近查過 are replaced by
+         buildEmptyStateBlock() which renders the original
+         "未有收藏…" message PLUS a context-aware tip line AND a
+         pill-shaped CTA that takes the user straight to the right
+         flow (search for the first two, search for the recent list).
+         Reuses the existing .home-empty-cta palette (accent / accent-
+         soft / pill) so the new CTAs visually pair with the empty
+         hero shown on first launch.
+       - index.html cache-busters: meta 47 → 49 (skipped 48 because
+         v48 left meta at 47 — see commit ae284b6), app.js?v=44 →
+         ?v=45, style.css?v=36 → ?v=37. planner.js / planner.css not
+         touched (UX-only release).
+       - sw.js: CACHE bumped buseta-v37 → buseta-v38 (forces clean
+         install). activate-handler drops buseta-vN for N < 38;
+         keeps new bucket + ASSET_CACHE + ETA_CACHE +
+         TD_DISRUPTION_CACHE.
+       - No planner-side changes in this release, so planner.min.js /
+         planner.min.css are unchanged from v48.3.
+
      v=48 ships "cross-mode routing" on top of v47's walk-time. The
      user's report "● 香港 → 馬鞍山警署 (MA180) 冇直達路線，需要轉車"
      was caused by findMtrRoutes requiring both `origin.stop` and
@@ -475,7 +508,7 @@
        - planner.min.js re-minified (133008 → 76323 bytes, 57.4%);
          planner.min.css unchanged.
 -->
-<link rel="stylesheet" href="style.css?v=36" />
+<link rel="stylesheet" href="style.css?v=37" />
 <title>BusETA HK · 巴士到站</title>
 <style id="critical-css">
 /* ============================================================
@@ -884,7 +917,7 @@ window.__buseta = {
   },
 };
 </script>
-<script defer src="app.js?v=44"></script>
+<script defer src="app.js?v=45"></script>
 <script>
   // SW path must be RELATIVE — GitHub Pages serves this site under
   // /buseta-hk/ but a leading `/sw.js` would resolve to the site root
@@ -896,7 +929,7 @@ window.__buseta = {
   // bumps take effect within one navigation.
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js?v=36', { updateViaCache: 'none' }).then((reg) => {
+      navigator.serviceWorker.register('./sw.js?v=37', { updateViaCache: 'none' }).then((reg) => {
         // SR-7 · Offline-mode onboarding. After a successful SW install
         // (first time only), tell the user the app can now be used offline.
         // We fire the toast when the very first install completes — that

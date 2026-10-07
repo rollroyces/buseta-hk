@@ -35,6 +35,21 @@
       emptyRoutes: '未有收藏路線。',
       emptyStops: '未有收藏車站。',
       emptyRecent: '未有最近查過嘅路線。',
+      emptyFavRoutesCta: '收藏常用路線',
+      emptyFavStopsCta: '收藏常用車站',
+      emptyRecentCta: '開始搜尋',
+      emptyFavRoutesTip: '喺路線頁長按星號即可加入收藏',
+      emptyFavStopsTip: '喺車站頁長按星號即可加入收藏',
+      emptyRecentTip: '搜尋路線或車站後會自動加入呢度',
+      onboardTitle: '歡迎使用 BusETA HK',
+      onboardLead: '三個步驟開始你嘅第一個旅程：',
+      onboardPlannerTitle: '規劃行程',
+      onboardPlannerBody: '輸入起點同終點，搵出最快、最平或最少轉乘嘅路線。',
+      onboardSearchTitle: '搜尋路線同車站',
+      onboardSearchBody: '輸入路線、巴士站、港鐵站或地點名稱，搵到即時到站時間。',
+      onboardNearbyTitle: '啟用定位',
+      onboardNearbyBody: '啟用之後會顯示附近嘅巴士站、港鐵站同熱門路線。',
+      onboardDismiss: '知道了',
       homeEmptyTitle: '探索附近路線，計劃你嘅行程',
       homeEmptySearch: '搜尋路線',
       homeEmptyLocate: '啟用定位',
@@ -279,6 +294,21 @@
       emptyRoutes: 'No saved routes yet.',
       emptyStops: 'No saved stops yet.',
       emptyRecent: 'No recent searches.',
+      emptyFavRoutesCta: 'Save your favourite routes',
+      emptyFavStopsCta: 'Save your favourite stops',
+      emptyRecentCta: 'Start searching',
+      emptyFavRoutesTip: 'Long-press the star on any route to save it',
+      emptyFavStopsTip: 'Long-press the star on any stop to save it',
+      emptyRecentTip: 'Searched routes and stops will appear here',
+      onboardTitle: 'Welcome to BusETA HK',
+      onboardLead: 'Three quick ways to get started:',
+      onboardPlannerTitle: 'Plan a trip',
+      onboardPlannerBody: 'Enter an origin and a destination — fastest, cheapest, or fewest transfers.',
+      onboardSearchTitle: 'Search routes & stops',
+      onboardSearchBody: 'Type a route, bus stop, MTR station or place name to see live arrivals.',
+      onboardNearbyTitle: 'Turn on location',
+      onboardNearbyBody: 'Once enabled, nearby bus stops, MTR stations and popular routes appear here.',
+      onboardDismiss: 'Got it',
       homeEmptyTitle: 'Discover routes near you and plan your trip',
       homeEmptySearch: 'Search routes',
       homeEmptyLocate: 'Use my location',
@@ -523,6 +553,21 @@
       emptyRoutes: '未有收藏路线。',
       emptyStops: '未有收藏车站。',
       emptyRecent: '未有最近查过嘅路线。',
+      emptyFavRoutesCta: '收藏常用路线',
+      emptyFavStopsCta: '收藏常用车站',
+      emptyRecentCta: '开始搜寻',
+      emptyFavRoutesTip: '喺路线页长按星号即可加入收藏',
+      emptyFavStopsTip: '喺车站页长按星号即可加入收藏',
+      emptyRecentTip: '搜寻路线或车站后会自动加入呢度',
+      onboardTitle: '欢迎使用 BusETA HK',
+      onboardLead: '三个步骤开始你嘅第一个旅程：',
+      onboardPlannerTitle: '规划行程',
+      onboardPlannerBody: '输入起点同终点，搵出最快、最平或最少转乘嘅路线。',
+      onboardSearchTitle: '搜寻路线同车站',
+      onboardSearchBody: '输入路线、巴士站、港铁站或地点名称，搵到即时到站时间。',
+      onboardNearbyTitle: '启用定位',
+      onboardNearbyBody: '启用之后会显示附近嘅巴士站、港铁站同热门路线。',
+      onboardDismiss: '知道了',
       homeEmptyTitle: '探索附近路线，计划你嘅行程',
       homeEmptySearch: '搜寻路线',
       homeEmptyLocate: '启用定位',
@@ -781,6 +826,7 @@
     OFFLINE: 'buseta.offline',
     NOTIF_ENABLED: 'buseta.notif.enabled',
     NOTIF_THRESHOLD: 'buseta.notif.threshold',
+    ONBOARDED: 'buseta.onboarded',
   };
 
   // ------------------------------------------------------------------
@@ -2697,6 +2743,175 @@
     return wrap;
   }
 
+  // First-run onboarding tip card. Renders a dismissable 3-step primer
+  // at the top of the home view so a brand-new user can see — at a
+  // glance — what the app can do and how to start. The dismiss button
+  // persists `buseta.onboarded = "1"` in localStorage so returning users
+  // never see the card again. Pure structural component: all visible
+  // strings live in the STRINGS table and run through the i18n pipeline
+  // via `data-i18n` on every `applyI18n()` pass.
+  function buildOnboardCard() {
+    const card = el('section', {
+      class: 'onboard-card',
+      role: 'region',
+      'aria-label': t_str('onboardTitle'),
+    });
+
+    // Inline close (×) button. Top-right of the card. Closing is the
+    // same action as tapping "知道了" — both write to localStorage and
+    // remove the card. We give the user two affordances because the
+    // dismiss button is at the bottom and the × is more discoverable.
+    const closeBtn = el('button', {
+      type: 'button',
+      class: 'onboard-card__close',
+      'aria-label': t_str('onboardDismiss'),
+    });
+    closeBtn.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">'
+      + '<path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M6 6l12 12M18 6L6 18"/>'
+      + '</svg>';
+    closeBtn.addEventListener('click', () => dismissOnboardCard(card));
+    card.appendChild(closeBtn);
+
+    card.appendChild(el('h2', { class: 'onboard-card__title', 'data-i18n': 'onboardTitle' }));
+    card.appendChild(el('p', { class: 'onboard-card__lead', 'data-i18n': 'onboardLead' }));
+
+    // Each row pairs a tinted icon with title + body text. The icon
+    // background uses --accent-soft so it picks up the same accent that
+    // lights up the brand chips / CTAs elsewhere.
+    const rows = [
+      { titleKey: 'onboardPlannerTitle', bodyKey: 'onboardPlannerBody', svg: 'planner' },
+      { titleKey: 'onboardSearchTitle',  bodyKey: 'onboardSearchBody',  svg: 'search'  },
+      { titleKey: 'onboardNearbyTitle',  bodyKey: 'onboardNearbyBody',  svg: 'pin'     },
+    ];
+    const list = el('ul', { class: 'onboard-card__list' });
+    rows.forEach((row) => {
+      const li = el('li', { class: 'onboard-card__row' });
+      const iconWrap = el('span', { class: 'onboard-card__icon', 'aria-hidden': 'true' });
+      iconWrap.appendChild(onboardIcon(row.svg));
+      li.appendChild(iconWrap);
+
+      const txt = el('div', { class: 'onboard-card__row-text' });
+      txt.appendChild(el('div', { class: 'onboard-card__row-title', 'data-i18n': row.titleKey }));
+      txt.appendChild(el('div', { class: 'onboard-card__row-body',  'data-i18n': row.bodyKey  }));
+      li.appendChild(txt);
+      list.appendChild(li);
+    });
+    card.appendChild(list);
+
+    const dismissBtn = el('button', {
+      type: 'button',
+      class: 'onboard-card__dismiss',
+      'data-i18n': 'onboardDismiss',
+    });
+    dismissBtn.addEventListener('click', () => dismissOnboardCard(card));
+    card.appendChild(dismissBtn);
+
+    return card;
+  }
+
+  // Build one of the three small SVG glyphs inside an .onboard-card__icon
+  // tile. Kept inline (no separate file, no sprite) so the card works
+  // even when the rest of the app is still preloading.
+  function onboardIcon(name) {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('width', '18');
+    svg.setAttribute('height', '18');
+    svg.setAttribute('aria-hidden', 'true');
+    const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    p.setAttribute('fill', 'none');
+    p.setAttribute('stroke', 'currentColor');
+    p.setAttribute('stroke-width', '1.8');
+    p.setAttribute('stroke-linecap', 'round');
+    p.setAttribute('stroke-linejoin', 'round');
+    if (name === 'planner') {
+      // Two arrows swapping — matches the bottom-nav "行程" glyph.
+      p.setAttribute('d', 'M6 7h12M6 7l3-3M6 7l3 3M18 17H6M18 17l-3 3M18 17l-3-3');
+    } else if (name === 'search') {
+      // Magnifier — matches the bottom-nav "搜尋" glyph.
+      p.setAttribute('d', 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-3.5-3.5');
+      const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      c.setAttribute('cx', '11'); c.setAttribute('cy', '11'); c.setAttribute('r', '7');
+      c.setAttribute('fill', 'none'); c.setAttribute('stroke', 'currentColor');
+      c.setAttribute('stroke-width', '1.8');
+      svg.appendChild(c);
+    } else {
+      // Pin — matches the in-app "啟用定位" CTA glyph.
+      p.setAttribute('d', 'M12 22s7-6.5 7-12a7 7 0 1 0-14 0c0 5.5 7 12 7 12z');
+      const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      c.setAttribute('cx', '12'); c.setAttribute('cy', '10'); c.setAttribute('r', '2.5');
+      c.setAttribute('fill', 'none'); c.setAttribute('stroke', 'currentColor');
+      c.setAttribute('stroke-width', '1.8');
+      svg.appendChild(c);
+    }
+    svg.appendChild(p);
+    return svg;
+  }
+
+  // Dismiss handler shared between the inline × and the bottom "知道了"
+  // button. Persists `buseta.onboarded = "1"` so the next home render
+  // skips the card entirely. We deliberately do NOT delete the key on a
+  // "reset" path — once onboarded, always onboarded; the card has done
+  // its job and shouldn't pop up again even after cache clears because
+  // any localStorage reset also wipes saved routes / recent, which is a
+  // strong enough "fresh device" signal that re-prompting is appropriate.
+  function dismissOnboardCard(card) {
+    try { storage.set(STORAGE_KEYS.ONBOARDED, 1); } catch { /* private mode */ }
+    if (card && card.parentNode) card.parentNode.removeChild(card);
+  }
+
+  // True if the user has already seen + dismissed the onboarding card.
+  // We only flip the flag on an explicit dismiss (× or button), so a
+  // brand-new install always sees the card on the first home render.
+  function hasOnboarded() {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.ONBOARDED)) === 1; }
+    catch { return false; }
+  }
+
+  // Empty-state block for the per-section home cards (未有收藏路線 /
+  // 未有收藏車站 / 最近查過). Renders the same dashed `.empty` surface
+  // the user used to see, plus a single line of "how do I add stuff"
+  // advice and an inline CTA that jumps to the relevant flow. The CTA
+  // is a real `<a href="#/...">` so it benefits from native focus,
+  // long-press menu, and bottom-nav history — not a fake button.
+  //
+  //   textKey — the "no items yet" copy (emptyRoutes / emptyStops / emptyRecent)
+  //   tipKey  — the contextual "how to populate" hint
+  //   ctaKey  — CTA label
+  //   ctaHref — destination hash route
+  function buildEmptyStateBlock({ textKey, tipKey, ctaKey, ctaHref }) {
+    const block = el('div', { class: 'empty-state-block' });
+    block.appendChild(el('p', { class: 'empty-state-block__text', 'data-i18n': textKey }));
+    if (tipKey) {
+      block.appendChild(el('p', { class: 'empty-state-block__tip', 'data-i18n': tipKey }));
+    }
+    if (ctaKey && ctaHref) {
+      const cta = el('a', {
+        class: 'empty-state-block__cta',
+        href: ctaHref,
+      });
+      cta.appendChild(el('span', { 'data-i18n': ctaKey }));
+      // Trailing chevron — communicates "this takes you somewhere"
+      // without leaning on a button-only affordance.
+      const chev = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      chev.setAttribute('viewBox', '0 0 24 24');
+      chev.setAttribute('width', '14');
+      chev.setAttribute('height', '14');
+      chev.setAttribute('aria-hidden', 'true');
+      const cp = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      cp.setAttribute('fill', 'none');
+      cp.setAttribute('stroke', 'currentColor');
+      cp.setAttribute('stroke-width', '2');
+      cp.setAttribute('stroke-linecap', 'round');
+      cp.setAttribute('stroke-linejoin', 'round');
+      cp.setAttribute('d', 'M9 6l6 6-6 6');
+      chev.appendChild(cp);
+      cta.appendChild(chev);
+      block.appendChild(cta);
+    }
+    return block;
+  }
+
   function renderHome() {
     showView('view-home');
     const view = renderInto('home', 'home');
@@ -2707,6 +2922,22 @@
     // connectivity state is the most prominent piece of information on
     // the home view when the user has no network.
     applyOfflineBanner();
+
+    // First-run onboarding tip card. Only renders for a brand-new user
+    // — once they tap "知道了" (or the ×) we write `buseta.onboarded = 1`
+    // into localStorage and the card is gone for good on this device.
+    // Sits ABOVE the offline / disruption / geo banners so the very
+    // first impression a new install gets is a friendly "here's what
+    // this app can do", not a warning about connectivity.
+    if (!hasOnboarded()) {
+      const onboardCard = buildOnboardCard();
+      // Prefer to mount at the very top of the .container, before any
+      // banners the applyOfflineBanner() / geo / nearest-stop branches
+      // may have just inserted. If for some reason there's no .container
+      // we fall back to the view itself — never crash a render for
+      // onboarding placement.
+      (container || view).insertBefore(onboardCard, (container || view).firstChild);
+    }
 
     // Service-disruption banner: inserted at the very top of the home
     // view, ABOVE the geo banner / nearest-stop pill / operators strip.
@@ -2778,7 +3009,12 @@
 
     const savedRoutesEl = $('[data-bind="savedRoutes"]', view);
     if (state.savedRoutes.length === 0) {
-      savedRoutesEl.appendChild(el('p', { class: 'empty' }, t_str('emptyRoutes')));
+      savedRoutesEl.appendChild(buildEmptyStateBlock({
+        textKey: 'emptyRoutes',
+        tipKey: 'emptyFavRoutesTip',
+        ctaKey: 'emptyFavRoutesCta',
+        ctaHref: '#/search',
+      }));
     } else {
       const ul = el('div', { class: 'list' });
       state.savedRoutes.forEach((r) => ul.appendChild(routeRow(r)));
@@ -2787,7 +3023,12 @@
 
     const savedStopsEl = $('[data-bind="savedStops"]', view);
     if (state.savedStops.length === 0) {
-      savedStopsEl.appendChild(el('p', { class: 'empty' }, t_str('emptyStops')));
+      savedStopsEl.appendChild(buildEmptyStateBlock({
+        textKey: 'emptyStops',
+        tipKey: 'emptyFavStopsTip',
+        ctaKey: 'emptyFavStopsCta',
+        ctaHref: '#/search',
+      }));
     } else {
       const ul = el('div', { class: 'list' });
       state.savedStops.forEach((s) => ul.appendChild(stopRow(s)));
@@ -2796,7 +3037,12 @@
 
     const recentEl = $('[data-bind="recent"]', view);
     if (state.recent.length === 0) {
-      recentEl.appendChild(el('p', { class: 'empty' }, t_str('emptyRecent')));
+      recentEl.appendChild(buildEmptyStateBlock({
+        textKey: 'emptyRecent',
+        tipKey: 'emptyRecentTip',
+        ctaKey: 'emptyRecentCta',
+        ctaHref: '#/search',
+      }));
     } else {
       const ul = el('div', { class: 'list' });
       state.recent.slice(0, 8).forEach((r) => {
@@ -2851,6 +3097,15 @@
         onclick: () => { state.recent = []; persist(); renderHome(); toast(t_str('cleared')); },
       }, t_str('clearRecent')));
     }
+
+    // Final i18n sweep. The static template was translated inside
+    // renderInto() (top of this function), but everything we just
+    // appended dynamically — the onboarding card, the empty-state
+    // blocks — still carries its raw `data-i18n` attribute. Re-running
+    // applyI18n() walks the whole view subtree, including the new
+    // nodes, so the user sees the localized copy immediately rather
+    // than the raw keys on first render.
+    applyI18n(view);
 
     // Nearby sections: only rendered when location is known. Insert the
     // bind containers into the home template and let populateNearbyInto
