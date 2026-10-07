@@ -800,7 +800,7 @@
         { kind: 'walk', from: 'origin', to: origin.stop,
           meters: walkOut.meters, minutes: walkOut.minutes,
           geometry: walkOut.geometry, routed: walkOut.routed },
-        { kind: 'ride', routeKey: key, from: origin.stop, to: dest.stop, meters: rideKm * 1000, minutes: rideMin },
+        { kind: 'ride', routeKey: key, routeMeta: meta, from: origin.stop, to: dest.stop, meters: rideKm * 1000, minutes: rideMin },
         { kind: 'walk', from: dest.stop, to: 'dest',
           meters: walkIn.meters, minutes: walkIn.minutes,
           geometry: walkIn.geometry, routed: walkIn.routed },
@@ -1784,33 +1784,32 @@
       if (!entry || !exit) continue;
       const [preBus, postBus] = await Promise.all([getPreBus(entry), getPostBus(exit)]);
       if (!preBus && !postBus) continue;
-      // Splice: replace the walkOut (first walk leg with from='origin')
-      // with preBus.legs if preBus exists; same for walkIn.
-      const newLegs = [];
+      // v52.1 — locate walkOut / walkIn by label, not by index, so the
+      // cross-mode append pattern works (findMtrRoutes pushes the cross
+      // walks at the END of rj.legs, so legs[0] is the ride, not the
+      // walkOut). The walkIn leg uses `to=dest.stop` in cross-mode but
+      // `to='dest'` in pureRail — match either.
       const legs = rj.legs;
-      let i = 0;
-      if (legs[0] && legs[0].kind === 'walk' && legs[0].from === 'origin') {
-        if (preBus) for (const bl of preBus.legs) newLegs.push(bl);
-        else        newLegs.push(legs[0]);
-        i = 1;
-      } else if (preBus && origin.stop !== entry) {
-        // Pure-rail start (origin is the rail station) but we found a
-        // bus from origin to entry — that means origin is on the bus
-        // route, skip the splice and just keep the rail middle.
+      const walkOut = legs.find((l) => l && l.kind === 'walk' && l.from === 'origin');
+      const walkIn = legs.find((l) => l && l.kind === 'walk' && (l.to === 'dest' || l.to === dest.stop));
+      const rideLegs = legs.filter((l) => l && l.kind === 'ride');
+      // Transfer walks (railRoute's between-line hops) keep their position
+      // relative to the rides; we just rebuild the journey in logical
+      // order [preBus | walkOut, ride(s), walkIn | postBus].
+      const transferWalks = legs.filter((l) => l && l.kind === 'walk' && l.transfer);
+      const newLegs = [];
+      if (preBus) {
+        for (const bl of preBus.legs) newLegs.push(bl);
+      } else if (walkOut) {
+        newLegs.push(walkOut);
       }
-      // Middle: rides + transfer walks until the walkIn.
-      for (; i < legs.length; i++) {
-        const l = legs[i];
-        if (l.kind === 'walk' && l.to === 'dest') {
-          if (postBus) for (const bl of postBus.legs) newLegs.push(bl);
-          else        newLegs.push(l);
-          i++;
-          break;
-        }
-        newLegs.push(l);
+      for (const l of rideLegs) newLegs.push(l);
+      for (const l of transferWalks) newLegs.push(l);
+      if (postBus) {
+        for (const bl of postBus.legs) newLegs.push(bl);
+      } else if (walkIn) {
+        newLegs.push(walkIn);
       }
-      // Any trailing legs (shouldn't normally exist) fall through.
-      for (; i < legs.length; i++) newLegs.push(legs[i]);
       out.push({
         legs: newLegs,
         totalMin: newLegs.reduce((s, l) => s + (l && l.minutes ? l.minutes : 0), 0),
