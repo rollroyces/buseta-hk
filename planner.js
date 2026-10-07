@@ -1721,6 +1721,112 @@
     return result;
   }
 
+  // ---- v52 — Mixed bus+rail builder ----------------------------------
+  // For each rail journey (MTR or LRT), try to prepend a direct bus
+  // leg from the user's origin to the rail entry station and/or
+  // append a direct bus leg from the rail exit station to the user's
+  // destination. When either exists, the resulting journey has both
+  // bus and rail legs — strategyOf() classifies it as "mixed" and
+  // the user sees it in a separate section alongside the pure bus
+  // and pure rail alternatives.
+  //
+  // Each mixed candidate requires 0-2 extra findDirect() calls
+  // (each fetchRoutesServingStop pre-warm costs ~250ms API RTT).
+  // Capped at MAX_MIXED_PER_RAIL to bound the worst-case work.
+  const MAX_MIXED_PER_RAIL = 1;       // only the shortest pre/post bus per rail
+  async function buildMixedJourneys(idx, origin, dest, railJourneys, railCo) {
+    const out = [];
+    // Each rail journey's entry/exit station is looked up once; we
+    // dedupe findDirect() calls across all rail journeys so multiple
+    // rails through the same entry don't trigger duplicate pre-warms.
+    const preBusCache = new Map();   // entryStation → shortest bus journey
+    const postBusCache = new Map();  // exitStation  → shortest bus journey
+    const entryMetaOf = (s) => {
+      if (railCo === 'MTR') {
+        const m = idx.mtr && idx.mtr.get(s);
+        return (m && Number.isFinite(m.lat) && Number.isFinite(m.lng)) ? m : null;
+      }
+      const m = idx.lrt && idx.lrt.stops && idx.lrt.stops.get(s);
+      return (m && Number.isFinite(m.lat) && Number.isFinite(m.lng)) ? m : null;
+    };
+    async function getPreBus(entry) {
+      if (origin.stop === entry) return Promise.resolve(null);
+      if (preBusCache.has(entry)) return preBusCache.get(entry);
+      const m = entryMetaOf(entry);
+      if (!m) { preBusCache.set(entry, null); return null; }
+      const stopObj = { stop: entry, lat: m.lat, lng: m.lng };
+      const direct = await findDirect(idx, origin, stopObj);
+      const best = direct.length > 0 ? direct[0] : null;
+      preBusCache.set(entry, best);
+      return best;
+    }
+    async function getPostBus(exit) {
+      if (exit === dest.stop) return Promise.resolve(null);
+      if (postBusCache.has(exit)) return postBusCache.get(exit);
+      const m = entryMetaOf(exit);
+      if (!m) { postBusCache.set(exit, null); return null; }
+      const stopObj = { stop: exit, lat: m.lat, lng: m.lng };
+      const direct = await findDirect(idx, stopObj, dest);
+      const best = direct.length > 0 ? direct[0] : null;
+      postBusCache.set(exit, best);
+      return best;
+    }
+    for (const rj of railJourneys) {
+      if (!rj.legs || rj.legs.length === 0) continue;
+      // Find rail entry/exit stations (first / last ride leg's from/to).
+      let entry = null, exit = null;
+      for (const l of rj.legs) {
+        if (l && l.kind === 'ride') {
+          if (!entry) entry = l.from;
+          exit = l.to;
+        }
+      }
+      if (!entry || !exit) continue;
+      const [preBus, postBus] = await Promise.all([getPreBus(entry), getPostBus(exit)]);
+      if (!preBus && !postBus) continue;
+      // Splice: replace the walkOut (first walk leg with from='origin')
+      // with preBus.legs if preBus exists; same for walkIn.
+      const newLegs = [];
+      const legs = rj.legs;
+      let i = 0;
+      if (legs[0] && legs[0].kind === 'walk' && legs[0].from === 'origin') {
+        if (preBus) for (const bl of preBus.legs) newLegs.push(bl);
+        else        newLegs.push(legs[0]);
+        i = 1;
+      } else if (preBus && origin.stop !== entry) {
+        // Pure-rail start (origin is the rail station) but we found a
+        // bus from origin to entry — that means origin is on the bus
+        // route, skip the splice and just keep the rail middle.
+      }
+      // Middle: rides + transfer walks until the walkIn.
+      for (; i < legs.length; i++) {
+        const l = legs[i];
+        if (l.kind === 'walk' && l.to === 'dest') {
+          if (postBus) for (const bl of postBus.legs) newLegs.push(bl);
+          else        newLegs.push(l);
+          i++;
+          break;
+        }
+        newLegs.push(l);
+      }
+      // Any trailing legs (shouldn't normally exist) fall through.
+      for (; i < legs.length; i++) newLegs.push(legs[i]);
+      out.push({
+        legs: newLegs,
+        totalMin: newLegs.reduce((s, l) => s + (l && l.minutes ? l.minutes : 0), 0),
+        kind: rj.kind,
+        // Preserve the rail routing metadata so the UI shows the right
+        // strategy tag (rail vs. mixed). We mark _mixed=true so the
+        // strategyOf classifier can promote the journey to the mixed
+        // bucket.
+        _mixedRailCo: railCo,
+        _entry: entry,
+        _exit: exit,
+      });
+    }
+    return out;
+  }
+
   // ---- Top-level search ----------------------------------------------
   async function search(originStop, destStop) {
     const t0 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
@@ -1794,6 +1900,23 @@
     const railDirect = [].concat(mtrRoutes.direct, lrtRoutes.direct);
     const railOneTransfer = [].concat(mtrRoutes.oneTransfer, lrtRoutes.oneTransfer);
 
+    // ---- v52 — Mixed bus+rail journeys -------------------------------
+    // For each rail journey, try to find direct buses from the user's
+    // origin to the rail entry station and/or from the rail exit to
+    // the user's destination. When found, splice them in place of the
+    // cross-mode walks so the user sees realistic end-to-end trips
+    // that mix bus and rail (e.g. "89K to 馬鞍山站 → MTR → 14X to
+    // KT924"). Mixed candidates are computed for both MTR and LRT
+    // rail outputs. Each mixed candidate costs 0-2 extra
+    // findDirect() calls; the worst case is ~4 extra RTTs per search.
+    const [mixedFromMtr, mixedFromLrt] = await Promise.all([
+      buildMixedJourneys(idx, origin, dest,
+        [].concat(mtrRoutes.direct, mtrRoutes.oneTransfer), 'MTR'),
+      buildMixedJourneys(idx, origin, dest,
+        [].concat(lrtRoutes.direct, lrtRoutes.oneTransfer), 'LRT'),
+    ]);
+    const mixedJourneys = [].concat(mixedFromMtr, mixedFromLrt);
+
     // ---- Mixed (current default) merge ------------------------------
     // Keep the legacy behaviour where rail legs are appended into the
     // direct + oneTransfer buckets so older callers of `Planner.search`
@@ -1849,6 +1972,15 @@
     for (const j of direct)          buckets[bucketOf(j)].push(j);
     for (const j of oneTransfer)     buckets[bucketOf(j)].push(j);
     for (const j of twoTransfer)     buckets[bucketOf(j)].push(j);
+    // v52 — mixed bus+rail candidates (spliced into the merged arrays
+    // so strategyOf() correctly classifies them as "mixed" — they have
+    // at least one bus leg AND one rail leg). We append them to the
+    // "direct" bucket of the merged legacy arrays so they're eligible
+    // for the mixed bucket, and to the strategyOf view via direct.
+    for (const j of mixedJourneys) {
+      direct.push(j);
+      buckets[bucketOf(j)].push(j);
+    }
 
     const strategies = { bus: { journeys: [], best: null }, rail: { journeys: [], best: null }, mixed: { journeys: [], best: null } };
     for (const k of Object.keys(buckets)) {
