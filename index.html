@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="BusETA" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="buseta-version" content="54" />
+<meta name="buseta-version" content="55" />
 <!-- Main stylesheet. The original style.css is what we ship today — a
      hand-rolled minifier produced a broken style.min.css earlier, so we
      load the unminified bundle directly. v=35 ships the "show every
@@ -485,6 +485,19 @@
        - No planner-side changes in this release, so planner.min.js /
          planner.min.css are unchanged from v48.3.
 
+     v=53 ships a UX fix the user flagged: "when use a non mobile the
+     navigate misplaced". The desktop layout (>=720px viewport) inherited
+     the mobile bottom-nav's "floating glass pill" treatment —
+     max-width: 480px, centered with translateX(-50%), 24px rounded-top
+     corners. On a 948 px viewport that puts a phone-notch-shaped strip
+     in the middle of the page, occluding the recent-search list behind
+     it ("香港 → 馬鞍山運動場" was hidden by the pill in the user's
+     report). Fix: at >=720 px the pill style resets to a full-width
+     bottom bar (no max-width, no translateX, no rounded top). Mobile
+     (<720 px) keeps the existing full-width bottom bar. No JS touched.
+       - style.css?v=37 → ?v=38. sw.js buseta-v43 → buseta-v44 (forces
+         clean install). planner.js / planner.min.js / app.js unchanged.
+
      v=52.2 ships the third leg of the v52 series — the proximity-based
      bus-stop lookup that actually lets mixed (bus+rail) journeys
      surface for the canonical cross-mode cases like MA309 → KT924.
@@ -638,7 +651,7 @@
        - planner.min.js re-minified (133008 → 76323 bytes, 57.4%);
          planner.min.css unchanged.
 -->
-<link rel="stylesheet" href="style.css?v=37" />
+<link rel="stylesheet" href="style.css?v=38" />
 <title>BusETA HK · 巴士到站</title>
 <style id="critical-css">
 /* ============================================================
@@ -1059,7 +1072,7 @@ window.__buseta = {
   // bumps take effect within one navigation.
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js?v=42', { updateViaCache: 'none' }).then((reg) => {
+      navigator.serviceWorker.register('./sw.js?v=43', { updateViaCache: 'none' }).then((reg) => {
         // SR-7 · Offline-mode onboarding. After a successful SW install
         // (first time only), tell the user the app can now be used offline.
         // We fire the toast when the very first install completes — that

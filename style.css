@@ -2071,7 +2071,18 @@ h1, h2, h3 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 @media (min-width: 720px) {
   .container { padding: 20px 24px 32px; }
   .topbar { padding: 0 24px; }
-  .bottom-nav { max-width: 480px; left: 50%; transform: translateX(-50%); border-radius: 24px 24px 0 0; }
+  /* v53 — desktop bottom-nav: full-width bar with proper border, no fake
+     "phone notch" floating-pill. The old 480px centered pill with 24px
+     rounded-top looked misplaced in a wide viewport and visually occluded
+     the recent-search list behind it. */
+  .bottom-nav {
+    max-width: none;
+    left: 0;
+    right: 0;
+    transform: none;
+    border-radius: 0;
+    border-top: 1px solid var(--line);
+  }
   .splash-title { font-size: 44px; }
 }
 
