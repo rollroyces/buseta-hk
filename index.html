@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="BusETA" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="buseta-version" content="50" />
+<meta name="buseta-version" content="51" />
 <!-- Main stylesheet. The original style.css is what we ship today — a
      hand-rolled minifier produced a broken style.min.css earlier, so we
      load the unminified bundle directly. v=35 ships the "show every
@@ -485,6 +485,25 @@
        - No planner-side changes in this release, so planner.min.js /
          planner.min.css are unchanged from v48.3.
 
+     v=51 ships "include bus too" follow-up on top of v50. After the
+     v50 cross-mode fix unblocked MA309 → KT924 the user noticed the
+     result only showed MTR cross-mode, not pure-bus 1-transfer. Two
+     conservative BFS loosenings:
+       - TRANSFER_WALK_LIMIT_M 350 → 500. Some HK bus interchanges
+         (e.g. 大圍站公共運輸交匯處, 黃大仙站) sit up to ~450m between
+         different operators' stops; the old 350m cap was filtering
+         these out silently.
+       - findTwoTransfer alight lookhead 30 → 50 stops. The original
+         30-stop window cut off long suburban routes mid-journey,
+         so any 2-transfer that needed a hop further along R1 or R2
+         was missed.
+     We deliberately did NOT add on-demand fetching for non-cached R2
+     routes — the cost is unbounded (worst-case ~4500 R2 candidates
+     × 250ms API each) and the pre-warm already covers R2 = dest-route
+     in 99% of cases. Bump cache-busters: meta 50 → 51, planner.js
+     ?v=31 → ?v=32, planner.css?v=31 → ?v=32; sw.js buseta-v39 →
+     buseta-v40.
+
      v=50 ships "cross-mode origin fix" on top of v49.1. The user's
      report "why most of the route 暫時搵唔到合適嘅路線，試吓其他車
      站啦" traced back to two early-returns the v48 commit accidentally
@@ -919,7 +938,7 @@ window.__buseta = {
     if (this._plannerScript) return this._plannerScript;
     this._plannerScript = new Promise((resolve, reject) => {
       const s = document.createElement('script');
-      s.src = 'planner.js?v=31';
+      s.src = 'planner.js?v=32';
       s.async = false; // preserve execution order
       s.onload = () => resolve(window.Planner);
       s.onerror = () => reject(new Error('planner.js failed to load'));
@@ -933,7 +952,7 @@ window.__buseta = {
     this._plannerCss = new Promise((resolve, reject) => {
       const l = document.createElement('link');
       l.rel = 'stylesheet';
-      l.href = 'planner.css?v=31';
+      l.href = 'planner.css?v=32';
       l.setAttribute('data-planner-css', '1');
       l.media = 'print';
       l.onload = () => { l.media = 'all'; resolve(); };
@@ -956,7 +975,7 @@ window.__buseta = {
   // bumps take effect within one navigation.
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js?v=38', { updateViaCache: 'none' }).then((reg) => {
+      navigator.serviceWorker.register('./sw.js?v=39', { updateViaCache: 'none' }).then((reg) => {
         // SR-7 · Offline-mode onboarding. After a successful SW install
         // (first time only), tell the user the app can now be used offline.
         // We fire the toast when the very first install completes — that

@@ -29,7 +29,14 @@
   const WALK_M_PER_MIN = 60;          // walking speed
   const BUS_KMH = 12;                  // average bus speed (busway included)
   const BUS_KMH_M_PER_MIN = BUS_KMH * 1000 / 60; // 200 m/min
-  const TRANSFER_WALK_LIMIT_M = 350;   // reject transfer legs that need a walk > this
+  const TRANSFER_WALK_LIMIT_M = 500;   // reject transfer legs that need a walk > this
+                                    // v51 — loosened from 350m. Some HK bus
+                                    // interchanges (e.g. 大圍站公共運輸交匯處,
+                                    // 黃大仙站) require a 350-500m walk between
+                                    // different operators' stops; the old limit
+                                    // silently filtered them out, leaving the
+                                    // user with only the MTR cross-mode option
+                                    // for legitimate KMB↔KMB transfers.
   const ORIGIN_WALK_LIMIT_M    = 1200; // walking from origin to first stop
   const DEST_WALK_LIMIT_M      = 1200;
   const ETA_MAX_MIN            = 120;  // ignore ETAs further out than this
@@ -993,7 +1000,7 @@
     for (const x of enriched) {
       if (!x || !x.ok || !x.value) continue;
       const { rk: rk1, meta: meta1, stops: stops1, oIdx } = x.value;
-      for (let i = oIdx + 1; i < Math.min(oIdx + 30, stops1.length); i++) {
+      for (let i = oIdx + 1; i < Math.min(oIdx + 50, stops1.length); i++) {
         const alight1 = stops1[i];
         const r2s = routesServingStop(alight1.stop);
         for (const rk2 of r2s) {
@@ -1002,7 +1009,7 @@
           if (!stops2) continue;
           const a2 = stops2.findIndex((s) => s.stop === alight1.stop);
           if (a2 < 0) continue;
-          for (let j = a2 + 1; j < Math.min(a2 + 30, stops2.length); j++) {
+          for (let j = a2 + 1; j < Math.min(a2 + 50, stops2.length); j++) {
             const alight2 = stops2[j];
             const r3s = routesServingStop(alight2.stop);
             for (const rk3 of r3s) {
