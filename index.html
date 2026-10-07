@@ -463,15 +463,17 @@
          never see it again. Pure structural component: every
          visible string lives in the STRINGS table (zh-Hant / en /
          zh-Hans) and is picked up by the existing applyI18n() pass.
-       - Empty-state CTAs. The three `<p class="empty">` placeholders
-         under 收藏路線 / 收藏車站 / 最近查過 are replaced by
-         buildEmptyStateBlock() which renders the original
-         "未有收藏…" message PLUS a context-aware tip line AND a
-         pill-shaped CTA that takes the user straight to the right
-         flow (search for the first two, search for the recent list).
-         Reuses the existing .home-empty-cta palette (accent / accent-
-         soft / pill) so the new CTAs visually pair with the empty
-         hero shown on first launch.
+       - Empty-state CTAs. The three empty placeholders under
+         收藏路線 / 收藏車站 / 最近查過 (mounted by the home template
+         via `<div data-bind="savedRoutes">` /
+         `<div data-bind="savedStops">` / `<div data-bind="recent">`)
+         are replaced by buildEmptyStateBlock() which renders the
+         original "未有收藏…" message PLUS a context-aware tip line
+         AND a pill-shaped CTA that takes the user straight to the
+         right flow (search for the first two, search for the recent
+         list). Reuses the existing .home-empty-cta palette (accent /
+         accent-soft / pill) so the new CTAs visually pair with the
+         empty hero shown on first launch.
        - index.html cache-busters: meta 47 → 49 (skipped 48 because
          v48 left meta at 47 — see commit ae284b6), app.js?v=44 →
          ?v=45, style.css?v=36 → ?v=37. planner.js / planner.css not
