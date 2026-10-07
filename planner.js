@@ -647,6 +647,44 @@
     _nearestRailCache.set(cacheKey, out);
     return out;
   }
+  // ---- v52.2 — Nearest bus stop lookup -------------------------------
+  // Used by buildMixedJourneys when the rail entry/exit is an MTR or LRT
+  // station code (3-letter or numeric), which never appears in a bus route's
+  // stop list. findDirect() iterates each candidate route's stops and does
+  // an exact `s.stop === dest.stop` check, so passing MTR as the literal
+  // findDirect dest yields zero candidates. Instead we resolve the closest
+  // KMB / LWB / CTB / NWFB / GMB stop within walking distance (~500 m) and
+  // use that as the findDirect dest; the extra walk from the bus-alighting
+  // stop to the actual rail station is then appended as a separate leg in
+  // the spliced mixed journey.
+  const _nearestBusCache = new Map();  // cacheKey → { stop, lat, lng, distMeters } | null
+  function _busCacheKey(lat, lng, maxM) {
+    return `${Math.round(lat * 10000) / 10000}|${Math.round(lng * 10000) / 10000}|${Math.round(maxM)}`;
+  }
+  function findNearestBusStop(idx, lat, lng, maxMeters) {
+    if (!idx || !idx.stops) return null;
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+    const max = Number.isFinite(maxMeters) ? maxMeters : 500;
+    const cacheKey = _busCacheKey(lat, lng, max);
+    if (_nearestBusCache.has(cacheKey)) return _nearestBusCache.get(cacheKey);
+    let best = null;
+    let bestDist = Infinity;
+    idx.stops.forEach((s, stopId) => {
+      const co = s && s.co;
+      if (co !== 'KMB' && co !== 'LWB' && co !== 'CTB' && co !== 'NWFB' && co !== 'GMB') return;
+      const sLat = Number.isFinite(s.lat) ? s.lat : null;
+      const sLng = Number.isFinite(s.lng) ? s.lng : null;
+      if (sLat == null || sLng == null) return;
+      const d = haversine(lat, lng, sLat, sLng) * 1000;
+      if (d > max) return;
+      if (d < bestDist) {
+        bestDist = d;
+        best = { stop: stopId, lat: sLat, lng: sLng, distMeters: d };
+      }
+    });
+    _nearestBusCache.set(cacheKey, best);
+    return best;
+  }
 
   // Stitch a real walking leg onto the end (or start) of an array of
   // rail-router journeys. Used by v48 to bridge cross-mode destinations
@@ -1754,7 +1792,14 @@
       if (preBusCache.has(entry)) return preBusCache.get(entry);
       const m = entryMetaOf(entry);
       if (!m) { preBusCache.set(entry, null); return null; }
-      const stopObj = { stop: entry, lat: m.lat, lng: m.lng };
+      // v52.2 — MTR/LRT station codes never appear in a bus route's stop
+      // list (KMB uses 16-hex, CTB uses 6-digit, GMB uses numeric IDs).
+      // Resolve the closest bus stop within ~500m so findDirect() can
+      // actually find a route; the extra walk from that bus stop to the
+      // rail entry is added as a tail leg in the splice below.
+      const near = findNearestBusStop(idx, m.lat, m.lng, 500);
+      if (!near) { preBusCache.set(entry, null); return null; }
+      const stopObj = { stop: near.stop, lat: near.lat, lng: near.lng };
       const direct = await findDirect(idx, origin, stopObj);
       const best = direct.length > 0 ? direct[0] : null;
       preBusCache.set(entry, best);
@@ -1765,7 +1810,11 @@
       if (postBusCache.has(exit)) return postBusCache.get(exit);
       const m = entryMetaOf(exit);
       if (!m) { postBusCache.set(exit, null); return null; }
-      const stopObj = { stop: exit, lat: m.lat, lng: m.lng };
+      // v52.2 — same fix as getPreBus. Resolve the nearest bus stop to
+      // the rail exit so findDirect() can return a real route.
+      const near = findNearestBusStop(idx, m.lat, m.lng, 500);
+      if (!near) { postBusCache.set(exit, null); return null; }
+      const stopObj = { stop: near.stop, lat: near.lat, lng: near.lng };
       const direct = await findDirect(idx, stopObj, dest);
       const best = direct.length > 0 ? direct[0] : null;
       postBusCache.set(exit, best);
@@ -1800,13 +1849,49 @@
       const newLegs = [];
       if (preBus) {
         for (const bl of preBus.legs) newLegs.push(bl);
+        // v52.2 — findDirect's dest is the nearest *bus* stop near `entry`,
+        // not the rail entry itself. Add a walk from that bus stop to the
+        // MTR/LRT entry so the rail ride can start there. Find the bus
+        // alighting stop from the last ride leg in preBus (its `to`).
+        const lastBusRide = [...preBus.legs].reverse().find((l) => l && l.kind === 'ride');
+        const alightStop = lastBusRide ? lastBusRide.to : null;
+        if (alightStop && alightStop !== entry) {
+          const aMeta = stopLatLng(idx, alightStop);
+          const eMeta = entryMetaOf(entry);
+          if (aMeta && eMeta && Number.isFinite(aMeta.lat) && Number.isFinite(aMeta.lng)) {
+            const w = await walkLeg(aMeta.lat, aMeta.lng, eMeta.lat, eMeta.lng);
+            newLegs.push({
+              kind: 'walk', from: alightStop, to: entry,
+              meters: w.meters, minutes: w.minutes,
+              geometry: w.geometry, routed: w.routed,
+            });
+          }
+        }
       } else if (walkOut) {
         newLegs.push(walkOut);
       }
       for (const l of rideLegs) newLegs.push(l);
       for (const l of transferWalks) newLegs.push(l);
       if (postBus) {
-        for (const bl of postBus.legs) newLegs.push(bl);
+        // v52.2 — postBus.legs[0] is a walk from 'origin' to the nearest
+        // bus stop near `exit`; we already fit that walk into the journey by
+        // walking from `exit` (rail exit) to the bus boarding stop. Drop
+        // postBus.legs[0] and keep the rest (ride + walkIn to user's dest).
+        const exitMeta = entryMetaOf(exit);
+        const firstLeg = postBus.legs[0];
+        const busBoardingStop = (firstLeg && firstLeg.kind === 'walk') ? firstLeg.to : null;
+        if (exitMeta && busBoardingStop && busBoardingStop !== exit) {
+          const busBoardingMeta = stopLatLng(idx, busBoardingStop);
+          if (busBoardingMeta && Number.isFinite(busBoardingMeta.lat)) {
+            const w = await walkLeg(exitMeta.lat, exitMeta.lng, busBoardingMeta.lat, busBoardingMeta.lng);
+            newLegs.push({
+              kind: 'walk', from: exit, to: busBoardingStop,
+              meters: w.meters, minutes: w.minutes,
+              geometry: w.geometry, routed: w.routed,
+            });
+          }
+        }
+        for (let i = 1; i < postBus.legs.length; i++) newLegs.push(postBus.legs[i]);
       } else if (walkIn) {
         newLegs.push(walkIn);
       }

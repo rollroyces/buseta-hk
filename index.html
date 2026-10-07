@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="BusETA" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="buseta-version" content="53" />
+<meta name="buseta-version" content="54" />
 <!-- Main stylesheet. The original style.css is what we ship today — a
      hand-rolled minifier produced a broken style.min.css earlier, so we
      load the unminified bundle directly. v=35 ships the "show every
@@ -484,6 +484,36 @@
          TD_DISRUPTION_CACHE.
        - No planner-side changes in this release, so planner.min.js /
          planner.min.css are unchanged from v48.3.
+
+     v=52.2 ships the third leg of the v52 series — the proximity-based
+     bus-stop lookup that actually lets mixed (bus+rail) journeys
+     surface for the canonical cross-mode cases like MA309 → KT924.
+     The previous v52 / v52.1 fixes made the code structurally correct
+     but the mixed bucket was still empty because findDirect() iterates
+     each candidate route's stop list and does an exact `s.stop === dest.stop`
+     match. MTR station codes (3-letter like 'MOS', 'KWT', 'HOK') and LRT
+     codes never appear in a bus route's stop list — KMB uses 16-hex
+     internal IDs, CTB uses 6-digit, GMB uses numeric. So calling
+     findDirect(MA309 → MOS) returned [], even though KMB 89K
+     physically serves a stop 5 m from Ma On Shan MTR Station.
+       - New findNearestBusStop(idx, lat, lng, maxMeters) helper, next
+         to the existing findNearestMtrStop / findNearestLrtStop. Scans
+         idx.stops filtered to bus operators (KMB / LWB / CTB / NWFB /
+         GMB), returns the closest within maxMeters (we use 500 m to
+         match the existing TRANSFER_WALK_LIMIT_M). Cached by rounded
+         lat/lng so the same station hit twice in one search reuses
+         the result.
+       - getPreBus / getPostBus now resolve the rail entry/exit to the
+         nearest bus stop first, then pass that to findDirect. The
+         splicer adds the remaining walk from the bus alighting stop to
+         the actual rail station as a tail leg in the newLegs array, so
+         the resulting journey is physically continuous:
+         walk-to-bus + bus ride + walk-to-rail + MTR ride + walk-to-bus
+         + bus ride + walk-to-destination.
+       - Cache-busters: meta 53 → 54, planner.js?v=34 → ?v=35,
+         planner.css?v=34 → ?v=35; sw.js buseta-v42 → buseta-v43.
+         planner.min.js re-minified (79278 → 81484 bytes, +2206 for
+         the helper + splice legs). planner.min.css unchanged.
 
      v=52.1 ships two follow-ups on top of v52 after the v52 reviewer
      audit caught two latent bugs that prevented the "mixed bus+rail"
@@ -992,7 +1022,7 @@ window.__buseta = {
     if (this._plannerScript) return this._plannerScript;
     this._plannerScript = new Promise((resolve, reject) => {
       const s = document.createElement('script');
-      s.src = 'planner.js?v=34';
+      s.src = 'planner.js?v=35';
       s.async = false; // preserve execution order
       s.onload = () => resolve(window.Planner);
       s.onerror = () => reject(new Error('planner.js failed to load'));
@@ -1006,7 +1036,7 @@ window.__buseta = {
     this._plannerCss = new Promise((resolve, reject) => {
       const l = document.createElement('link');
       l.rel = 'stylesheet';
-      l.href = 'planner.css?v=34';
+      l.href = 'planner.css?v=35';
       l.setAttribute('data-planner-css', '1');
       l.media = 'print';
       l.onload = () => { l.media = 'all'; resolve(); };
@@ -1029,7 +1059,7 @@ window.__buseta = {
   // bumps take effect within one navigation.
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js?v=41', { updateViaCache: 'none' }).then((reg) => {
+      navigator.serviceWorker.register('./sw.js?v=42', { updateViaCache: 'none' }).then((reg) => {
         // SR-7 · Offline-mode onboarding. After a successful SW install
         // (first time only), tell the user the app can now be used offline.
         // We fire the toast when the very first install completes — that
