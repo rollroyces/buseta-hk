@@ -17,7 +17,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="BusETA" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="buseta-version" content="71" />
+    <meta name="buseta-version" content="72" />
     <!-- Main stylesheet. The original style.css is what we ship today — a
      hand-rolled minifier produced a broken style.min.css earlier, so we
      load the unminified bundle directly. v=35 ships the "show every
@@ -1497,7 +1497,7 @@
           if (this._plannerScript) return this._plannerScript;
           this._plannerScript = new Promise((resolve, reject) => {
             const s = document.createElement('script');
-            s.src = 'planner.js?v=39';
+            s.src = 'planner.js?v=40';
             s.async = false; // preserve execution order
             s.onload = () => resolve(window.Planner);
             s.onerror = () => reject(new Error('planner.js failed to load'));

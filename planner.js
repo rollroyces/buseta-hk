@@ -215,35 +215,13 @@
   // touch a stop by enumerating routes and checking the stop list).
   // The GMB operator has a /stop-route endpoint which is much cheaper.
 
-  // Small helper: bound-concurrency fetcher (mirrors fetchStopsWithCap).
-  async function mapWithCap(items, cap, worker) {
-    const out = new Array(items.length);
-    if (items.length === 0) return out;
-    const limit = Math.max(1, Math.min(cap, items.length));
-    let cursor = 0;
-    const inFlight = new Set();
-    const pump = () => {
-      while (inFlight.size < limit && cursor < items.length) {
-        const i = cursor++;
-        const p = (async () => {
-          try {
-            out[i] = { ok: true, value: await worker(items[i], i) };
-          } catch (e) {
-            out[i] = { ok: false, error: e };
-          }
-        })();
-        inFlight.add(p);
-        p.finally(() => inFlight.delete(p));
-      }
-    };
-    pump();
-    while (inFlight.size > 0 || cursor < items.length) {
-      if (inFlight.size === 0) pump();
-      await Promise.race([...inFlight]);
-      pump();
-    }
-    return out;
-  }
+  // Small helper: bound-concurrency fetcher. Phase 19 — swapped the
+  // local copy for the shared `busetaUtils.mapWithCap` exported by
+  // `src/utils/concurrency.js` (Phase 12). Both are byte-equivalent; the
+  // shared version is the single source of truth so future improvements
+  // (e.g. cancellation, AbortSignal) automatically benefit both
+  // consumers (the prefetch in app.js and the planner here).
+  // See `src/utils/concurrency.js` for the full implementation + tests.
 
   // Haversine / walkMinutes / rideMinutes moved to src/utils/geo.js and src/utils/time.js — Phase 3 modularization
 
@@ -839,7 +817,7 @@
       items = collapseRouteVariants(idx);
     }
 
-    const results = await mapWithCap(items, CONCURRENCY, async (meta) => {
+    const results = await busetaUtils.mapWithCap(items, CONCURRENCY, async (meta) => {
       const key = `${meta.co}|${meta.route}|${meta.dir}|${meta.service}`;
       const stops = await getRouteStops(idx, key, meta);
       if (!stops || stops.length === 0) return null;
@@ -934,7 +912,7 @@
       routesFromOrigin = shortcut.map((m) => `${m.co}|${m.route}|${m.dir}|${m.service}`);
       // Pre-warm the cache for these candidates so the BFS below can hit
       // the route-stop lists without redundant fetches.
-      await mapWithCap(shortcut, CONCURRENCY, async (m) => {
+      await busetaUtils.mapWithCap(shortcut, CONCURRENCY, async (m) => {
         const k = `${m.co}|${m.route}|${m.dir}|${m.service}`;
         await getRouteStops(idx, k, m);
       });
@@ -942,7 +920,7 @@
     }
 
     // Fetch the stop list of every route that touches origin.
-    const enriched = await mapWithCap(routesFromOrigin, CONCURRENCY, async (rk) => {
+    const enriched = await busetaUtils.mapWithCap(routesFromOrigin, CONCURRENCY, async (rk) => {
       const stops = await getRouteStops(idx, rk);
       if (!stops || stops.length === 0) return null;
       const oIdx = stops.findIndex((s) => s.stop === originStop);
@@ -1094,7 +1072,7 @@
     if (routesFromOrigin.length === 0) {
       const shortcut = await fetchRoutesServingStop(originStop);
       routesFromOrigin = shortcut.map((m) => `${m.co}|${m.route}|${m.dir}|${m.service}`);
-      await mapWithCap(shortcut, CONCURRENCY, async (m) => {
+      await busetaUtils.mapWithCap(shortcut, CONCURRENCY, async (m) => {
         const k = `${m.co}|${m.route}|${m.dir}|${m.service}`;
         await getRouteStops(idx, k, m);
       });
@@ -1103,7 +1081,7 @@
 
     // For each R1 from origin, for each alight S1, for each R2 from S1,
     // for each alight S2, for each R3 from S2 that reaches dest, score.
-    const enriched = await mapWithCap(routesFromOrigin, CONCURRENCY, async (rk) => {
+    const enriched = await busetaUtils.mapWithCap(routesFromOrigin, CONCURRENCY, async (rk) => {
       const stops = await getRouteStops(idx, rk);
       if (!stops) return null;
       const oIdx = stops.findIndex((s) => s.stop === originStop);
