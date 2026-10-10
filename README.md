@@ -18,14 +18,14 @@ A small, fast web app that shows live arrival times across Hong Kong's major pub
 
 ## Data sources
 
-| Source | Used for | Provider |
-| --- | --- | --- |
-| [data.etabus.gov.hk](https://data.etabus.gov.hk/v1/transport/kmb/) | KMB / LWB routes, stops, real-time ETA | Transport Department Data One |
-| [rt.data.gov.hk · Citybus](https://rt.data.gov.hk/v2/transport/citybus/) | Citybus + NWFB routes and ETA | Transport Department Data One |
-| [data.etagmb.gov.hk](https://data.etagmb.gov.hk/) | Green minibus (GMB / 專線小巴) routes, stops, ETA | Transport Department Data One |
-| [rt.data.gov.hk · MTR](https://rt.data.gov.hk/v1/transport/mtr/) | MTR heavy rail + Light Rail real-time schedule | MTR Corporation (via data.gov.hk) |
-| [opendata.mtr.com.hk](https://opendata.mtr.com.hk/) | MTR / Light Rail line + station static catalogue | MTR Corporation |
-| `assets/hk-stops.json` | Curated lat/lng for GMB stops + MTR stations + (bonus) NLB stops | Compiled from public sources; included as a local asset so the app has no runtime dependency beyond the official APIs |
+| Source                                                                   | Used for                                                         | Provider                                                                                                              |
+| ------------------------------------------------------------------------ | ---------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| [data.etabus.gov.hk](https://data.etabus.gov.hk/v1/transport/kmb/)       | KMB / LWB routes, stops, real-time ETA                           | Transport Department Data One                                                                                         |
+| [rt.data.gov.hk · Citybus](https://rt.data.gov.hk/v2/transport/citybus/) | Citybus + NWFB routes and ETA                                    | Transport Department Data One                                                                                         |
+| [data.etagmb.gov.hk](https://data.etagmb.gov.hk/)                        | Green minibus (GMB / 專線小巴) routes, stops, ETA                | Transport Department Data One                                                                                         |
+| [rt.data.gov.hk · MTR](https://rt.data.gov.hk/v1/transport/mtr/)         | MTR heavy rail + Light Rail real-time schedule                   | MTR Corporation (via data.gov.hk)                                                                                     |
+| [opendata.mtr.com.hk](https://opendata.mtr.com.hk/)                      | MTR / Light Rail line + station static catalogue                 | MTR Corporation                                                                                                       |
+| `assets/hk-stops.json`                                                   | Curated lat/lng for GMB stops + MTR stations + (bonus) NLB stops | Compiled from public sources; included as a local asset so the app has no runtime dependency beyond the official APIs |
 
 All runtime API calls are unauthenticated and CORS-enabled. Stop coordinates for GMB, MTR stations and (where available) Light Rail stops are bundled in `assets/` so the app can offer accurate nearby stops out-of-the-box.
 
@@ -82,6 +82,11 @@ rewrite rules are needed.
 The app does not track you. It uses `localStorage` for saved routes/stops/stations and
 the Geolocation API only when you tap into the search tab (and only on the
 client). No analytics. No accounts. No server.
+
+## Changelog
+
+See [CHANGELOG.md](./CHANGELOG.md) for the full per-PR release history
+(Phases 1–20).
 
 ## License
 
