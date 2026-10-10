@@ -157,6 +157,17 @@ h3 {
   border-radius: var(--r-sm);
   z-index: 1000;
 }
+
+/* Global keyboard focus indicator. a11y (Phase 17): every interactive
+   element gets a visible focus ring when keyboard-focused. `:focus-visible`
+   (not `:focus`) so mouse clicks don't show the ring. 2px solid outline
+   at the brand accent + a 2px transparent gap (computed via box-shadow)
+   so the ring has breathing room against the surrounding UI. */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--accent, #0ea5e9);
+  outline-offset: 2px;
+}
+
 .skip-link:focus {
   top: 8px;
 }

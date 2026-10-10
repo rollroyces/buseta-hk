@@ -2953,6 +2953,13 @@
     $$('.nav-item').forEach((n) => {
       n.classList.toggle('is-active', n.dataset.route === active);
       n.classList.toggle('is-detail', onDetail && n.dataset.route === 'home');
+      // a11y (Phase 17): mirror `is-active` into aria-current="page" so
+      // screen readers announce "current page" on the active nav item
+      // instead of just trusting the visual underline. We clear the
+      // attribute on inactive items so it doesn't dangle on hashchange.
+      const isActive = n.dataset.route === active;
+      if (isActive) n.setAttribute('aria-current', 'page');
+      else n.removeAttribute('aria-current');
     });
 
     // Hide splash once we navigate
