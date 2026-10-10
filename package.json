@@ -1,0 +1,24 @@
+{
+  "name": "buseta-hk",
+  "version": "0.53.0",
+  "description": "Real-time Hong Kong transit arrivals — KMB / LWB / Citybus / Minibus / MTR. Mobile-first, bilingual (繁體中文 / English), zero build step.",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "lint:i18n": "node scripts/check-i18n.js",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "eslint": "^9.10.0",
+    "prettier": "^3.3.3",
+    "vitest": "^2.0.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
