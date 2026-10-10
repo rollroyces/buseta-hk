@@ -146,6 +146,15 @@ lint` errored with "ESLint couldn't find an eslint.config.* file".
     asserts no workflow has the boolean `True` as a top-level key.
     This is the only way to catch the YAML 1.1 `on:` boolean gotcha
     (js-yaml v5 won't surface it).
+- **`.github/ISSUE_TEMPLATE/`** (PR #30): bug-report + feature-request
+  templates with `config.yml` (disables blank issues, adds a "Live
+  app" contact link). Modern GitHub Issue Forms syntax (YAML
+  frontmatter + structured Markdown body).
+- **`.github/dependabot.yml`** (PR #31): weekly npm + GitHub Actions
+  updates with SemVer grouping (one PR per major / minor / patch
+  per ecosystem per run). `open-pull-requests-limit: 5` prevents
+  queue flooding; `rebase-strategy: auto` keeps stale PRs current.
+  Labels `dependencies` + `area:dev-infra` auto-apply.
 
 ### Changed
 
