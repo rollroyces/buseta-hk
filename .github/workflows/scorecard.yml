@@ -1,0 +1,82 @@
+# This workflow uses actions that are not certified by GitHub. They are
+# provided by a third party and are governed by separate terms of service,
+# privacy policy, and support documentation.
+#
+# OpenSSF Scorecard — automated security health check for the project.
+# Adapted from the official template (see
+# https://github.com/ossf/scorecard-action). Schedule is weekly (Monday
+# morning) so the score tracks the project over time. Manual dispatch
+# available for ad-hoc re-scans.
+#
+# Triggers:
+#   - branch_protection_rule: enables the Branch-Protection check on main.
+#   - schedule (weekly): keeps the Maintained check fresh.
+#   - push to main: re-scores after each merge.
+#   - pull_request: scores the PR branch (path-filtered so doc-only PRs
+#     don't move the score).
+#   - workflow_dispatch: manual re-scan.
+#
+# `on` is quoted as `"on"` to avoid the YAML 1.1 boolean-literal
+# gotcha. See ci.yml + lighthouse.yml for the same pattern.
+
+name: OpenSSF Scorecard
+"on":
+  branch_protection_rule:
+  schedule:
+    - cron: "43 12 * * 6"
+  push:
+    branches: [main]
+  pull_request:
+    # Doc-only and config-only PRs shouldn't move the score — they
+    # don't change behavior. Mirrors the cache-buster discipline
+    # (cache-strategy.md, Phase 22).
+    paths-ignore:
+      - "**/*.md"
+      - "LICENSE"
+      - "docs/**"
+      - ".github/ISSUE_TEMPLATE/**"
+      - ".github/PULL_REQUEST_TEMPLATE.md"
+  workflow_dispatch:
+
+# Default permissions: read-only. The job below grants the write
+# permissions it requires explicitly.
+permissions: read-all
+
+jobs:
+  analysis:
+    name: Scorecard analysis
+    runs-on: ubuntu-latest
+    permissions:
+      # Needed to upload the results to the code-scanning dashboard.
+      security-events: write
+      # Needed to publish results and get a badge (see publish_results).
+      id-token: write
+      contents: read
+      actions: read
+    steps:
+      - name: "Checkout code"
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          persist-credentials: false
+
+      - name: "Run analysis"
+        uses: ossf/scorecard-action@0864cf19026789058feabb7e87baa5f140aac736 # v2.3.1
+        with:
+          results_file: results.sarif
+          results_format: sarif
+          # Public repos: publish results to OpenSSF REST API for the
+          # public Scorecard badge at api.scorecard.dev. For private
+          # repos this is always false regardless of the value here.
+          publish_results: true
+
+      - name: "Upload artifact"
+        uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3 # v4.3.1
+        with:
+          name: SARIF file
+          path: results.sarif
+          retention-days: 5
+
+      - name: "Upload to code-scanning"
+        uses: github/codeql-action/upload-sarif@8a470fddafa5cbb6266ee11b37ef4d8aae19c571 # v3.24.6
+        with:
+          sarif_file: results.sarif
