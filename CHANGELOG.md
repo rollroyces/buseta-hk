@@ -84,9 +84,9 @@ op)` covering 27 KMB / LWB operator suffixes. 12 cases.
   `${etaCount(count)}, ${soonest} ${minShort}` composition in the stop-view
   live region. Chinese leads with the duration, English uses "arriving in the
   next N minutes".
-- **`CHANGELOG.md` (this file)** (PR #21): backfilled in Keep a Changelog
-  1.1.0 format. Linked from `README.md` so contributors can find the per-PR
-  history.
+- **`CHANGELOG.md` (this file)** (PR #21, kept current by PR #27 + #29):
+  backfilled in Keep a Changelog 1.1.0 format. Linked from `README.md`
+  so contributors can find the per-PR history.
 - **Cache-buster consistency test** (PR #22): `tests/unit/cache-buster.test.js`
   scrapes the six live cache-buster values from `index.html` + `sw.js`
   via plain regex and enforces six invariants (every value is a positive
@@ -120,6 +120,32 @@ lint` errored with "ESLint couldn't find an eslint.config.* file".
   and on manual dispatch. `actions/checkout@v4` + `actions/setup-node@v4`
   (Node 20, npm cache) + `npm ci --no-audit --no-fund` + `npm run check`.
   Permissions: `contents: read` only.
+- **`CONTRIBUTING.md`** (PR #28): practical contributor guide — TL;DR,
+  project conventions (no build step, cache-buster discipline, one
+  phase per PR, tests required for new code, i18n parity), 8-step
+  workflow, file map, "what won't be merged" list, MIT licensing.
+- **`CODE_OF_CONDUCT.md`** (PR #28): the standard Contributor Covenant
+  v2.1, with enforcement contact pointed at `@rollroyces`. Attribution
+  preserved per the CC-BY-SA-4.0 license.
+- **`.github/PULL_REQUEST_TEMPLATE.md`** (PR #28): standard PR template
+  pre-filling Summary / Type of change / Checklist / Cache-buster
+  bumps / Verification / Out of scope / Merge order. GitHub picks it
+  up automatically via the filename convention.
+- **`.github/workflows/scorecard.yml`** (PR #29): OpenSSF Scorecard
+  workflow from the official `ossf/scorecard-action` template. Was
+  promised in PR #1 but never landed. Triggers: `branch_protection_rule`
+  - weekly `schedule` + `push` to main + path-filtered `pull_request` +
+    `workflow_dispatch`. Permissions: `read-all` default + job-specific
+    grants. `publish_results: true` (public repo).
+- **`tests/unit/yaml-lint.test.js`** (PR #29): 19-case YAML hygiene
+  guard for workflow files. Two passes:
+  - 16 `js-yaml` v5 (YAML 1.2) structural checks — every workflow
+    has `on`, `jobs`, every job has `runs-on`, every step has `name`
+    or `uses`/`run`.
+  - 3 PyYAML (YAML 1.1) regression checks — spawns `python3` and
+    asserts no workflow has the boolean `True` as a top-level key.
+    This is the only way to catch the YAML 1.1 `on:` boolean gotcha
+    (js-yaml v5 won't surface it).
 
 ### Changed
 
@@ -135,6 +161,12 @@ lint` errored with "ESLint couldn't find an eslint.config.* file".
   existing `assets/**` ignore. Hand-curated reference data with
   intentional formatting — reformatting would obscure content changes
   in PR diffs.
+- **`lighthouse.yml` quotes `"on":`** (PR #29): same fix as `ci.yml`
+  (Phase 25). The YAML 1.1 boolean-literal gotcha (where unquoted
+  `on:` parses as the boolean `true`) was latent in `lighthouse.yml`
+  until Phase 29 — GitHub Actions handled it at runtime via
+  special-casing, but the strict YAML 1.1 parse made the file
+  unportable.
 
 ### Fixed
 
