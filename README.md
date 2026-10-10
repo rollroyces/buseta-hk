@@ -1,5 +1,7 @@
 # BusETA HK · 巴士到站
 
+[![CI](https://github.com/rollroyces/buseta-hk/actions/workflows/ci.yml/badge.svg)](https://github.com/rollroyces/buseta-hk/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE) [![Language: JavaScript](https://img.shields.io/badge/language-JavaScript-F7DF1E)](.) [![No build step](https://img.shields.io/badge/build-none-success)](.) [![GitHub Pages](https://img.shields.io/badge/deploy-GitHub%20Pages-blue)](.)
+
 > Real-time Hong Kong transit arrivals — KMB / LWB / Citybus / Minibus / MTR. Mobile-first, bilingual (繁體中文 / English), zero build step.
 
 A small, fast web app that shows live arrival times across Hong Kong's major public transit modes. Tap a route number, a stop name, or your location to see what's coming next.
