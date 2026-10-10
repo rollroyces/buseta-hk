@@ -190,9 +190,11 @@ comment — if it's been a week and there's no review, ping
 
 ## Reporting security issues
 
-See [SECURITY.md](SECURITY.md). (Note: as of Phase 27, SECURITY.md
-is not yet on `main`. A future PR will land it. In the meantime,
-DM [@rollroyces on GitHub](https://github.com/rollroyces).)
+See [SECURITY.md](./SECURITY.md) for the full disclosure policy
+(coordinated disclosure, supported versions, response targets).
+In short: open a [private GitHub Security advisory](https://github.com/rollroyces/buseta-hk/security/advisories/new),
+DM [@rollroyces on GitHub](https://github.com/rollroyces), or
+file a public issue tagged `security` for low-severity findings.
 
 ## License
 

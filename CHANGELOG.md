@@ -173,6 +173,11 @@ lint` errored with "ESLint couldn't find an eslint.config.* file".
   re-import, and argument forwarding. `app.js` + `planner.js`
   now call `busetaUtils.debugLog(...)` instead of duplicating
   the gate.
+- **`.gitattributes`** (PR #35): line-ending normalization +
+  binary markers. Mirrors `.editorconfig` at the Git level.
+  Contributors on Windows check out LF files; binary files
+  (minified, images, gzipped JSON) are marked as such so Git
+  doesn't try to diff or normalize them.
 
 ### Changed
 
