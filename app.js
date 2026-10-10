@@ -852,6 +852,11 @@
     GMB_LIST: 'buseta.gmb.list',
     GMB_LIST_TS: 'buseta.gmb.list.ts',
     GMB_PROGRESS: 'buseta.gmb.progress',
+    // Phase 14 — persisted snapshot of the prefetched /route-stop map so
+    // repeat visits can serve via-stops without re-paying the 75s prefetch
+    // (and the network) once the SW 24h TTL has expired.
+    ROUTE_STOPS: 'buseta.route.stops',
+    ROUTE_STOPS_TS: 'buseta.route.stops.ts',
     GMAPS_KEY: 'buseta.gmapsKey',
     CONFIG: 'assets/config.json',
     META: 'buseta.meta',
@@ -1486,6 +1491,13 @@
     storage.set(STORAGE_KEYS.INDEX_TS, Date.now());
     storage.set(STORAGE_KEYS.INDEX_VER, INDEX_SCHEMA_VERSION);
 
+    // Restore previously-persisted /route-stop snapshot so via-stops are
+    // visible immediately on repeat visits (within ROUTE_STOPS_MAX_AGE),
+    // even after the SW 24h TTL has expired. The prefetcher (Phase 12)
+    // then top-ups any routes that are missing or stale since the last
+    // save.
+    restoreRouteStopsFromStorage();
+
     // Kick off GMB route list build in the background.
     ensureGmbList().catch(() => {});
 
@@ -1517,9 +1529,99 @@
     return `${r.co}|${r.route}|${r.dir}|${r.service}`;
   }
 
+  // Phase 14 — localStorage persistence for the prefetched route-stops
+  // snapshot. Repeat visits within ROUTE_STOPS_MAX_AGE avoid re-paying
+  // the 75s prefetch (and any upstream 4xx/5xx the prefetcher swallows)
+  // by restoring the cached state immediately. The persisted snapshot
+  // lives across the SW 24h TTL — it's the longer-lived layer.
+  const ROUTE_STOPS_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+
+  // Serialize state.routeStopsByRoute + state.routesByStop into a
+  // JSON-safe form. Both are Map<_, Array<_>> / Map<_, Set<_>> so we
+  // round-trip via Array.from(entries) and an inner Array.from(set)
+  // for the Set values. Round-trippable by rehydrateRouteStops.
+  function dehydrateRouteStops() {
+    if (!state.routeStopsByRoute || !state.routesByStop) return null;
+    return {
+      // Map<routeKey, Array<stopInfo>> → [[routeKey, stopInfo[]], ...]
+      r: Array.from(state.routeStopsByRoute.entries()),
+      // Map<stopName, Set<routeInfo>> → [[stopName, routeInfo[]], ...]
+      s: Array.from(state.routesByStop.entries()).map(([k, set]) => [k, Array.from(set)]),
+    };
+  }
+
+  function rehydrateRouteStops(raw) {
+    if (!raw || typeof raw !== 'object') return false;
+    const rMap = new Map();
+    if (Array.isArray(raw.r)) {
+      for (const [k, stops] of raw.r) {
+        if (typeof k === 'string' && Array.isArray(stops)) rMap.set(k, stops);
+      }
+    }
+    const sMap = new Map();
+    if (Array.isArray(raw.s)) {
+      for (const [k, arr] of raw.s) {
+        if (typeof k === 'string' && Array.isArray(arr)) sMap.set(k, new Set(arr));
+      }
+    }
+    state.routeStopsByRoute = rMap;
+    state.routesByStop = sMap;
+    return rMap.size > 0 || sMap.size > 0;
+  }
+
+  // Pull the persisted snapshot back into state on boot, if it's recent
+  // enough. Returns true on a successful restore.
+  function restoreRouteStopsFromStorage() {
+    const ts = storage.get(STORAGE_KEYS.ROUTE_STOPS_TS, 0);
+    if (!ts || Date.now() - ts > ROUTE_STOPS_MAX_AGE_MS) return false;
+    const raw = storage.get(STORAGE_KEYS.ROUTE_STOPS, null);
+    if (!raw) return false;
+    try {
+      return rehydrateRouteStops(raw);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  // Debounced saver — called from inside prefetchRouteStops after every
+  // successful fetch. Coalesces 3000+ small writes into a handful of
+  // localStorage.setItem calls per cold load.
+  let _saveRouteStopsTimer = null;
+  function schedulePersistRouteStops() {
+    if (_saveRouteStopsTimer) return;
+    _saveRouteStopsTimer = setTimeout(() => {
+      _saveRouteStopsTimer = null;
+      try {
+        const raw = dehydrateRouteStops();
+        if (!raw) return;
+        storage.set(STORAGE_KEYS.ROUTE_STOPS, raw);
+        storage.set(STORAGE_KEYS.ROUTE_STOPS_TS, Date.now());
+      } catch (_) {
+        /* quota / serialization — ignore */
+      }
+    }, 2000);
+  }
+  // Final flush on page-hide so we don't lose progress when the user
+  // closes the tab mid-prefetch (cold-load scenario).
+  if (typeof window !== 'undefined' && window.addEventListener) {
+    window.addEventListener('pagehide', () => {
+      if (!_saveRouteStopsTimer) return;
+      clearTimeout(_saveRouteStopsTimer);
+      _saveRouteStopsTimer = null;
+      try {
+        const raw = dehydrateRouteStops();
+        if (!raw) return;
+        storage.set(STORAGE_KEYS.ROUTE_STOPS, raw);
+        storage.set(STORAGE_KEYS.ROUTE_STOPS_TS, Date.now());
+      } catch (_) {
+        /* ignore */
+      }
+    });
+  }
+
   async function prefetchRouteStops() {
     if (!state.index) return;
-    if (state.routeStopsByRoute) return; // already running or done
+    if (state.routeStopsByRoute && state.routeStopsByRoute.size > 0) return; // already restored
     const routes = Array.from(state.index.routes.values()).concat(
       Array.from(state.index.ctbRoutes.values())
     );
@@ -1531,11 +1633,15 @@
     );
     if (candidates.length === 0) return;
 
-    state.routeStopsByRoute = new Map();
-    state.routesByStop = new Map();
+    // If we restored from localStorage, top-up only the missing routes
+    // (Phase 14). Otherwise start empty.
+    if (!state.routeStopsByRoute) state.routeStopsByRoute = new Map();
+    if (!state.routesByStop) state.routesByStop = new Map();
+    const seen = new Set(state.routeStopsByRoute.keys());
 
     await busetaUtils.mapWithCap(candidates, 8, async (r) => {
       const key = routeKey(r);
+      if (seen.has(key)) return null; // already restored
       let raw;
       try {
         raw =
@@ -1562,8 +1668,26 @@
         if (!state.routesByStop.has(stopName)) state.routesByStop.set(stopName, new Set());
         for (const item of set) state.routesByStop.get(stopName).add(item);
       }
+      // Debounced save — coalesces 3000+ small writes into a handful of
+      // localStorage.setItem calls per cold load.
+      schedulePersistRouteStops();
       return key;
     });
+    // Final flush once the prefetch completes so the snapshot is up to
+    // date regardless of the debounce window.
+    if (_saveRouteStopsTimer) {
+      clearTimeout(_saveRouteStopsTimer);
+      _saveRouteStopsTimer = null;
+    }
+    try {
+      const raw = dehydrateRouteStops();
+      if (raw) {
+        storage.set(STORAGE_KEYS.ROUTE_STOPS, raw);
+        storage.set(STORAGE_KEYS.ROUTE_STOPS_TS, Date.now());
+      }
+    } catch (_) {
+      /* ignore */
+    }
   }
 
   // Light CSV parser for the MTR/LRT files: handles quoted fields with commas.
