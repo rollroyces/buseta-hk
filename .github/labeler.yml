@@ -1,0 +1,38 @@
+documentation:
+  - '**/*.md'
+  - 'docs/**'
+  - 'CHANGELOG.md'
+  - 'CONTRIBUTING.md'
+  - 'CODE_OF_CONDUCT.md'
+  - 'README.md'
+  - 'SECURITY.md'
+  - 'SUPPORT.md'
+
+ci:
+  - '.github/workflows/**'
+  - '.github/dependabot.yml'
+  - '.github/release-drafter.yml'
+  - '.github/CODEOWNERS'
+  - '.github/labeler.yml'
+
+dependencies:
+  - 'package.json'
+  - 'package-lock.json'
+  - '.nvmrc'
+
+testing:
+  - 'tests/**'
+  - 'vitest.config.js'
+
+config:
+  - '.editorconfig'
+  - '.eslintrc.json'
+  - '.prettierrc.json'
+  - '.prettierignore'
+  - '.gitignore'
+  - '.gitattributes'
+
+assets:
+  - 'assets/**'
+  - 'assets/qrcode.js'
+  - 'assets/vehicle-positions.js'

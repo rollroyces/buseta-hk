@@ -1,0 +1,18 @@
+# CODEOWNERS
+# GitHub auto-assigns these users as reviewers when a PR touches matching paths.
+# Replace `@rollroyces` with the GitHub username(s) responsible for each path.
+# The last match wins, so list broader / less-specific patterns first.
+
+# Default — repo owner reviews everything
+* @rollroyces
+
+# CI / workflows — repo owner (no separate security reviewer yet)
+/.github/ @rollroyces
+
+# Production code — repo owner
+/app.js @rollroyces
+/planner.js @rollroyces
+/index.html @rollroyces
+/sw.js @rollroyces
+/style.css @rollroyces
+/planner.css @rollroyces
