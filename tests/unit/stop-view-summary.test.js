@@ -66,13 +66,12 @@ describe('summariseSoon', () => {
 });
 
 describe('buildStopViewSummary', () => {
-  // Minimal t_str fixture — only the keys the helper uses. Some entries
-  // are functions (etaCount takes a count argument), others are plain
-  // strings (minShort is a static label).
+  // Minimal t_str fixture — Phase 18 moved from `etaCount + minShort`
+  // composition to a dedicated `ariaSummary(count, mins)` formatter so
+  // the phrasing is grammar-correct per language.
   const t_str = (key, ...args) => {
     const store = {
-      etaCount: (n) => (n === 1 ? `${n} bus away` : `${n} buses away`),
-      minShort: 'min',
+      ariaSummary: (count, mins) => `${count} buses arriving in the next ${mins} minutes`,
     };
     const v = store[key];
     if (typeof v === 'function') return v(...args);
@@ -84,20 +83,10 @@ describe('buildStopViewSummary', () => {
     expect(buildStopViewSummary(null, t_str)).toBe('');
   });
 
-  it('formats the English summary with soonest minute', () => {
+  it('formats the English summary via ariaSummary(count, mins)', () => {
     expect(buildStopViewSummary({ count: 5, soonestMinutes: 3 }, t_str)).toBe(
-      '5 buses away, 3 min'
+      '5 buses arriving in the next 3 minutes'
     );
-  });
-
-  it('singularises correctly for count=1', () => {
-    expect(buildStopViewSummary({ count: 1, soonestMinutes: 5 }, t_str)).toBe('1 bus away, 5 min');
-  });
-
-  it('handles soonest === 1 specially (still uses min label)', () => {
-    // Edge case: 1 bus arriving in exactly 1 minute. Pluralisation
-    // doesn't apply to the minute word; the formatter just emits "1 min".
-    expect(buildStopViewSummary({ count: 1, soonestMinutes: 1 }, t_str)).toBe('1 bus away, 1 min');
   });
 
   it('integrates with summariseSoon for end-to-end use', () => {
@@ -107,6 +96,19 @@ describe('buildStopViewSummary', () => {
       { arrivals: [{ minutes: 45 }] }, // out of window
     ];
     const summary = summariseSoon(routes);
-    expect(buildStopViewSummary(summary, t_str)).toBe('3 buses away, 2 min');
+    expect(buildStopViewSummary(summary, t_str)).toBe('3 buses arriving in the next 2 minutes');
+  });
+
+  it('a custom ariaSummary formatter receives both args', () => {
+    const customT = (key, ...args) => {
+      if (key === 'ariaSummary') {
+        const [count, mins] = args;
+        return `${count} buses · fastest in ${mins} min`;
+      }
+      return key;
+    };
+    expect(buildStopViewSummary({ count: 7, soonestMinutes: 4 }, customT)).toBe(
+      '7 buses · fastest in 4 min'
+    );
   });
 });

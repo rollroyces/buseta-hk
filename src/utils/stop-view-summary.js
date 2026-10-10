@@ -35,26 +35,23 @@ export function summariseSoon(routes) {
 /**
  * Build the user-facing summary string from a `summariseSoon` result.
  *
- *   count === 0           → '' (caller should clear the live region)
- *   soonestMinutes === 1  → `${count} ${etaCount(count)}, fastest in 1 minute`
- *   soonestMinutes > 1    → `${count} ${etaCount(count)}, fastest in ${soonest} minutes`
+ *   count === 0   → '' (caller should clear the live region)
+ *   count > 0     → `t_str('ariaSummary', count, soonestMinutes)`
  *
- * Uses the existing `etaCount` translation so the phrasing matches the
- * arrival-card sub-label.
+ * Uses the dedicated `ariaSummary` translation so the phrasing is
+ * grammar-correct in each language (Chinese leads with the duration;
+ * English uses "in the next N minutes" between subject and verb).
+ * Added in Phase 18 — previously this composed `etaCount + minShort`
+ * which read awkwardly as "still have 3 buses, 5 min".
  *
  * @param {{ count: number, soonestMinutes: number }} summary - Output of `summariseSoon`.
- * @param {(key: string, ...args: any[]) => string} t_str - i18n lookup. Receives `etaCount` and `minShort`.
+ * @param {(key: string, ...args: any[]) => string} t_str - i18n lookup. Receives `ariaSummary`.
  * @returns {string} The summary, or '' when nothing's in the window.
  */
 export function buildStopViewSummary(summary, t_str) {
   if (!summary || summary.count === 0) return '';
   const { count, soonestMinutes } = summary;
-  if (soonestMinutes === 1) {
-    // Single minute → don't pluralise the minute; reuse the etaCount
-    // formatter so the phrasing stays in sync with the cards.
-    return `${t_str('etaCount', count)}, ${soonestMinutes} ${t_str('minShort')}`;
-  }
-  return `${t_str('etaCount', count)}, ${soonestMinutes} ${t_str('minShort')}`;
+  return t_str('ariaSummary', count, soonestMinutes);
 }
 
 // When loaded as a classic script (in index.html before app.js), attach

@@ -105,6 +105,12 @@
       noEta: '暫無到站時間',
       nextArrivals: '下一班到站',
       etaCount: (n) => `仲有 ${n} 班`,
+      // Phase 18 — dedicated aria-live summary for the stop-view live
+      // region. Takes (count, soonestMinutes) and emits a sentence a
+      // screen-reader user can act on. Kept as a function so the
+      // phrasing can localise grammar (Chinese doesn't use "in the next"
+      // — the duration leads).
+      ariaSummary: (count, mins) => `${count} 班車喺 ${mins} 分鐘內到站`,
       errorTitle: '搵唔到嗰頁',
       errorBody: '你跟蹤嘅連結可能已經過期，或者資料未能成功載入。',
       retry: '再試一次',
@@ -372,6 +378,10 @@
       noEta: 'No ETA',
       nextArrivals: 'Next arrivals',
       etaCount: (n) => `${n} more`,
+      // Phase 18 — aria-live summary for the stop-view live region.
+      // `${count} buses arriving in the next ${mins} minutes` — English
+      // grammar needs the duration between the subject and the verb.
+      ariaSummary: (count, mins) => `${count} buses arriving in the next ${mins} minutes`,
       errorTitle: 'Page not found',
       errorBody: 'The link may be out of date, or the data could not load.',
       retry: 'Try again',
@@ -623,6 +633,9 @@
       noEta: '暂无到站时间',
       nextArrivals: '下一班到站',
       etaCount: (n) => `仲有 ${n} 班`,
+      // Phase 18 — aria-live summary for the stop-view live region.
+      // Mirrors the zh-Hant structure (count + duration leads).
+      ariaSummary: (count, mins) => `${count} 班车在 ${mins} 分钟内到站`,
       errorTitle: '揫唔到呢页',
       errorBody: '你跟蹤嘅连结可能已经过期，或者资料未能成功载入。',
       retry: '再试一次',
