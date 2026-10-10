@@ -1,0 +1,8 @@
+node_modules/
+.github/
+planner.min.js
+planner.min.css
+assets/qrcode.js
+assets/vehicle-positions.js
+package-lock.json
+*.log
