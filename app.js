@@ -1072,31 +1072,17 @@
   // trailing "(ST905)" / "(PA100)" / "(LS001)" suffix in both Chinese and
   // English. Strip that suffix for display; keep the operator code itself
   // for the `kmbOperatorId` reverse-lookup table built in buildIndex().
-  function stripKmbOpSuffix(name) {
-    if (!name) return '';
-    return String(name)
-      .replace(/\s*\([A-Z][A-Z0-9]{1,5}\)\s*$/, '')
-      .trim();
-  }
+  // stripKmbOpSuffix moved to src/utils/text.js — Phase 5 modularization
 
   // Pick a stop / route name in the current UI language. Falls back to the
   // other Chinese variant (tc ↔ sc) if the requested variant is empty, then
   // to English. Operator APIs return `name_tc` / `name_sc` / `name_en`.
-  function pickName(obj, lang) {
-    if (!obj) return '';
-    const wantTc = lang !== 'zh-Hans';
-    const tc = obj.name_tc || obj.nameTc || '';
-    const sc = obj.name_sc || obj.nameSc || '';
-    const en = obj.name_en || obj.nameEn || '';
-    if (lang === 'en') return en || tc || sc;
-    if (wantTc) return tc || sc || en;
-    return sc || tc || en;
-  }
+  // pickName moved to src/utils/text.js — Phase 5 modularization
 
   // Convenience: pick a stop / route name in the *current* UI language.
-  // Wraps `pickName(obj, state.lang)` for the common case.
+  // Wraps `busetaUtils.pickName(obj, state.lang)` for the common case.
   function nameFor(obj) {
-    return pickName(obj, state.lang);
+    return busetaUtils.pickName(obj, state.lang);
   }
 
   const makeRouteKey = (co, route, dir, service) => `${co}|${route}|${dir}|${service}`;
@@ -1275,9 +1261,9 @@
         if (opId && !kmbOperatorId.has(opId)) {
           kmbOperatorId.set(opId, {
             internalId: s.stop,
-            nameTc: stripKmbOpSuffix(s.name_tc),
-            nameEn: stripKmbOpSuffix(s.name_en),
-            nameSc: stripKmbOpSuffix(s.name_sc || ''),
+            nameTc: busetaUtils.stripKmbOpSuffix(s.name_tc),
+            nameEn: busetaUtils.stripKmbOpSuffix(s.name_en),
+            nameSc: busetaUtils.stripKmbOpSuffix(s.name_sc || ''),
             lat: parseFloat(s.lat),
             lng: parseFloat(s.long),
           });
@@ -1495,28 +1481,7 @@
   }
 
   // Light CSV parser for the MTR/LRT files: handles quoted fields with commas.
-  function parseCsvLine(line) {
-    const out = [];
-    let cur = '';
-    let inQuote = false;
-    for (let i = 0; i < line.length; i++) {
-      const ch = line[i];
-      if (inQuote) {
-        if (ch === '"') {
-          if (line[i + 1] === '"') {
-            cur += '"';
-            i++;
-          } else inQuote = false;
-        } else cur += ch;
-      } else if (ch === '"') inQuote = true;
-      else if (ch === ',') {
-        out.push(cur);
-        cur = '';
-      } else cur += ch;
-    }
-    out.push(cur);
-    return out;
-  }
+  // parseCsvLine moved to src/utils/text.js — Phase 5 modularization
 
   // fetchJSON / fetchText moved to src/utils/network.js — Phase 4 modularization
 
@@ -7328,7 +7293,7 @@
   // (routes that pass through without terminating) also show up in the
   // live panel. The current scan only catches terminus routes.
   function findTerminusRoutesForStop(stopNameTc) {
-    const want = stripKmbOpSuffix(stopNameTc);
+    const want = busetaUtils.stripKmbOpSuffix(stopNameTc);
     if (!want) return [];
     const matches = [];
     state.index.routes.forEach((r) => {
@@ -7337,8 +7302,8 @@
       // whose orig/dest happens to match the stop name never leaks into
       // the live panel of a KMB bus stop.
       if (r.co !== 'KMB' && r.co !== 'LWB' && r.co !== 'CTB' && r.co !== 'NWFB') return;
-      const o = stripKmbOpSuffix(r.origTc || '');
-      const d = stripKmbOpSuffix(r.destTc || '');
+      const o = busetaUtils.stripKmbOpSuffix(r.origTc || '');
+      const d = busetaUtils.stripKmbOpSuffix(r.destTc || '');
       if (o !== want && d !== want) return;
       matches.push({
         co: r.co,
@@ -8335,9 +8300,9 @@
     if (nameTc === stopId) return;
     // Strip the trailing "(ST905)" suffix from upstream / direct-fetch names
     // so the recent row title reads "大學站" instead of "大學站 (ST905)".
-    const cleanTc = stripKmbOpSuffix(nameTc) || nameTc;
-    const cleanSc = stripKmbOpSuffix(nameSc) || nameSc;
-    const cleanEn = stripKmbOpSuffix(nameEn) || nameEn;
+    const cleanTc = busetaUtils.stripKmbOpSuffix(nameTc) || nameTc;
+    const cleanSc = busetaUtils.stripKmbOpSuffix(nameSc) || nameSc;
+    const cleanEn = busetaUtils.stripKmbOpSuffix(nameEn) || nameEn;
     let changed = false;
     state.recent.forEach((x) => {
       if (x.stop !== stopId) return;
