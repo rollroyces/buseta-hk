@@ -7316,7 +7316,17 @@
         return meta ? String(meta.nameTc || '').trim() : '';
       })();
       if (resolvedStopTc) {
-        for (const t of findTerminusRoutesForStop(resolvedStopTc)) {
+        // Merge via-stops (state.routesByStop, populated from upstream
+        // /route-stop data) with the legacy terminus scan. The via-stops
+        // map is empty until the prefetcher has had a chance to run, so
+        // the terminus scan still serves as a graceful fallback for the
+        // first visit (or any operator whose /route-stop fetch failed).
+        // v53: helper lives in src/utils/routes-by-stop.js (Phase 11).
+        const matches = busetaUtils.findRoutesServingStop(resolvedStopTc, {
+          routesByStop: state.routesByStop,
+          terminusMatches: findTerminusRoutesForStop(resolvedStopTc),
+        });
+        for (const t of matches) {
           const key = `${t.co}|${t.route}|${t.dir}|${t.service}|${t.destTc || ''}`;
           if (routeMap.has(key)) continue;
           routeMap.set(key, {
