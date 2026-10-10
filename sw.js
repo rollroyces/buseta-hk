@@ -9,6 +9,10 @@
  * via scripts/build-icons.py so re-running keeps the SVG and PNG copies
  * in lock-step.
  *
+ * v34 is the v61→v62 cache-buster bump (zh-Hans i18n parity — adds
+ * 11 missing translations so the three STRINGS blocks have identical
+ * key sets; backed by scripts/check-i18n.js + tests/unit/i18n-parity.test.js).
+ *
  * v32 was the v54 cache-buster bump (planner walking-segments on the
  * route-shape canvas).
  *
@@ -29,7 +33,7 @@
  * v21 was the same forced-update after v32's QW-1 → QW-10 batch.
  * v20 was the same forced-update after the v30→v31 layout revert.
  */
-const CACHE = 'buseta-v50';
+const CACHE = 'buseta-v51';
 const SHELL = ['/', '/index.html', '/app.js', '/style.css', '/manifest.json'];
 
 // Runtime caches — separate buckets so we can evolve each strategy
