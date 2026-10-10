@@ -7375,10 +7375,14 @@
   // a KMB-style 巴士總站. Exact match (not substring) so 利安 matches 利安
   // but NOT 利安山.
   //
-  // TODO(v38): build a true `routesByStop` map at index time by querying
-  // `/route-stop/{route}/{dir}/{service}` for every route, so via-stops
-  // (routes that pass through without terminating) also show up in the
-  // live panel. The current scan only catches terminus routes.
+  // NOTE: the term "routesByStop" now lives in `src/utils/routes-by-stop.js`
+  // (added in v53 / Phase 11) and is populated by `prefetchRouteStops()`
+  // (Phase 12) which queries `/route-stop/{route}/{dir}/{service}` for every
+  // route, so via-stops now show up in the live panel via
+  // `findRoutesServingStop({ routesByStop, terminusMatches })`. This
+  // function only fills the `terminusMatches` half — it's intentionally
+  // kept as a fast terminus-only scan that works even when the
+  // /route-stop prefetch hasn't completed.
   function findTerminusRoutesForStop(stopNameTc) {
     const want = busetaUtils.stripKmbOpSuffix(stopNameTc);
     if (!want) return [];
