@@ -1105,29 +1105,7 @@
   const sameStop = (a, b) =>
     String(a.stop) === String(b.stop) && (a.co || 'STOP') === (b.co || 'STOP');
 
-  function classifyKmbOp(route, origTc, destTc) {
-    const r = String(route || '')
-      .toUpperCase()
-      .trim();
-    if (/^[AEN]/.test(r)) return 'LWB';
-    if (/^R\d/.test(r)) return 'LWB';
-    if (/^S\d/.test(r)) return 'LWB';
-    if (/^T\d/.test(r)) return 'LWB';
-    if (/^X\d/.test(r) && /(機場|博覽|東涌|昂坪|港珠澳|口岸)/.test((origTc || '') + (destTc || '')))
-      return 'LWB';
-    return 'KMB';
-  }
-
-  function opCoKey(co) {
-    if (co === 'KMB') return 'kmb';
-    if (co === 'LWB') return 'lwb';
-    if (co === 'CTB') return 'ctb';
-    if (co === 'NWFB') return 'nwfb';
-    if (co === 'GMB') return 'gmb';
-    if (co === 'MTR') return 'mtr';
-    if (co === 'LRT') return 'lrt';
-    return co;
-  }
+  // classifyKmbOp / opCoKey moved to src/utils/operators.js — Phase 4 modularization
 
   // ------------------------------------------------------------------
   // Persistence
@@ -1232,18 +1210,18 @@
   async function buildIndex() {
     const [kmbRoutes, kmbStops, ctbRoutes, mtrLines, lrtRoutes, lrtStops, hkStops, mtrStops] =
       await Promise.all([
-        fetchJSON(`${API.KMB}/route/`).catch(() => null),
-        fetchJSON(`${API.KMB}/stop/`).catch(() => null),
-        fetchJSON(`${API.CITYBUS}/route/ctb`).catch(() => null),
-        fetchJSON(API.MTR_LINES).catch(() => null),
-        fetchJSON(API.LRT_ROUTES).catch(() => null),
+        busetaUtils.fetchJSON(`${API.KMB}/route/`).catch(() => null),
+        busetaUtils.fetchJSON(`${API.KMB}/stop/`).catch(() => null),
+        busetaUtils.fetchJSON(`${API.CITYBUS}/route/ctb`).catch(() => null),
+        busetaUtils.fetchJSON(API.MTR_LINES).catch(() => null),
+        busetaUtils.fetchJSON(API.LRT_ROUTES).catch(() => null),
         // v45 — LRT stop coordinates; merged into lrt.stops below so the
         // planner's railRoute() haversine helper can compute km for LRT
         // ride legs. Best-effort: missing file or shape just leaves lat
         // null (legacy behaviour: leg meters fall back to 0).
-        fetchJSON(API.LRT_STOPS).catch(() => null),
-        fetchJSON(API.HK_STOPS).catch(() => null),
-        fetchJSON(API.MTR_STOPS).catch(() => null),
+        busetaUtils.fetchJSON(API.LRT_STOPS).catch(() => null),
+        busetaUtils.fetchJSON(API.HK_STOPS).catch(() => null),
+        busetaUtils.fetchJSON(API.MTR_STOPS).catch(() => null),
       ]);
 
     const routes = new Map();
@@ -1261,7 +1239,7 @@
     if (kmbRoutes && Array.isArray(kmbRoutes.data)) {
       for (const r of kmbRoutes.data) {
         const key = makeRouteKey('KMB', r.route, r.bound, r.service_type);
-        const op = classifyKmbOp(r.route, r.orig_tc || '', r.dest_tc || '');
+        const op = busetaUtils.classifyKmbOp(r.route, r.orig_tc || '', r.dest_tc || '');
         routes.set(key, {
           co: op,
           route: r.route,
@@ -1540,27 +1518,16 @@
     return out;
   }
 
-  // ------------------------------------------------------------------
-  // Network
-  // ------------------------------------------------------------------
-  async function fetchJSON(url, signal) {
-    const res = await fetch(url, { signal });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return res.json();
-  }
-  async function fetchText(url, signal) {
-    const res = await fetch(url, { signal });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return res.text();
-  }
+  // fetchJSON / fetchText moved to src/utils/network.js — Phase 4 modularization
 
   const fetchKmbRouteStop = (route, dir, service) =>
-    fetchJSON(
+    busetaUtils.fetchJSON(
       `${API.KMB}/route-stop/${encodeURIComponent(route)}/${dir === 'I' ? 'inbound' : 'outbound'}/${encodeURIComponent(service)}`
     );
-  const fetchKmbStop = (stopId) => fetchJSON(`${API.KMB}/stop/${encodeURIComponent(stopId)}`);
+  const fetchKmbStop = (stopId) =>
+    busetaUtils.fetchJSON(`${API.KMB}/stop/${encodeURIComponent(stopId)}`);
   const fetchKmbStopEta = (stopId) =>
-    fetchJSON(`${API.KMB}/stop-eta/${encodeURIComponent(stopId)}`);
+    busetaUtils.fetchJSON(`${API.KMB}/stop-eta/${encodeURIComponent(stopId)}`);
   // Per-stop section fares for KMB / LWB (same endpoint). Returns a
   // Map<seq, fare>, a flat number, or null on failure. The upstream
   // /route-fare endpoint returns per-stop seq fares (`front_board` is the
@@ -1577,7 +1544,7 @@
     let flat = null;
     try {
       const dirSeg = dir === 'I' ? 'inbound' : 'outbound';
-      const resp = await fetchJSON(
+      const resp = await busetaUtils.fetchJSON(
         `${API.KMB}/route-fare/${encodeURIComponent(route)}/${dirSeg}/${encodeURIComponent(service)}`
       );
       const arr = resp && Array.isArray(resp.data) ? resp.data : [];
@@ -1605,7 +1572,7 @@
       // fare_increment page publishes a flat Octopus fare per route;
       // the file is keyed by route number with `{co: 'KMB', fare, octopus}`.
       try {
-        const all = await fetchJSON(`assets/kmb-fares.json`);
+        const all = await busetaUtils.fetchJSON(`assets/kmb-fares.json`);
         const entry = (all && all[route]) || null;
         const f =
           entry && Number.isFinite(Number(entry.octopus || entry.fare))
@@ -1644,7 +1611,7 @@
     if (_fareFlatCache.has(cacheKey)) return _fareFlatCache.get(cacheKey);
     let entry = null;
     try {
-      const resp = await fetchJSON(
+      const resp = await busetaUtils.fetchJSON(
         `${API.CITYBUS}/route-fare/ctb/${encodeURIComponent(route)}/${dir === 'I' ? 'inbound' : 'outbound'}/1`
       );
       if (resp && Array.isArray(resp.data) && resp.data.length > 0) {
@@ -1655,7 +1622,7 @@
     }
     if (!entry) {
       try {
-        const all = await fetchJSON(`assets/ctb-fares.json`);
+        const all = await busetaUtils.fetchJSON(`assets/ctb-fares.json`);
         entry = (all && all[route]) || null;
       } catch (e) {
         entry = null;
@@ -1677,7 +1644,7 @@
     if (_fareFlatCache.has(cacheKey)) return _fareFlatCache.get(cacheKey);
     let entry = null;
     try {
-      const all = await fetchJSON(`assets/gmb-fares.json`);
+      const all = await busetaUtils.fetchJSON(`assets/gmb-fares.json`);
       const key1 = `${region}/${code}`;
       const key2 = route ? `${region}/${route}` : null;
       entry = (all && (all[key1] || (key2 && all[key2]))) || null;
@@ -1697,7 +1664,7 @@
     if (_fareFlatCache.has(cacheKey)) return _fareFlatCache.get(cacheKey);
     let entry = null;
     try {
-      const all = await fetchJSON(`assets/lrt-fares.json`);
+      const all = await busetaUtils.fetchJSON(`assets/lrt-fares.json`);
       entry = (all && all[route]) || null;
     } catch (e) {
       entry = null;
@@ -1754,17 +1721,19 @@
 
   // Citybus + NWFB (CTB uses 6-digit numeric stop IDs)
   const fetchCitybusRouteStop = (route, dir) =>
-    fetchJSON(
+    busetaUtils.fetchJSON(
       `${API.CITYBUS}/route-stop/ctb/${encodeURIComponent(route)}/${dir === 'I' ? 'inbound' : 'outbound'}`
     );
   const fetchCitybusStopEta = (stopId, route) =>
-    fetchJSON(`${API.CITYBUS}/eta/ctb/${encodeURIComponent(stopId)}/${encodeURIComponent(route)}`);
+    busetaUtils.fetchJSON(
+      `${API.CITYBUS}/eta/ctb/${encodeURIComponent(stopId)}/${encodeURIComponent(route)}`
+    );
   // CTB stop metadata (name includes "Stop, Location" for many stops).
   const fetchCitybusStop = (stopId) =>
-    fetchJSON(`${API.CITYBUS}/stop/${encodeURIComponent(stopId)}`);
+    busetaUtils.fetchJSON(`${API.CITYBUS}/stop/${encodeURIComponent(stopId)}`);
   // Per-stop ETA feed (CTB uses 6-digit numeric stop IDs).
   const fetchCitybusBatchStopEta = (stopId) =>
-    fetchJSON(
+    busetaUtils.fetchJSON(
       `https://rt.data.gov.hk/v1/transport/batch/stop-eta/CTB/${encodeURIComponent(stopId)}`
     );
   // Returns the right ETA fetcher for a stop_id + route + dir.
@@ -1779,29 +1748,33 @@
 
   // GMB (Green Minibus / 專線小巴)
   const fetchGmbRoute = (region, code) =>
-    fetchJSON(`${API.GMB}/route/${encodeURIComponent(region)}/${encodeURIComponent(code)}`);
+    busetaUtils.fetchJSON(
+      `${API.GMB}/route/${encodeURIComponent(region)}/${encodeURIComponent(code)}`
+    );
   const fetchGmbRouteStops = (routeId, routeSeq) =>
-    fetchJSON(
+    busetaUtils.fetchJSON(
       `${API.GMB}/route-stop/${encodeURIComponent(String(routeId))}/${encodeURIComponent(String(routeSeq))}`
     );
   const fetchGmbStopEta = (routeId, routeSeq, stopSeq) =>
-    fetchJSON(
+    busetaUtils.fetchJSON(
       `${API.GMB}/eta/route-stop/${encodeURIComponent(String(routeId))}/${encodeURIComponent(String(routeSeq))}/${encodeURIComponent(String(stopSeq))}`
     );
   const fetchGmbStopRoutes = (stopId) =>
-    fetchJSON(`${API.GMB}/stop-route/${encodeURIComponent(String(stopId))}`);
+    busetaUtils.fetchJSON(`${API.GMB}/stop-route/${encodeURIComponent(String(stopId))}`);
   const fetchGmbStopCoord = (stopId) =>
-    fetchJSON(`${API.GMB}/stop/${encodeURIComponent(String(stopId))}`);
+    busetaUtils.fetchJSON(`${API.GMB}/stop/${encodeURIComponent(String(stopId))}`);
 
   // MTR (heavy rail) — line/station codes are 3-letter strings.
   const fetchMtrSchedule = (line, station) =>
-    fetchJSON(
+    busetaUtils.fetchJSON(
       `${API.MTR}/getSchedule.php?line=${encodeURIComponent(line)}&sta=${encodeURIComponent(station)}&lang=tc`
     );
 
   // Light Rail — station_id is 3-digit numeric string (e.g. "001").
   const fetchLrtSchedule = (stationId) =>
-    fetchJSON(`${API.MTR}/lrt/getSchedule?station_id=${encodeURIComponent(String(stationId))}`);
+    busetaUtils.fetchJSON(
+      `${API.MTR}/lrt/getSchedule?station_id=${encodeURIComponent(String(stationId))}`
+    );
 
   // Bounded-concurrency fetcher: runs up to `limit` fetches in parallel.
   async function mapWithConcurrency(items, limit, fn) {
@@ -1834,7 +1807,8 @@
   function loadGmapsConfig() {
     if (state.gmapsConfigLoaded) return Promise.resolve(state.gmapsKey);
     state.gmapsConfigLoaded = true;
-    return fetchJSON(API.CONFIG)
+    return busetaUtils
+      .fetchJSON(API.CONFIG)
       .then((cfg) => {
         if (cfg && typeof cfg.gmapsKey === 'string') {
           state.gmapsKey = cfg.gmapsKey.trim();
@@ -2419,7 +2393,7 @@
     }
     state.gmbListPromise = (async () => {
       try {
-        const resp = await fetchJSON(`${API.GMB}/route`);
+        const resp = await busetaUtils.fetchJSON(`${API.GMB}/route`);
         const raw = (resp && resp.data && resp.data.routes) || {};
         const list = [];
         for (const [region, codes] of Object.entries(raw)) {
@@ -4156,7 +4130,7 @@
     const p = (async () => {
       let xmlText;
       try {
-        xmlText = await fetchText(TD_DISRUPTIONS_URL);
+        xmlText = await busetaUtils.fetchText(TD_DISRUPTIONS_URL);
       } catch (_) {
         return [];
       }
@@ -4517,7 +4491,7 @@
               : [];
           stopItems.push({ stop, dist, etas });
           etas.forEach((e) => {
-            const co = classifyKmbOp(e.route, '', e.dest_tc || '');
+            const co = busetaUtils.classifyKmbOp(e.route, '', e.dest_tc || '');
             const key = makeRouteKey(co, e.route, e.dir, e.service_type);
             if (!routeMap.has(key)) {
               routeMap.set(key, {
@@ -4953,7 +4927,11 @@
     );
     a.appendChild(main);
     a.appendChild(
-      el('div', { class: 'row-meta' }, el('div', { class: 'row-dim' }, t_str(opCoKey(r.co))))
+      el(
+        'div',
+        { class: 'row-meta' },
+        el('div', { class: 'row-dim' }, t_str(busetaUtils.opCoKey(r.co)))
+      )
     );
     a.appendChild(makeChev());
     return a;
@@ -6387,7 +6365,7 @@
     summary.appendChild(numWrap);
 
     if (co && co !== 'STOP') {
-      summary.appendChild(el('span', { class: 'route-op-pill' }, t_str(opCoKey(co))));
+      summary.appendChild(el('span', { class: 'route-op-pill' }, t_str(busetaUtils.opCoKey(co))));
     }
     head.appendChild(summary);
 
@@ -6397,7 +6375,7 @@
     // Origin · operator sub-line
     if (orig) {
       const sub = el('p', { class: 'route-sub' });
-      const opName = t_str(opCoKey(co));
+      const opName = t_str(busetaUtils.opCoKey(co));
       sub.appendChild(document.createTextNode(`${orig}${opName ? ' · ' + opName : ''}`));
       head.appendChild(sub);
     }
@@ -6960,7 +6938,7 @@
           if (!e || !e.eta) continue; // skip null ETAs (route not running today)
           const t = new Date(e.eta);
           if (Number.isNaN(t.getTime())) continue;
-          const co = isCtb ? 'CTB' : classifyKmbOp(e.route, '', e.dest_tc || '');
+          const co = isCtb ? 'CTB' : busetaUtils.classifyKmbOp(e.route, '', e.dest_tc || '');
           rows.push({
             co,
             route: e.route,
@@ -7133,7 +7111,7 @@
           el('span', { class: 'stop-schedule-time' }, formatHMTimestamp(r.time.toISOString()))
         );
         if (destStr) li.appendChild(el('span', { class: 'stop-schedule-dest' }, destStr));
-        li.appendChild(el('span', { class: 'stop-schedule-op' }, t_str(opCoKey(r.co))));
+        li.appendChild(el('span', { class: 'stop-schedule-op' }, t_str(busetaUtils.opCoKey(r.co))));
         ul.appendChild(li);
       });
       bucket.appendChild(ul);
@@ -7470,7 +7448,7 @@
       // a dimmed `.route-card--no-eta` placeholder further down.
       const routeMap = new Map();
       for (const e of data) {
-        const co = isCtb ? 'CTB' : classifyKmbOp(e.route, '', e.dest_tc || '');
+        const co = isCtb ? 'CTB' : busetaUtils.classifyKmbOp(e.route, '', e.dest_tc || '');
         const key = `${co}|${e.route}|${e.dir}|${e.service_type}|${e.dest_tc || ''}`;
         if (!routeMap.has(key)) {
           routeMap.set(key, {
@@ -7592,7 +7570,9 @@
         const left = el('div', { class: 'arrival-card-left' });
         left.appendChild(el('div', { class: 'arrival-card-route' }, r.route));
         const meta = el('div', { class: 'arrival-card-meta' });
-        meta.appendChild(el('span', { class: 'arrival-card-op' }, t_str(opCoKey(r.co))));
+        meta.appendChild(
+          el('span', { class: 'arrival-card-op' }, t_str(busetaUtils.opCoKey(r.co)))
+        );
         const destStr = pickFirst(r.destTc, r.destEn);
         if (destStr) meta.appendChild(el('span', { class: 'arrival-card-dest' }, `往 ${destStr}`));
         left.appendChild(meta);
@@ -7650,7 +7630,7 @@
   // Signature:
   //   buildNoEtaCard(co, route, destTc, destEn, onSchedule)
   //     co         - operator id ("KMB", "CTB", …) used to pick the pill
-  //                  label via t_str(opCoKey(co)).
+  //                  label via t_str(busetaUtils.opCoKey(co)).
   //     route      - route number string ("1A", "KMB 970", …).
   //     destTc     - Traditional-Chinese destination (may be '').
   //     destEn     - English destination (may be '').
@@ -7663,7 +7643,7 @@
     // ---- left: operator pill + route number + destination (TC + EN) ----
     const left = el('div', { class: 'route-card-left' });
     const head = el('div', { class: 'route-card-head' });
-    head.appendChild(el('span', { class: 'route-card-op' }, t_str(opCoKey(co))));
+    head.appendChild(el('span', { class: 'route-card-op' }, t_str(busetaUtils.opCoKey(co))));
     head.appendChild(el('span', { class: 'route-card-num' }, route));
     left.appendChild(head);
 
@@ -8014,7 +7994,7 @@
 
     // ---- operator pill (small, above title) ----
     if (co && co !== 'STOP') {
-      head.appendChild(el('span', { class: 'stop-op-pill' }, t_str(opCoKey(co))));
+      head.appendChild(el('span', { class: 'stop-op-pill' }, t_str(busetaUtils.opCoKey(co))));
     }
 
     // ---- main stop name ----
@@ -8840,7 +8820,7 @@
           const co =
             r.stop.co && r.stop.co !== 'STOP'
               ? r.stop.co
-              : classifyKmbOp(item.route, '', item.dest_tc || '');
+              : busetaUtils.classifyKmbOp(item.route, '', item.dest_tc || '');
           const serviceType = item.service_type != null ? String(item.service_type) : '1';
           const dir = item.dir || '';
           const key = `${r.stop.stop}|${co}|${item.route}|${dir}|${serviceType}`;
