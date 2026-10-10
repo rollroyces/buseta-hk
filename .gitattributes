@@ -1,0 +1,65 @@
+# .gitattributes — line-ending normalization + binary markers.
+#
+# Mirrors .editorconfig (Phase 23): LF everywhere except Windows-only
+# files, Makefiles (tabs), Python (4 spaces). Unlike .editorconfig
+# (which only affects NEW edits), this file tells Git to normalize
+# line endings on commit. Contributors on Windows check out LF files;
+# contributors on Linux/macOS won't accidentally introduce CRLF.
+# Combined with .editorconfig, every editor picks up the same rules.
+#
+# `* text=auto` lets Git auto-detect (binary vs text) and normalize.
+# Specific overrides pin files that must stay LF / CRLF / binary.
+
+*               text=auto eol=lf
+
+# Shell scripts (with a shebang) — must stay LF for #!/usr/bin/env
+# to parse on *nix. Bash on Windows 10+ accepts LF since the
+# Creators Update; older WSL-era bash does too.
+*.sh            text eol=lf
+*.bash          text eol=lf
+
+# Generated minified bundles — binary-ish, never diff them.
+*.min.js        binary
+*.min.css       binary
+
+# Generated icons / favicons — committed as PNG, never diffed as text.
+*.png           binary
+*.jpg           binary
+*.gif           binary
+*.ico           binary
+*.webp          binary
+
+# Pre-compressed stop coordinates (gzipped JSON).
+*.gz            binary
+
+# Python — follow PEP 8 (LF + 4 spaces). Editorconfig handles indent.
+*.py            text eol=lf
+
+# Markdown — LF, no CRLF nonsense.
+*.md            text eol=lf
+
+# YAML (GitHub Actions, Dependabot, Issue Templates) — LF.
+*.yml           text eol=lf
+*.yaml          text eol=lf
+
+# JSON — LF (Prettier enforces this in CI).
+*.json          text eol=lf
+
+# Plain JS/CSS/HTML — LF.
+*.js            text eol=lf
+*.mjs           text eol=lf
+*.cjs           text eol=lf
+*.css           text eol=lf
+*.html          text eol=lf
+
+# Makefile — tabs required (handled by .editorconfig's [Makefile] block).
+Makefile        text eol=lf
+
+# License — LF.
+LICENSE        text eol=lf
+
+# Generated PWA icons (built by scripts/build-icons.py, Phase 8).
+# Already covered by *.png above but listed for clarity.
+# /assets/bus-*.png      binary
+# /assets/favicon-*.png binary
+# /assets/apple-touch-icon.png binary
