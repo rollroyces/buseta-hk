@@ -1,0 +1,63 @@
+name: Operator coverage request
+description: Request adding support for a new transit operator (e.g. Tram, Ferry, MTR Bus)
+title: '🚌 '
+labels:
+  - enhancement
+  - operators
+body:
+  - type: input
+    id: operator-name
+    attributes:
+      label: Operator name
+      description: English + local name
+      placeholder: 'e.g. Tramways (香港電車)'
+    validations:
+      required: true
+
+  - type: input
+    id: data-source
+    attributes:
+      label: Public data source URL
+      description: Link to the operator's open-data portal or API documentation
+      placeholder: 'https://data.gov.hk/...'
+
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Mode
+      options:
+        - Tram
+        - Light rail (already supported)
+        - Heavy rail (already supported)
+        - Ferry
+        - Bus (additional operator)
+        - Coach / intercity bus
+        - Bicycle sharing
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Use case
+      description: Why does the app need this? What would the user experience be?
+    validations:
+      required: true
+
+  - type: textarea
+    id: data-quality
+    attributes:
+      label: Data quality notes
+      description: Is the data structured? Real-time? Free of API keys? CORS-enabled?
+      placeholder: |
+        - Real-time ETA: yes/no
+        - CORS: yes/no
+        - API key required: yes/no
+        - Lat/lng for stops: yes/no
+
+  - type: textarea
+    id: references
+    attributes:
+      label: References
+      description: Similar apps that already integrate this operator, news articles, etc.
