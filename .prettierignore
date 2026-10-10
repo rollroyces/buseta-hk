@@ -1,0 +1,16 @@
+node_modules/
+.github/
+planner.min.js
+planner.min.css
+assets/qrcode.js
+assets/vehicle-positions.js
+assets/*.png
+# Data JSONs (fares, stops, lines, routes) — hand-curated reference
+# data with intentional formatting (alignment for readability, key
+# ordering for diff-friendliness). Reformatting would obscure content
+# changes in PR diffs and add no real value, so we skip them from
+# Prettier. Mirrors ESLint's `assets/**` ignore.
+assets/*.json
+scripts/*.py
+package-lock.json
+*.log

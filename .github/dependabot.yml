@@ -1,0 +1,77 @@
+# Dependabot configuration. Tracks upstream updates for the npm
+# ecosystem (package.json + package-lock.json) and GitHub Actions
+# (workflow files under .github/workflows/).
+#
+# Both ecosystems update weekly. PRs are grouped by SemVer major /
+# minor / patch so a single Dependabot run produces at most three
+# reviewable PRs per ecosystem, each with a clean diff.
+#
+# PRs are limited to 5 open at a time to avoid drowning the queue.
+# `rebase-strategy: "auto"` lets Dependabot rebase open PRs on top of
+# main as new commits land, so a stale Dependabot PR doesn't sit
+# behind conflicts for weeks.
+#
+# `labels: ["dependencies"]` (set automatically) + `["area:dev-infra"]`
+# (we add manually) help reviewers triage.
+#
+# Phase 30 lands this file. PR #1 listed it as a deliverable but the
+# foundation branch never made it to main.
+
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      # 09:00 UTC is morning in Europe + afternoon in Asia — both
+      # round the clock for the maintainer.
+      time: "09:00"
+      timezone: "UTC"
+    # SemVer grouping: one PR per major, one per minor, one per
+    # patch. Smaller diffs than one-PR-per-package.
+    groups:
+      npm-major:
+        patterns: ["*"]
+        update-types: ["major"]
+      npm-minor:
+        patterns: ["*"]
+        update-types: ["minor"]
+      npm-patch:
+        patterns: ["*"]
+        update-types: ["patch"]
+    open-pull-requests-limit: 5
+    rebase-strategy: "auto"
+    labels:
+      - "dependencies"
+      - "area:dev-infra"
+    # Skip dev-only metadata updates — these are noisy churn PRs that
+    # don't change behavior. The lockfile refresh still happens via
+    # the regular update groups above.
+    ignore:
+      - dependency-name: "@*"
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    # GitHub Actions: one PR per action per major/minor/patch bump.
+    groups:
+      actions-major:
+        patterns: ["*"]
+        update-types: ["major"]
+      actions-minor:
+        patterns: ["*"]
+        update-types: ["minor"]
+      actions-patch:
+        patterns: ["*"]
+        update-types: ["patch"]
+    open-pull-requests-limit: 5
+    rebase-strategy: "auto"
+    labels:
+      - "dependencies"
+      - "area:dev-infra"
