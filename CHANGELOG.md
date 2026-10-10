@@ -155,6 +155,24 @@ lint` errored with "ESLint couldn't find an eslint.config.* file".
   per ecosystem per run). `open-pull-requests-limit: 5` prevents
   queue flooding; `rebase-strategy: auto` keeps stale PRs current.
   Labels `dependencies` + `area:dev-infra` auto-apply.
+- **`.nvmrc`** (PR #32): pins local Node.js to v20 to match CI's
+  `actions/setup-node@v4` `node-version: '20'`. Without it,
+  contributors on Node 22 (current LTS) silently drift from CI on
+  subtle Node-version-dependent behavior (`fetch()`, `Intl`, etc.).
+  Honored by `nvm use`, `fnm use`, `volta pin`, `asdf`.
+- **Debug-log gate** (PR #33): gates two debug `console.log` calls
+  (`app.js:logGeoStatus`, `planner.js:planner.search`) behind
+  `window.busetaDebug`. Production users see no console noise;
+  the maintainer enables via DevTools
+  (`window.busetaDebug = true; location.reload()`). First
+  code-touching PR since Phase 20.
+- **`src/utils/debug-log.js`** (PR #34): extracts the Phase 33
+  inline gate into a tested utility module. 10 tests cover gate
+  behavior (undefined/false/0/null/NaN → silent; true → logs),
+  dual-export (`globalThis.busetaUtils.debugLog`), idempotent
+  re-import, and argument forwarding. `app.js` + `planner.js`
+  now call `busetaUtils.debugLog(...)` instead of duplicating
+  the gate.
 
 ### Changed
 
