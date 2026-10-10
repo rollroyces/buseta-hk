@@ -1,0 +1,48 @@
+name: Feature request
+description: Suggest a new feature or improvement
+title: '✨ '
+labels:
+  - enhancement
+body:
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Scope
+      options:
+        - User-facing feature
+        - Performance improvement
+        - Accessibility improvement
+        - Internationalization / new language
+        - Internal / developer experience
+        - Documentation
+        - Bug-prevention (test, CI)
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or motivation
+      description: What pain point does this solve?
+      placeholder: |
+        Right now I have to do X. It would be better if Y.
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: How would you like it to work?
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Screenshots, links, references.

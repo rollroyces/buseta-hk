@@ -1,0 +1,88 @@
+name: Bug report
+description: Report a broken route, missing stop, or other unexpected behaviour
+title: '🐛 '
+labels:
+  - bug
+body:
+  - type: dropdown
+    id: operator
+    attributes:
+      label: Affected operator
+      description: Which transit operator is involved?
+      options:
+        - KMB (九巴)
+        - LWB (龍運)
+        - CTB (城巴)
+        - NWFB (新巴)
+        - GMB (專線小巴)
+        - MTR (港鐵)
+        - Light Rail (輕鐵)
+        - Multiple operators
+        - Not transit-related
+    validations:
+      required: true
+
+  - type: input
+    id: buseta-version
+    attributes:
+      label: App version
+      description: Find this in Settings → About, or in the page footer / <head> <meta name="buseta-version">.
+      placeholder: 'e.g. v53'
+    validations:
+      required: true
+
+  - type: dropdown
+    id: device
+    attributes:
+      label: Device / browser
+      description: What device and browser are you using?
+      options:
+        - iPhone — Safari
+        - iPhone — Chrome
+        - iPhone — Other
+        - Android — Chrome
+        - Android — Samsung Internet
+        - Android — Other
+        - Desktop — Chrome
+        - Desktop — Safari
+        - Desktop — Firefox
+        - Desktop — Edge
+        - Other / not sure
+    validations:
+      required: true
+
+  - type: input
+    id: route-or-stop
+    attributes:
+      label: Route number / stop name / MTR station
+    - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Describe the unexpected behaviour.
+      placeholder: |
+        I expected to see X, but the app showed Y.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open the app
+        2. Tap …
+        3. See …
+
+  - type: textarea
+    id: console
+    attributes:
+      label: Console output (optional)
+      description: Open browser DevTools → Console, copy any errors here.
