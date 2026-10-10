@@ -33,7 +33,7 @@
  * v21 was the same forced-update after v32's QW-1 → QW-10 batch.
  * v20 was the same forced-update after the v30→v31 layout revert.
  */
-const CACHE = 'buseta-v54';
+const CACHE = 'buseta-v55';
 const SHELL = ['/', '/index.html', '/app.js', '/style.css', '/manifest.json'];
 
 // Runtime caches — separate buckets so we can evolve each strategy

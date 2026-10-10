@@ -2858,6 +2858,15 @@
         renderError();
     }
     window.scrollTo(0, 0);
+    // a11y: shift focus to the <main> region so screen readers announce
+    // the new view's heading after navigation. `<main>` has
+    // `tabindex="-1"` (index.html) so it can receive programmatic focus
+    // without entering the tab order. `preventScroll: true` keeps the
+    // explicit `scrollTo(0, 0)` above authoritative — focus() would
+    // otherwise scroll the focused element into view, which we don't
+    // want here. Phase 13 a11y fix.
+    const main = document.getElementById('main');
+    if (main) main.focus({ preventScroll: true });
   }
 
   // ------------------------------------------------------------------

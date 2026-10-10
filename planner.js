@@ -3128,8 +3128,10 @@
     originInput.appendChild(el('span', { class: 'planner-input-label' }, t_str('plannerFrom')));
     const originField = el('input', {
       type: 'search',
+      id: 'planner-origin-input',
       placeholder: t_str('plannerFromPh'),
       autocomplete: 'off',
+      'aria-label': t_str('plannerFrom'),
     });
     originInput.appendChild(originField);
     originWrap.appendChild(originInput);
@@ -3180,8 +3182,10 @@
     destInput.appendChild(el('span', { class: 'planner-input-label' }, t_str('plannerTo')));
     const destField = el('input', {
       type: 'search',
+      id: 'planner-dest-input',
       placeholder: t_str('plannerToPh'),
       autocomplete: 'off',
+      'aria-label': t_str('plannerTo'),
     });
     destInput.appendChild(destField);
     destWrap.appendChild(destInput);
@@ -3247,6 +3251,7 @@
       id: 'planner-target-time',
       class: 'planner-time-field',
       step: '60',
+      'aria-label': t_str('plannerArriveBy'),
     });
     // Default target: 30 minutes from now, rounded up to next 5 minutes.
     const defaultTarget = new Date(Date.now() + 30 * 60000);
