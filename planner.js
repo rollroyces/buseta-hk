@@ -605,13 +605,6 @@
     return m / 1000;
   }
 
-  // Compute the walk minutes from an arbitrary (lat,lng) point to a stop.
-  function walkMinutesTo(lat, lng, idx, stopId) {
-    const ll = stopLatLng(idx, stopId);
-    if (!ll || !Number.isFinite(lat) || !Number.isFinite(lng)) return Infinity;
-    return busetaUtils.walkMinutes(busetaUtils.haversine(lat, lng, ll.lat, ll.lng) * 1000);
-  }
-
   // ---- v48 — cross-mode nearest-rail-station lookup ------------------
   // v43 relaxed the bus sub-planners to fire only when one or both stops
   // are non-rail; v47 added real walking paths via walkLeg. v48 stitches

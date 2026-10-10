@@ -17,7 +17,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="BusETA" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="buseta-version" content="62" />
+    <meta name="buseta-version" content="63" />
     <!-- Main stylesheet. The original style.css is what we ship today — a
      hand-rolled minifier produced a broken style.min.css earlier, so we
      load the unminified bundle directly. v=35 ships the "show every
@@ -1489,7 +1489,7 @@
           if (this._plannerScript) return this._plannerScript;
           this._plannerScript = new Promise((resolve, reject) => {
             const s = document.createElement('script');
-            s.src = 'planner.js?v=37';
+            s.src = 'planner.js?v=38';
             s.async = false; // preserve execution order
             s.onload = () => resolve(window.Planner);
             s.onerror = () => reject(new Error('planner.js failed to load'));
@@ -1503,7 +1503,7 @@
           this._plannerCss = new Promise((resolve, reject) => {
             const l = document.createElement('link');
             l.rel = 'stylesheet';
-            l.href = 'planner.css?v=37';
+            l.href = 'planner.css?v=38';
             l.setAttribute('data-planner-css', '1');
             l.media = 'print';
             l.onload = () => {
@@ -1530,7 +1530,7 @@
     <script src="src/utils/network.js?v=1"></script>
     <script src="src/utils/operators.js?v=1"></script>
     <script src="src/utils/text.js?v=1"></script>
-    <script defer src="app.js?v=52"></script>
+    <script defer src="app.js?v=53"></script>
     <script>
       // SW path must be RELATIVE — GitHub Pages serves this site under
       // /buseta-hk/ but a leading `/sw.js` would resolve to the site root

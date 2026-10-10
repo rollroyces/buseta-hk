@@ -53,6 +53,28 @@ function loadStrings() {
   }
 }
 
+// Extracts the planner-only string keys from planner.js by scanning
+// every `ensure('zh-Hant', '<key>', ...)` call. Returns the unique
+// sorted set of keys. Catches two failure modes:
+//   1. A key is patched for zh-Hant / en but not for zh-Hans (parity
+//      drift across the three languages).
+//   2. A key is patched only in one or two languages (forgotten
+//      language block).
+function loadPlannerPatchedKeys() {
+  const plannerPath = pathResolve(__dirname, '../../planner.js');
+  const txt = readFileSync(plannerPath, 'utf8');
+  // Match `ensure('<lang>', '<key>', ...)` calls. Three per key.
+  const re = /ensure\(\s*'([^']+)'\s*,\s*'([^']+)'\s*,/g;
+  const perKeyLangs = new Map();
+  let m;
+  while ((m = re.exec(txt)) !== null) {
+    const [, lang, key] = m;
+    if (!perKeyLangs.has(key)) perKeyLangs.set(key, new Set());
+    perKeyLangs.get(key).add(lang);
+  }
+  return perKeyLangs; // Map<key, Set<lang>>
+}
+
 describe('STRINGS — i18n parity across languages', () => {
   const STRINGS = loadStrings();
 
@@ -104,5 +126,42 @@ describe('STRINGS — i18n parity across languages', () => {
         expect(val.length, `STRINGS.${lang}.${key} should not be empty`).toBeGreaterThan(0);
       }
     }
+  });
+});
+
+describe('planner.js patchPlannerStrings — covers all three languages per key', () => {
+  const perKey = loadPlannerPatchedKeys();
+
+  it('planner.js patches at least one planner-only key', () => {
+    expect(perKey.size).toBeGreaterThan(0);
+  });
+
+  it('every planner-patched key is patched in all three languages', () => {
+    const expectedLangs = new Set(['zh-Hant', 'en', 'zh-Hans']);
+    const offenders = [];
+    for (const [key, langs] of perKey.entries()) {
+      const missing = [...expectedLangs].filter((l) => !langs.has(l));
+      if (missing.length) offenders.push(`${key} → missing ${missing.join(', ')}`);
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  it('planner-patched keys are unique (no duplicate `ensure` calls for the same key+lang)', () => {
+    // The regex already dedupes per-key by collapsing into a Set; this
+    // test exists so a future refactor that introduces per-key dup
+    // calls (e.g. two zh-Hant patches) fails explicitly rather than
+    // silently shadowing the earlier value.
+    const plannerPath = pathResolve(__dirname, '../../planner.js');
+    const txt = readFileSync(plannerPath, 'utf8');
+    const re = /ensure\(\s*'([^']+)'\s*,\s*'([^']+)'\s*,/g;
+    const seen = new Set();
+    const dupes = [];
+    let m;
+    while ((m = re.exec(txt)) !== null) {
+      const tuple = `${m[1]}|${m[2]}`;
+      if (seen.has(tuple)) dupes.push(tuple);
+      seen.add(tuple);
+    }
+    expect(dupes).toEqual([]);
   });
 });
