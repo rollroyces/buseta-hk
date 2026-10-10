@@ -1,0 +1,50 @@
+name: Translation request
+description: Request adding a new locale or improving existing translations
+title: '🌐 '
+labels:
+  - localization
+body:
+  - type: dropdown
+    id: action
+    attributes:
+      label: Action
+      options:
+        - Add a new locale
+        - Improve an existing translation
+        - Fix a typo in a translation
+        - Update terminology
+    validations:
+      required: true
+
+  - type: dropdown
+    id: locale
+    attributes:
+      label: Locale
+      options:
+        - 繁體中文 (zh-Hant)
+        - English (en)
+        - 简体中文 (zh-Hans)
+        - 日本語 (ja) — proposed
+        - 한국어 (ko) — proposed
+        - Bahasa Indonesia (id) — proposed
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: What string(s) need to change? Where do they appear?
+      placeholder: |
+        String key: onboardPlannerBody
+        zh-Hant current: 「輸入起點同終點，即時幫你搵車」
+        Proposed: …
+    validations:
+      required: true
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Translator notes
+      description: Tone preference, regional dialect, length constraints, etc.

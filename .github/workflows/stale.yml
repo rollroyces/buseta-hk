@@ -1,0 +1,29 @@
+name: Close stale issues and PRs
+
+on:
+  schedule:
+    - cron: '0 7 * * *'  # Daily 15:00 HKT (07:00 UTC)
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/stale@v9
+        with:
+          days-before-stale: 60
+          days-before-close: 14
+          stale-issue-message: |
+            This issue has been inactive for 60 days. If it's still relevant, please comment within the next 14 days. Otherwise it will be auto-closed.
+          stale-pr-message: |
+            This PR has been inactive for 60 days. If you intend to continue, please comment within the next 14 days. Otherwise it will be auto-closed.
+          close-issue-message: |
+            Closing due to inactivity. Feel free to reopen if this is still relevant.
+          close-pr-message: |
+            Closing due to inactivity. Feel free to reopen if you'd like to continue.
+          exempt-issue-labels: 'pinned,security,enhancement,good first issue,help wanted'
+          exempt-pr-labels: 'pinned,work-in-progress,do-not-merge'
