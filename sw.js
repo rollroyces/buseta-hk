@@ -29,7 +29,7 @@
  * v21 was the same forced-update after v32's QW-1 → QW-10 batch.
  * v20 was the same forced-update after the v30→v31 layout revert.
  */
-const CACHE = 'buseta-v44';
+const CACHE = 'buseta-v45';
 const SHELL = [
   '/',
   '/index.html',
