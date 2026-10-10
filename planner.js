@@ -26,30 +26,27 @@
   'use strict';
 
   // ---- Tunables ---------------------------------------------------------
-  const WALK_M_PER_MIN = 60;          // walking speed
-  const BUS_KMH = 12;                  // average bus speed (busway included)
-  const BUS_KMH_M_PER_MIN = BUS_KMH * 1000 / 60; // 200 m/min
-  const TRANSFER_WALK_LIMIT_M = 500;   // reject transfer legs that need a walk > this
-                                    // v51 — loosened from 350m. Some HK bus
-                                    // interchanges (e.g. 大圍站公共運輸交匯處,
-                                    // 黃大仙站) require a 350-500m walk between
-                                    // different operators' stops; the old limit
-                                    // silently filtered them out, leaving the
-                                    // user with only the MTR cross-mode option
-                                    // for legitimate KMB↔KMB transfers.
-  const ORIGIN_WALK_LIMIT_M    = 1200; // walking from origin to first stop
-  const DEST_WALK_LIMIT_M      = 1200;
-  const ETA_MAX_MIN            = 120;  // ignore ETAs further out than this
-  const CONCURRENCY            = 16;   // API concurrency cap (browsers tolerate 16 per origin)
-  const DIRECT_LIMIT           = 5;
-  const ONE_TRANSFER_LIMIT     = 5;
-  const TWO_TRANSFER_LIMIT     = 3;
+  const TRANSFER_WALK_LIMIT_M = 500; // reject transfer legs that need a walk > this
+  // v51 — loosened from 350m. Some HK bus
+  // interchanges (e.g. 大圍站公共運輸交匯處,
+  // 黃大仙站) require a 350-500m walk between
+  // different operators' stops; the old limit
+  // silently filtered them out, leaving the
+  // user with only the MTR cross-mode option
+  // for legitimate KMB↔KMB transfers.
+  const ORIGIN_WALK_LIMIT_M = 1200; // walking from origin to first stop
+  const DEST_WALK_LIMIT_M = 1200;
+  const ETA_MAX_MIN = 120; // ignore ETAs further out than this
+  const CONCURRENCY = 16; // API concurrency cap (browsers tolerate 16 per origin)
+  const DIRECT_LIMIT = 5;
+  const ONE_TRANSFER_LIMIT = 5;
+  const TWO_TRANSFER_LIMIT = 3;
   // v41 — route strategies (Bus / Rail / Mixed). Each strategy is computed
   // by a different sub-planner running on different candidate sets, so
   // showing the top N of each gives the user genuinely different routes
   // to compare. We slice the per-strategy bucket down to STRATEGY_LIMIT so
   // the results view stays scannable (top 1–2 per strategy is plenty).
-  const STRATEGY_LIMIT         = 2;
+  const STRATEGY_LIMIT = 2;
 
   // ---- Module state ----------------------------------------------------
   // Per-stop route list cache. We don't pre-build the whole graph (≈600
@@ -57,22 +54,22 @@
   // route-stop lists for routes that touch origin / destination / transfer
   // candidates as we go. We also keep a `stopId → [routeKey]` reverse
   // index so subsequent 1-/2-hop searches are cheap.
-  const _routeStopsCache = new Map();        // routeKey -> [{ stop, seq, lat, lng }]
-  const _stopRoutesCache = new Map();        // stopId -> Set(routeKey)  (reverse index)
-  const _routeAccess     = new Map();        // routeKey -> Date.now() of last cache hit/miss
-  let   _adjacencyCache  = new WeakMap();    // state.index -> { stops: Map(stopId -> [{ toStop, routeKey, km }]) }
-  let   _indexVersion    = 0;
+  const _routeStopsCache = new Map(); // routeKey -> [{ stop, seq, lat, lng }]
+  const _stopRoutesCache = new Map(); // stopId -> Set(routeKey)  (reverse index)
+  const _routeAccess = new Map(); // routeKey -> Date.now() of last cache hit/miss
+  let _adjacencyCache = new WeakMap(); // state.index -> { stops: Map(stopId -> [{ toStop, routeKey, km }]) }
+  let _indexVersion = 0;
 
   // ---- Persisted cache (localStorage) ---------------------------------
   // Persist a compact version of `_routeStopsCache` + `_stopRoutesCache`
   // so the second visit paints instantly. We use a short, versioned key
   // so future schema changes can invalidate it by bumping the suffix.
-  const CACHE_KEY        = 'buseta.planner.adj.v1';
-  const CACHE_MAX_ROUTES = 400;        // soft cap; evicts oldest beyond this
-  const CACHE_MAX_BYTES  = 4_500_000;  // ~4.5 MB — under the localStorage limit
-  let   _cacheLoaded     = false;
-  let   _cacheDirty      = false;
-  let   _cacheSaveTimer  = null;
+  const CACHE_KEY = 'buseta.planner.adj.v1';
+  const CACHE_MAX_ROUTES = 400; // soft cap; evicts oldest beyond this
+  const CACHE_MAX_BYTES = 4_500_000; // ~4.5 MB — under the localStorage limit
+  let _cacheLoaded = false;
+  let _cacheDirty = false;
+  let _cacheSaveTimer = null;
 
   function loadPersistedCache() {
     if (_cacheLoaded) return;
@@ -130,8 +127,9 @@
       const keys = Array.from(_routeStopsCache.keys());
       let keepKeys = keys;
       if (keys.length > CACHE_MAX_ROUTES) {
-        const sorted = keys.slice().sort(
-          (a, b) => (_routeAccess.get(a) || 0) - (_routeAccess.get(b) || 0));
+        const sorted = keys
+          .slice()
+          .sort((a, b) => (_routeAccess.get(a) || 0) - (_routeAccess.get(b) || 0));
         keepKeys = sorted.slice(sorted.length - CACHE_MAX_ROUTES);
         // Evict the dropped routes from both caches.
         for (const k of keys) {
@@ -157,10 +155,12 @@
         const arr = _routeStopsCache.get(k);
         if (!arr) continue;
         const slim = arr.map((it) => ({
-          s: it.stop, q: it.seq,
+          s: it.stop,
+          q: it.seq,
           la: Number.isFinite(it.lat) ? it.lat : null,
           ln: Number.isFinite(it.lng) ? it.lng : null,
-          n: it.nameTc || '', e: it.nameEn || '',
+          n: it.nameTc || '',
+          e: it.nameEn || '',
         }));
         const json = JSON.stringify(slim);
         bytes += json.length;
@@ -185,8 +185,12 @@
   // Reset at the start of every Planner.search() and read inside `search()`
   // for the timing log. Cheap and process-local.
   let _reqCounter = 0;
-  function _bumpReq() { _reqCounter++; }
-  function _resetReq() { _reqCounter = 0; }
+  function _bumpReq() {
+    _reqCounter++;
+  }
+  function _resetReq() {
+    _reqCounter = 0;
+  }
 
   function invalidateCaches() {
     _routeStopsCache.clear();
@@ -195,7 +199,9 @@
     _adjacencyCache = new WeakMap();
     _indexVersion++;
     // Drop the persisted snapshot too — the next cold start rebuilds it.
-    try { window.localStorage.removeItem(CACHE_KEY); } catch (e) {}
+    try {
+      window.localStorage.removeItem(CACHE_KEY);
+    } catch (e) {}
     _cacheLoaded = false;
     _cacheDirty = false;
     // Rail graphs are built once per index lifetime; drop them too so a
@@ -220,8 +226,11 @@
       while (inFlight.size < limit && cursor < items.length) {
         const i = cursor++;
         const p = (async () => {
-          try { out[i] = { ok: true, value: await worker(items[i], i) }; }
-          catch (e) { out[i] = { ok: false, error: e }; }
+          try {
+            out[i] = { ok: true, value: await worker(items[i], i) };
+          } catch (e) {
+            out[i] = { ok: false, error: e };
+          }
         })();
         inFlight.add(p);
         p.finally(() => inFlight.delete(p));
@@ -236,22 +245,7 @@
     return out;
   }
 
-  // Haversine (mirrors app.js, kept self-contained).
-  function haversine(lat1, lng1, lat2, lng2) {
-    const R = 6371;
-    const toRad = (x) => x * Math.PI / 180;
-    const dLat = toRad(lat2 - lat1);
-    const dLng = toRad(lng2 - lng1);
-    const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng/2)**2;
-    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-  }
-
-  function walkMinutes(meters) {
-    return meters / WALK_M_PER_MIN;
-  }
-  function rideMinutes(meters) {
-    return meters / BUS_KMH_M_PER_MIN;
-  }
+  // Haversine / walkMinutes / rideMinutes moved to src/utils/geo.js and src/utils/time.js — Phase 3 modularization
 
   // ---- v47 — Real walking path via public GraphHopper demo ------------
   // The flat 60 m/min haversine estimate (walkMinutes above) is fast but
@@ -264,31 +258,43 @@
   //
   // Public demo is fair-use. Cache aggressively (rounded coords ~1 m
   // precision) so back-to-back searches don't hammer the demo. On any
-  // failure we fall back to walkMinutes() so the planner still works.
-  const _walkRouteCache = new Map();   // "lat,lng|lat,lng" → {meters, seconds, geometry} | null
+  // failure we fall back to busetaUtils.walkMinutes() so the planner still works.
+  const _walkRouteCache = new Map(); // "lat,lng|lat,lng" → {meters, seconds, geometry} | null
   const WALK_ROUTE_URL = 'https://routing.openstreetmap.de/routed-foot/route/v1/foot/';
   async function fetchRealWalkRoute(lat1, lng1, lat2, lng2) {
-    if (!Number.isFinite(lat1) || !Number.isFinite(lng1) ||
-        !Number.isFinite(lat2) || !Number.isFinite(lng2)) return null;
+    if (
+      !Number.isFinite(lat1) ||
+      !Number.isFinite(lng1) ||
+      !Number.isFinite(lat2) ||
+      !Number.isFinite(lng2)
+    )
+      return null;
     // Skip trivial distances (<50 m straight-line) — no routing value.
-    if (haversine(lat1, lng1, lat2, lng2) < 0.05) return null;
+    if (busetaUtils.haversine(lat1, lng1, lat2, lng2) < 0.05) return null;
     const k1 = `${lat1.toFixed(5)},${lng1.toFixed(5)}`;
     const k2 = `${lat2.toFixed(5)},${lng2.toFixed(5)}`;
     const key = `${k1}>${k2}`;
     if (_walkRouteCache.has(key)) return _walkRouteCache.get(key);
     try {
-      const url = `${WALK_ROUTE_URL}${lng1.toFixed(5)},${lat1.toFixed(5)};${lng2.toFixed(5)},${lat2.toFixed(5)}` +
-                  `?overview=full&geometries=geojson&steps=false&alternatives=false`;
+      const url =
+        `${WALK_ROUTE_URL}${lng1.toFixed(5)},${lat1.toFixed(5)};${lng2.toFixed(5)},${lat2.toFixed(5)}` +
+        `?overview=full&geometries=geojson&steps=false&alternatives=false`;
       const ctl = new AbortController();
       const timer = setTimeout(() => ctl.abort(), 2500);
       let resp;
       try {
         resp = await fetch(url, { signal: ctl.signal });
-      } finally { clearTimeout(timer); }
-      if (!resp.ok) { _walkRouteCache.set(key, null); return null; }
+      } finally {
+        clearTimeout(timer);
+      }
+      if (!resp.ok) {
+        _walkRouteCache.set(key, null);
+        return null;
+      }
       const j = await resp.json();
       if (j.code !== 'Ok' || !j.routes || !j.routes[0]) {
-        _walkRouteCache.set(key, null); return null;
+        _walkRouteCache.set(key, null);
+        return null;
       }
       const route = j.routes[0];
       const out = {
@@ -296,7 +302,10 @@
         seconds: route.duration,
         // GeoJSON: each coord is [lng, lat] — flip to {lat, lng} for the
         // canvas projector, which expects lat-first.
-        geometry: (route.geometry && route.geometry.coordinates || []).map((c) => ({ lat: c[1], lng: c[0] })),
+        geometry: ((route.geometry && route.geometry.coordinates) || []).map((c) => ({
+          lat: c[1],
+          lng: c[0],
+        })),
       };
       _walkRouteCache.set(key, out);
       return out;
@@ -319,8 +328,8 @@
         routed: true,
       };
     }
-    const m = haversine(lat1, lng1, lat2, lng2) * 1000;
-    return { meters: m, minutes: walkMinutes(m), geometry: null, routed: false };
+    const m = busetaUtils.haversine(lat1, lng1, lat2, lng2) * 1000;
+    return { meters: m, minutes: busetaUtils.walkMinutes(m), geometry: null, routed: false };
   }
   function totalKm(legs) {
     let m = 0;
@@ -332,7 +341,9 @@
   }
 
   // Round helper that prefers integer minutes but keeps "0" for trivial hops.
-  function mins(x) { return Math.max(1, Math.round(x)); }
+  function mins(x) {
+    return Math.max(1, Math.round(x));
+  }
 
   // Pretty distance "320 m" / "1.4 km".
   function fmtDistance(m) {
@@ -397,14 +408,18 @@
     let rawStops = null;
     try {
       if (meta.co === 'CTB' || meta.co === 'NWFB') {
-        const resp = await fetch(`https://rt.data.gov.hk/v2/transport/citybus/route-stop/${encodeURIComponent(meta.co.toLowerCase())}/${encodeURIComponent(meta.route)}/${meta.dir === 'I' ? 'inbound' : 'outbound'}`);
+        const resp = await fetch(
+          `https://rt.data.gov.hk/v2/transport/citybus/route-stop/${encodeURIComponent(meta.co.toLowerCase())}/${encodeURIComponent(meta.route)}/${meta.dir === 'I' ? 'inbound' : 'outbound'}`
+        );
         _bumpReq();
         if (resp.ok) {
           const j = await resp.json();
           if (Array.isArray(j.data)) rawStops = j.data;
         }
       } else if (meta.co === 'KMB' || meta.co === 'LWB') {
-        const resp = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/route-stop/${encodeURIComponent(meta.route)}/${meta.dir === 'I' ? 'inbound' : 'outbound'}/${encodeURIComponent(meta.service)}`);
+        const resp = await fetch(
+          `https://data.etabus.gov.hk/v1/transport/kmb/route-stop/${encodeURIComponent(meta.route)}/${meta.dir === 'I' ? 'inbound' : 'outbound'}/${encodeURIComponent(meta.service)}`
+        );
         _bumpReq();
         if (resp.ok) {
           const j = await resp.json();
@@ -430,7 +445,8 @@
           return {
             stop: String(it.stop),
             seq: parseInt(it.seq, 10),
-            lat, lng,
+            lat,
+            lng,
             nameTc: known ? known.nameTc : '',
             nameEn: known ? known.nameEn : '',
           };
@@ -460,15 +476,17 @@
   function classifyStopId(stopId) {
     const s = String(stopId);
     if (/^[0-9a-fA-F]{16}$/.test(s)) return 'KMB';
-    if (/^[0-9]{6}$/.test(s))       return 'CTB';
-    if (/^[A-Za-z]{3,4}$/.test(s))  return 'MTR';
-    if (/^[0-9]{1,3}$/.test(s))     return 'LRT';
+    if (/^[0-9]{6}$/.test(s)) return 'CTB';
+    if (/^[A-Za-z]{3,4}$/.test(s)) return 'MTR';
+    if (/^[0-9]{1,3}$/.test(s)) return 'LRT';
     return 'OTHER';
   }
 
   async function fetchKmbStopEtaMeta(stopId) {
     try {
-      const resp = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/stop-eta/${encodeURIComponent(stopId)}`);
+      const resp = await fetch(
+        `https://data.etabus.gov.hk/v1/transport/kmb/stop-eta/${encodeURIComponent(stopId)}`
+      );
       _bumpReq();
       if (!resp.ok) return [];
       const j = await resp.json();
@@ -493,7 +511,9 @@
 
   async function fetchCtbStopEtaMeta(stopId) {
     try {
-      const resp = await fetch(`https://rt.data.gov.hk/v1/transport/batch/stop-eta/CTB/${encodeURIComponent(stopId)}`);
+      const resp = await fetch(
+        `https://rt.data.gov.hk/v1/transport/batch/stop-eta/CTB/${encodeURIComponent(stopId)}`
+      );
       _bumpReq();
       if (!resp.ok) return [];
       const j = await resp.json();
@@ -528,9 +548,7 @@
 
   // Return all routes that touch a given stop (uses the reverse index).
   function routesServingStop(stopId) {
-    return _stopRoutesCache.has(stopId)
-      ? Array.from(_stopRoutesCache.get(stopId))
-      : [];
+    return _stopRoutesCache.has(stopId) ? Array.from(_stopRoutesCache.get(stopId)) : [];
   }
 
   // Stop meta lookup with operator stop id fallback.
@@ -544,7 +562,8 @@
     const s = stopMeta(idx, stopId);
     if (!s) return stopId;
     if (window.state && window.state.lang === 'en') return s.nameEn || s.nameTc || stopId;
-    if (window.state && window.state.lang === 'zh-Hans') return s.nameSc || s.nameTc || s.nameEn || stopId;
+    if (window.state && window.state.lang === 'zh-Hans')
+      return s.nameSc || s.nameTc || s.nameEn || stopId;
     return s.nameTc || s.nameSc || s.nameEn || stopId;
   }
 
@@ -574,12 +593,14 @@
 
   // Get the on-route km distance between two stops on the same route.
   function routeDistanceKm(stops, aSeq, bSeq) {
-    const lo = Math.min(aSeq, bSeq), hi = Math.max(aSeq, bSeq);
+    const lo = Math.min(aSeq, bSeq),
+      hi = Math.max(aSeq, bSeq);
     let m = 0;
     for (let i = lo; i < hi; i++) {
-      const a = stops[i], b = stops[i + 1];
+      const a = stops[i],
+        b = stops[i + 1];
       if (!a || !b || !Number.isFinite(a.lat) || !Number.isFinite(b.lat)) continue;
-      m += haversine(a.lat, a.lng, b.lat, b.lng) * 1000;
+      m += busetaUtils.haversine(a.lat, a.lng, b.lat, b.lng) * 1000;
     }
     return m / 1000;
   }
@@ -588,7 +609,7 @@
   function walkMinutesTo(lat, lng, idx, stopId) {
     const ll = stopLatLng(idx, stopId);
     if (!ll || !Number.isFinite(lat) || !Number.isFinite(lng)) return Infinity;
-    return walkMinutes(haversine(lat, lng, ll.lat, ll.lng) * 1000);
+    return busetaUtils.walkMinutes(busetaUtils.haversine(lat, lng, ll.lat, ll.lng) * 1000);
   }
 
   // ---- v48 — cross-mode nearest-rail-station lookup ------------------
@@ -602,7 +623,7 @@
   //
   // Cached by rounded coords (~1 m precision) and operator so a back-to-
   // back planner query (e.g. swap button) doesn't re-scan the index.
-  const _nearestRailCache = new Map();  // key → array
+  const _nearestRailCache = new Map(); // key → array
   function _railCacheKey(marker, lat, lng, maxM) {
     // ~1 m precision at HK latitudes — adequate for station selection.
     return `${marker}|${Math.round(lat * 10000) / 10000}|${Math.round(lng * 10000) / 10000}|${Math.round(maxM)}`;
@@ -619,7 +640,7 @@
       const sLat = Number.isFinite(s.lat) ? s.lat : null;
       const sLng = Number.isFinite(s.lng) ? s.lng : null;
       if (sLat == null || sLng == null) return;
-      const d = haversine(lat, lng, sLat, sLng) * 1000;
+      const d = busetaUtils.haversine(lat, lng, sLat, sLng) * 1000;
       if (d > max) return;
       out.push({ code, lat: sLat, lng: sLng, distMeters: d });
     });
@@ -639,7 +660,7 @@
       const sLat = Number.isFinite(s.lat) ? s.lat : null;
       const sLng = Number.isFinite(s.lng) ? s.lng : null;
       if (sLat == null || sLng == null) return;
-      const d = haversine(lat, lng, sLat, sLng) * 1000;
+      const d = busetaUtils.haversine(lat, lng, sLat, sLng) * 1000;
       if (d > max) return;
       out.push({ code, lat: sLat, lng: sLng, distMeters: d });
     });
@@ -657,7 +678,7 @@
   // use that as the findDirect dest; the extra walk from the bus-alighting
   // stop to the actual rail station is then appended as a separate leg in
   // the spliced mixed journey.
-  const _nearestBusCache = new Map();  // cacheKey → { stop, lat, lng, distMeters } | null
+  const _nearestBusCache = new Map(); // cacheKey → { stop, lat, lng, distMeters } | null
   function _busCacheKey(lat, lng, maxM) {
     return `${Math.round(lat * 10000) / 10000}|${Math.round(lng * 10000) / 10000}|${Math.round(maxM)}`;
   }
@@ -675,7 +696,7 @@
       const sLat = Number.isFinite(s.lat) ? s.lat : null;
       const sLng = Number.isFinite(s.lng) ? s.lng : null;
       if (sLat == null || sLng == null) return;
-      const d = haversine(lat, lng, sLat, sLng) * 1000;
+      const d = busetaUtils.haversine(lat, lng, sLat, sLng) * 1000;
       if (d > max) return;
       if (d < bestDist) {
         bestDist = d;
@@ -708,7 +729,7 @@
       j.legs.push(leg);
       j.totalMin = j.legs.reduce((s, l) => s + (Number.isFinite(l.minutes) ? l.minutes : 0), 0);
       const transfers = j.legs.filter((l) => l.kind === 'walk' && l.transfer).length;
-      j.kind = transfers === 0 ? 'direct' : (transfers === 1 ? 'one' : 'two');
+      j.kind = transfers === 0 ? 'direct' : transfers === 1 ? 'one' : 'two';
     });
   }
 
@@ -719,7 +740,9 @@
     try {
       // CTB / NWFB use the 6-digit numeric stop id.
       if (/^[0-9]{6}$/.test(String(stopId))) {
-        const resp = await fetch(`https://rt.data.gov.hk/v2/transport/citybus/eta/ctb/${encodeURIComponent(stopId)}/${encodeURIComponent(route)}`);
+        const resp = await fetch(
+          `https://rt.data.gov.hk/v2/transport/citybus/eta/ctb/${encodeURIComponent(stopId)}/${encodeURIComponent(route)}`
+        );
         if (!resp.ok) return null;
         const j = await resp.json();
         const data = Array.isArray(j.data) ? j.data : [];
@@ -733,13 +756,18 @@
         return Math.max(0, Math.round((soonest.t - Date.now()) / 60000));
       }
       // KMB / LWB hex stop id.
-      const resp = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/stop-eta/${encodeURIComponent(stopId)}`);
+      const resp = await fetch(
+        `https://data.etabus.gov.hk/v1/transport/kmb/stop-eta/${encodeURIComponent(stopId)}`
+      );
       if (!resp.ok) return null;
       const j = await resp.json();
       const data = Array.isArray(j.data) ? j.data : [];
-      const matching = data.filter((e) => e.route === route
-        && (dir == null || e.dir === dir)
-        && (service == null || String(e.service_type) === String(service)));
+      const matching = data.filter(
+        (e) =>
+          e.route === route &&
+          (dir == null || e.dir === dir) &&
+          (service == null || String(e.service_type) === String(service))
+      );
       if (matching.length === 0) return null;
       const soonest = matching
         .map((e) => ({ eta: e.eta, t: new Date(e.eta).getTime() }))
@@ -769,7 +797,10 @@
     function consider(meta) {
       const key = `${meta.co}|${meta.route}|${meta.dir}`;
       const prior = seen.get(key);
-      if (!prior) { seen.set(key, meta); return; }
+      if (!prior) {
+        seen.set(key, meta);
+        return;
+      }
       // Prefer the regular service over school specials (service === '1').
       const priorIsReg = String(prior.service) === '1';
       const curIsReg = String(meta.service) === '1';
@@ -823,25 +854,49 @@
       const dIdx = stops.findIndex((s) => s.stop === dest.stop);
       if (oIdx < 0 || dIdx < 0 || dIdx <= oIdx) return null;
       const rideKm = routeDistanceKm(stops, oIdx, dIdx);
-      const rideMin = rideMinutes(rideKm * 1000);
+      const rideMin = busetaUtils.rideMinutes(rideKm * 1000);
       // v47 — real walking path via walkLeg() (GraphHopper demo, haversine
       // fallback). Each router awaits its own walks; routers run in parallel
       // via Promise.all in search(), so the GraphHopper RTT (~250 ms)
       // stacks with the slowest router, not every router.
       const oLL = stopLatLng(idx, origin.stop);
       const dLL = stopLatLng(idx, dest.stop);
-      const walkOut = oLL ? await walkLeg(origin.lat, origin.lng, oLL.lat, oLL.lng) : { meters: 0, minutes: 0, geometry: null, routed: false };
-      const walkIn  = dLL ? await walkLeg(dest.lat, dest.lng, dLL.lat, dLL.lng) : { meters: 0, minutes: 0, geometry: null, routed: false };
+      const walkOut = oLL
+        ? await walkLeg(origin.lat, origin.lng, oLL.lat, oLL.lng)
+        : { meters: 0, minutes: 0, geometry: null, routed: false };
+      const walkIn = dLL
+        ? await walkLeg(dest.lat, dest.lng, dLL.lat, dLL.lng)
+        : { meters: 0, minutes: 0, geometry: null, routed: false };
       if (walkOut.meters > ORIGIN_WALK_LIMIT_M) return null;
-      if (walkIn.meters  > DEST_WALK_LIMIT_M)   return null;
+      if (walkIn.meters > DEST_WALK_LIMIT_M) return null;
       const legs = [
-        { kind: 'walk', from: 'origin', to: origin.stop,
-          meters: walkOut.meters, minutes: walkOut.minutes,
-          geometry: walkOut.geometry, routed: walkOut.routed },
-        { kind: 'ride', routeKey: key, routeMeta: meta, from: origin.stop, to: dest.stop, meters: rideKm * 1000, minutes: rideMin },
-        { kind: 'walk', from: dest.stop, to: 'dest',
-          meters: walkIn.meters, minutes: walkIn.minutes,
-          geometry: walkIn.geometry, routed: walkIn.routed },
+        {
+          kind: 'walk',
+          from: 'origin',
+          to: origin.stop,
+          meters: walkOut.meters,
+          minutes: walkOut.minutes,
+          geometry: walkOut.geometry,
+          routed: walkOut.routed,
+        },
+        {
+          kind: 'ride',
+          routeKey: key,
+          routeMeta: meta,
+          from: origin.stop,
+          to: dest.stop,
+          meters: rideKm * 1000,
+          minutes: rideMin,
+        },
+        {
+          kind: 'walk',
+          from: dest.stop,
+          to: 'dest',
+          meters: walkIn.meters,
+          minutes: walkIn.minutes,
+          geometry: walkIn.geometry,
+          routed: walkIn.routed,
+        },
       ];
       return {
         kind: 'direct',
@@ -907,73 +962,90 @@
     // `await walkLeg(...)` is legal. forEach doesn't propagate async; the
     // `await` token threw a SyntaxError on parse.
     for (const x of enriched.filter((x) => x && x.ok && x.value)) {
-        const { rk, meta, stops, oIdx } = x.value;
-        // Walk every alight stop strictly after origin (we don't accept
-        // back-tracking on a single route — same as a "direct" route).
-        for (let i = oIdx + 1; i < stops.length; i++) {
-          const alight = stops[i];
-          if (alight.stop === destStop) continue; // direct, not a transfer
-          // For each alight, find routes touching it AND touching dest.
-          const nextRoutes = routesServingStop(alight.stop);
-          for (const rk2 of nextRoutes) {
-            if (rk2 === rk) continue;
-            const stops2 = _routeStopsCache.get(rk2);
-            if (!stops2) continue; // not fetched yet
-            const d2 = stops2.findIndex((s) => s.stop === destStop);
-            if (d2 < 0) continue;
-            // Require forward direction on the second leg as well.
-            const a2 = stops2.findIndex((s) => s.stop === alight.stop);
-            if (a2 < 0 || d2 <= a2) continue;
-            const m2 = idx.routes.get(rk2) || idx.ctbRoutes.get(rk2);
-            const ride1Km = routeDistanceKm(stops, oIdx, i);
-            const ride2Km = routeDistanceKm(stops2, a2, d2);
-            // Walking from alight to the boarding stop of leg 2 = 0
-            // when they're the same physical stop. Use the real walking
-            // path otherwise (v47 — GraphHopper demo with haversine
-            // fallback inside walkLeg()).
-            const aLL = (Number.isFinite(alight.lat) && Number.isFinite(alight.lng))
-              ? { lat: alight.lat, lng: alight.lng } : null;
-            const board2 = stops2[a2];
-            const bLL = (Number.isFinite(board2.lat) && Number.isFinite(board2.lng))
-              ? { lat: board2.lat, lng: board2.lng } : null;
-            const xfer = (aLL && bLL)
+      const { rk, meta, stops, oIdx } = x.value;
+      // Walk every alight stop strictly after origin (we don't accept
+      // back-tracking on a single route — same as a "direct" route).
+      for (let i = oIdx + 1; i < stops.length; i++) {
+        const alight = stops[i];
+        if (alight.stop === destStop) continue; // direct, not a transfer
+        // For each alight, find routes touching it AND touching dest.
+        const nextRoutes = routesServingStop(alight.stop);
+        for (const rk2 of nextRoutes) {
+          if (rk2 === rk) continue;
+          const stops2 = _routeStopsCache.get(rk2);
+          if (!stops2) continue; // not fetched yet
+          const d2 = stops2.findIndex((s) => s.stop === destStop);
+          if (d2 < 0) continue;
+          // Require forward direction on the second leg as well.
+          const a2 = stops2.findIndex((s) => s.stop === alight.stop);
+          if (a2 < 0 || d2 <= a2) continue;
+          const m2 = idx.routes.get(rk2) || idx.ctbRoutes.get(rk2);
+          const ride1Km = routeDistanceKm(stops, oIdx, i);
+          const ride2Km = routeDistanceKm(stops2, a2, d2);
+          // Walking from alight to the boarding stop of leg 2 = 0
+          // when they're the same physical stop. Use the real walking
+          // path otherwise (v47 — GraphHopper demo with haversine
+          // fallback inside walkLeg()).
+          const aLL =
+            Number.isFinite(alight.lat) && Number.isFinite(alight.lng)
+              ? { lat: alight.lat, lng: alight.lng }
+              : null;
+          const board2 = stops2[a2];
+          const bLL =
+            Number.isFinite(board2.lat) && Number.isFinite(board2.lng)
+              ? { lat: board2.lat, lng: board2.lng }
+              : null;
+          const xfer =
+            aLL && bLL
               ? await walkLeg(aLL.lat, aLL.lng, bLL.lat, bLL.lng)
               : { meters: 0, minutes: 0, geometry: null, routed: false };
-            if (xfer.meters > TRANSFER_WALK_LIMIT_M) continue;
-            candidates.push({
-              legs: [
-                {
-                  kind: 'ride', routeKey: rk,
-                  routeMeta: meta,
-                  from: originStop, to: alight.stop,
-                  meters: ride1Km * 1000,
-                  minutes: rideMinutes(ride1Km * 1000),
-                },
-                {
-                  kind: 'walk', from: alight.stop, to: board2.stop,
-                  meters: xfer.meters, minutes: xfer.minutes,
-                  geometry: xfer.geometry, routed: xfer.routed,
-                  transfer: true,
-                },
-                {
-                  kind: 'ride', routeKey: rk2,
-                  routeMeta: m2,
-                  from: board2.stop, to: destStop,
-                  meters: ride2Km * 1000,
-                  minutes: rideMinutes(ride2Km * 1000),
-                },
-              ],
-            });
-          }
+          if (xfer.meters > TRANSFER_WALK_LIMIT_M) continue;
+          candidates.push({
+            legs: [
+              {
+                kind: 'ride',
+                routeKey: rk,
+                routeMeta: meta,
+                from: originStop,
+                to: alight.stop,
+                meters: ride1Km * 1000,
+                minutes: busetaUtils.rideMinutes(ride1Km * 1000),
+              },
+              {
+                kind: 'walk',
+                from: alight.stop,
+                to: board2.stop,
+                meters: xfer.meters,
+                minutes: xfer.minutes,
+                geometry: xfer.geometry,
+                routed: xfer.routed,
+                transfer: true,
+              },
+              {
+                kind: 'ride',
+                routeKey: rk2,
+                routeMeta: m2,
+                from: board2.stop,
+                to: destStop,
+                meters: ride2Km * 1000,
+                minutes: busetaUtils.rideMinutes(ride2Km * 1000),
+              },
+            ],
+          });
         }
+      }
     }
 
     // Walk-out at origin and walk-in at dest.
     const originLL = stopLatLng(idx, originStop);
     const destLL = stopLatLng(idx, destStop);
     // v47 — use real walking path; same pattern as findDirect.
-    const walkOut = originLL ? await walkLeg(origin.lat, origin.lng, originLL.lat, originLL.lng) : { meters: 0, minutes: 0, geometry: null, routed: false };
-    const walkIn  = destLL   ? await walkLeg(dest.lat, dest.lng, destLL.lat, destLL.lng) : { meters: 0, minutes: 0, geometry: null, routed: false };
+    const walkOut = originLL
+      ? await walkLeg(origin.lat, origin.lng, originLL.lat, originLL.lng)
+      : { meters: 0, minutes: 0, geometry: null, routed: false };
+    const walkIn = destLL
+      ? await walkLeg(dest.lat, dest.lng, destLL.lat, destLL.lng)
+      : { meters: 0, minutes: 0, geometry: null, routed: false };
     if (walkOut.meters > ORIGIN_WALK_LIMIT_M || walkIn.meters > DEST_WALK_LIMIT_M) return [];
 
     const seen = new Set();
@@ -983,13 +1055,25 @@
       // of leg 1. If originStop !== board1 (which is originStop, by
       // construction) the walk is 0.
       const fullLegs = [
-        { kind: 'walk', from: 'origin', to: originStop,
-          meters: walkOut.meters, minutes: walkOut.minutes,
-          geometry: walkOut.geometry, routed: walkOut.routed },
+        {
+          kind: 'walk',
+          from: 'origin',
+          to: originStop,
+          meters: walkOut.meters,
+          minutes: walkOut.minutes,
+          geometry: walkOut.geometry,
+          routed: walkOut.routed,
+        },
         ...c.legs,
-        { kind: 'walk', from: destStop, to: 'dest',
-          meters: walkIn.meters, minutes: walkIn.minutes,
-          geometry: walkIn.geometry, routed: walkIn.routed },
+        {
+          kind: 'walk',
+          from: destStop,
+          to: 'dest',
+          meters: walkIn.meters,
+          minutes: walkIn.minutes,
+          geometry: walkIn.geometry,
+          routed: walkIn.routed,
+        },
       ];
       const totalMin = fullLegs.reduce((s, l) => s + l.minutes, 0);
       const sig = fullLegs.map((l) => `${l.kind}:${l.routeKey || l.from}:${l.to}`).join('|');
@@ -1064,38 +1148,71 @@
               // v47 — real walking path for transfer walks via walkLeg(); xfersM/haver
               // becomes the haversine fallback when the public GraphHopper
               // demo is unreachable.
-              const xfer1 = (alight1.lat != null && stops2[a2].lat != null)
-                ? await walkLeg(alight1.lat, alight1.lng, stops2[a2].lat, stops2[a2].lng)
-                : { meters: 0, minutes: 0, geometry: null, routed: false };
-              const xfer2 = (alight2.lat != null && stops3[a3].lat != null)
-                ? await walkLeg(alight2.lat, alight2.lng, stops3[a3].lat, stops3[a3].lng)
-                : { meters: 0, minutes: 0, geometry: null, routed: false };
-              if (xfer1.meters > TRANSFER_WALK_LIMIT_M || xfer2.meters > TRANSFER_WALK_LIMIT_M) continue;
+              const xfer1 =
+                alight1.lat != null && stops2[a2].lat != null
+                  ? await walkLeg(alight1.lat, alight1.lng, stops2[a2].lat, stops2[a2].lng)
+                  : { meters: 0, minutes: 0, geometry: null, routed: false };
+              const xfer2 =
+                alight2.lat != null && stops3[a3].lat != null
+                  ? await walkLeg(alight2.lat, alight2.lng, stops3[a3].lat, stops3[a3].lng)
+                  : { meters: 0, minutes: 0, geometry: null, routed: false };
+              if (xfer1.meters > TRANSFER_WALK_LIMIT_M || xfer2.meters > TRANSFER_WALK_LIMIT_M)
+                continue;
               const ride1Km = routeDistanceKm(stops1, oIdx, i);
               const ride2Km = routeDistanceKm(stops2, a2, j);
               const ride3Km = routeDistanceKm(stops3, a3, d3);
 
               candidates.push({
                 legs: [
-                    { kind: 'ride', routeKey: rk1, routeMeta: meta1,
-                      from: originStop, to: alight1.stop,
-                      meters: ride1Km * 1000, minutes: rideMinutes(ride1Km * 1000) },
-                    { kind: 'walk', from: alight1.stop, to: stops2[a2].stop,
-                      meters: xfer1.meters, minutes: xfer1.minutes,
-                      geometry: xfer1.geometry, routed: xfer1.routed,
-                      transfer: true },
-                    { kind: 'ride', routeKey: rk2, routeMeta: meta2,
-                      from: stops2[a2].stop, to: alight2.stop,
-                      meters: ride2Km * 1000, minutes: rideMinutes(ride2Km * 1000) },
-                    { kind: 'walk', from: alight2.stop, to: stops3[a3].stop,
-                      meters: xfer2.meters, minutes: xfer2.minutes,
-                      geometry: xfer2.geometry, routed: xfer2.routed,
-                      transfer: true },
-                    { kind: 'ride', routeKey: rk3, routeMeta: meta3,
-                      from: stops3[a3].stop, to: destStop,
-                      meters: ride3Km * 1000, minutes: rideMinutes(ride3Km * 1000) },
-                  ],
-                });
+                  {
+                    kind: 'ride',
+                    routeKey: rk1,
+                    routeMeta: meta1,
+                    from: originStop,
+                    to: alight1.stop,
+                    meters: ride1Km * 1000,
+                    minutes: busetaUtils.rideMinutes(ride1Km * 1000),
+                  },
+                  {
+                    kind: 'walk',
+                    from: alight1.stop,
+                    to: stops2[a2].stop,
+                    meters: xfer1.meters,
+                    minutes: xfer1.minutes,
+                    geometry: xfer1.geometry,
+                    routed: xfer1.routed,
+                    transfer: true,
+                  },
+                  {
+                    kind: 'ride',
+                    routeKey: rk2,
+                    routeMeta: meta2,
+                    from: stops2[a2].stop,
+                    to: alight2.stop,
+                    meters: ride2Km * 1000,
+                    minutes: busetaUtils.rideMinutes(ride2Km * 1000),
+                  },
+                  {
+                    kind: 'walk',
+                    from: alight2.stop,
+                    to: stops3[a3].stop,
+                    meters: xfer2.meters,
+                    minutes: xfer2.minutes,
+                    geometry: xfer2.geometry,
+                    routed: xfer2.routed,
+                    transfer: true,
+                  },
+                  {
+                    kind: 'ride',
+                    routeKey: rk3,
+                    routeMeta: meta3,
+                    from: stops3[a3].stop,
+                    to: destStop,
+                    meters: ride3Km * 1000,
+                    minutes: busetaUtils.rideMinutes(ride3Km * 1000),
+                  },
+                ],
+              });
             }
           }
         }
@@ -1106,21 +1223,37 @@
     const destLL = stopLatLng(idx, destStop);
     // v47 — real walking path (walkLeg) for the outer walk-out/walk-in;
     // transfer walks inside c.legs already routed via walkLeg above.
-    const walkOut = originLL ? await walkLeg(origin.lat, origin.lng, originLL.lat, originLL.lng) : { meters: 0, minutes: 0, geometry: null, routed: false };
-    const walkIn  = destLL   ? await walkLeg(dest.lat, dest.lng, destLL.lat, destLL.lng) : { meters: 0, minutes: 0, geometry: null, routed: false };
+    const walkOut = originLL
+      ? await walkLeg(origin.lat, origin.lng, originLL.lat, originLL.lng)
+      : { meters: 0, minutes: 0, geometry: null, routed: false };
+    const walkIn = destLL
+      ? await walkLeg(dest.lat, dest.lng, destLL.lat, destLL.lng)
+      : { meters: 0, minutes: 0, geometry: null, routed: false };
     if (walkOut.meters > ORIGIN_WALK_LIMIT_M || walkIn.meters > DEST_WALK_LIMIT_M) return [];
 
     const seen = new Set();
     const out = [];
     candidates.forEach((c) => {
       const fullLegs = [
-        { kind: 'walk', from: 'origin', to: originStop,
-          meters: walkOut.meters, minutes: walkOut.minutes,
-          geometry: walkOut.geometry, routed: walkOut.routed },
+        {
+          kind: 'walk',
+          from: 'origin',
+          to: originStop,
+          meters: walkOut.meters,
+          minutes: walkOut.minutes,
+          geometry: walkOut.geometry,
+          routed: walkOut.routed,
+        },
         ...c.legs,
-        { kind: 'walk', from: destStop, to: 'dest',
-          meters: walkIn.meters, minutes: walkIn.minutes,
-          geometry: walkIn.geometry, routed: walkIn.routed },
+        {
+          kind: 'walk',
+          from: destStop,
+          to: 'dest',
+          meters: walkIn.meters,
+          minutes: walkIn.minutes,
+          geometry: walkIn.geometry,
+          routed: walkIn.routed,
+        },
       ];
       const totalMin = fullLegs.reduce((s, l) => s + l.minutes, 0);
       const sig = fullLegs.map((l) => `${l.kind}:${l.routeKey || l.from}:${l.to}`).join('|');
@@ -1134,7 +1267,7 @@
 
   function xferMeters(s1, s2) {
     if (!Number.isFinite(s1.lat) || !Number.isFinite(s2.lat)) return 0;
-    return haversine(s1.lat, s1.lng, s2.lat, s2.lng) * 1000;
+    return busetaUtils.haversine(s1.lat, s1.lng, s2.lat, s2.lng) * 1000;
   }
 
   // ---- MTR + LRT (Light Rail) routing --------------------------------
@@ -1143,22 +1276,22 @@
   // between two rail stations is a pure-graph problem: no upstream API
   // calls, results in <10 ms. This unblocks "金鐘 → 中環"-style queries
   // that the bus planner cannot answer.
-  const MTR_PER_STATION_MIN = 2.2;        // avg time between consecutive MTR stations
-  const LRT_PER_STATION_MIN = 1.8;        // LRT slightly faster (shorter inter-stop)
-  const RAIL_TRANSFER_MIN   = 5;          // paid-area transfer (walk + wait + board)
-  const LRT_TRANSFER_MIN    = 4;          // LRT paid-area transfer
-  const MTR_LINES_URL       = 'assets/mtr-lines.json?v=15';
-  const LRT_LINES_URL       = 'assets/lrt-routes.json?v=15';
-  const MTR_FARES_URL       = 'assets/mtr-fares.json?v=1';
-  const LRT_FARES_URL       = 'assets/lrt-fares.json?v=1';
+  const MTR_PER_STATION_MIN = 2.2; // avg time between consecutive MTR stations
+  const LRT_PER_STATION_MIN = 1.8; // LRT slightly faster (shorter inter-stop)
+  const RAIL_TRANSFER_MIN = 5; // paid-area transfer (walk + wait + board)
+  const LRT_TRANSFER_MIN = 4; // LRT paid-area transfer
+  const MTR_LINES_URL = 'assets/mtr-lines.json?v=15';
+  const LRT_LINES_URL = 'assets/lrt-routes.json?v=15';
+  const MTR_FARES_URL = 'assets/mtr-fares.json?v=1';
+  const LRT_FARES_URL = 'assets/lrt-fares.json?v=1';
 
-  let _mtrGraphCache   = null;
-  let _lrtGraphCache   = null;
+  let _mtrGraphCache = null;
+  let _lrtGraphCache = null;
   let _mtrGraphPromise = null;
   let _lrtGraphPromise = null;
-  let _mtrFaresCache   = null;
+  let _mtrFaresCache = null;
   let _mtrFaresPromise = null;
-  let _lrtFaresCache   = null;
+  let _lrtFaresCache = null;
   let _lrtFaresPromise = null;
 
   function invalidateRailGraphs() {
@@ -1185,7 +1318,9 @@
         const resp = await fetch(MTR_FARES_URL);
         if (!resp.ok) return null;
         return await resp.json();
-      } catch (e) { return null; }
+      } catch (e) {
+        return null;
+      }
     })();
     try {
       _mtrFaresCache = await _mtrFaresPromise;
@@ -1202,7 +1337,9 @@
         const resp = await fetch(LRT_FARES_URL);
         if (!resp.ok) return null;
         return await resp.json();
-      } catch (e) { return null; }
+      } catch (e) {
+        return null;
+      }
     })();
     try {
       _lrtFaresCache = await _lrtFaresPromise;
@@ -1219,7 +1356,8 @@
     const f1 = fares[from];
     if (f1 && f1[to] && Number.isFinite(Number(f1[to].octopus))) return Number(f1[to].octopus);
     const f2 = fares[to];
-    if (f2 && f2[from] && Number.isFinite(Number(f2[from].octopus))) return Number(f2[from].octopus);
+    if (f2 && f2[from] && Number.isFinite(Number(f2[from].octopus)))
+      return Number(f2[from].octopus);
     return null;
   }
   // LRT fares are flat per-route, so the lookup is route-only.
@@ -1239,7 +1377,9 @@
       try {
         const resp = await fetch(MTR_LINES_URL);
         if (resp.ok) rows = await resp.json();
-      } catch (e) { rows = null; }
+      } catch (e) {
+        rows = null;
+      }
       return buildMtrGraph(idx, rows);
     })();
     try {
@@ -1258,7 +1398,9 @@
       try {
         const resp = await fetch(LRT_LINES_URL);
         if (resp.ok) rows = await resp.json();
-      } catch (e) { rows = null; }
+      } catch (e) {
+        rows = null;
+      }
       return buildLrtGraph(idx, rows);
     })();
     try {
@@ -1378,7 +1520,7 @@
 
     const segsAt = (stop) => {
       const m = reverseIdx.get(stop);
-      return m ? (m[linesField] || []) : [];
+      return m ? m[linesField] || [] : [];
     };
 
     const initialSegs = segsAt(origin.stop);
@@ -1388,7 +1530,7 @@
 
     const keyOf = (seg, stop) => seg + '\x00' + stop;
     const dist = new Map();
-    const prev = new Map();        // state key -> { fromKey, seg, fromStop, toStop, kind }
+    const prev = new Map(); // state key -> { fromKey, seg, fromStop, toStop, kind }
     const visited = new Set();
 
     const queue = [];
@@ -1436,7 +1578,13 @@
           const newCost = cur.cost + perStationMin;
           if (!dist.has(nextK) || newCost < dist.get(nextK)) {
             dist.set(nextK, newCost);
-            prev.set(nextK, { fromKey: k, seg: cur.seg, fromStop: cur.stop, toStop: next.stop, kind: 'ride' });
+            prev.set(nextK, {
+              fromKey: k,
+              seg: cur.seg,
+              fromStop: cur.stop,
+              toStop: next.stop,
+              kind: 'ride',
+            });
             queue.push({ seg: cur.seg, stop: next.stop, cost: newCost });
           }
         }
@@ -1450,7 +1598,13 @@
         const newCost = cur.cost + transferMin;
         if (!dist.has(nextK) || newCost < dist.get(nextK)) {
           dist.set(nextK, newCost);
-          prev.set(nextK, { fromKey: k, seg: nextSeg, fromStop: cur.stop, toStop: cur.stop, kind: 'walk' });
+          prev.set(nextK, {
+            fromKey: k,
+            seg: nextSeg,
+            fromStop: cur.stop,
+            toStop: cur.stop,
+            kind: 'walk',
+          });
           queue.push({ seg: nextSeg, stop: cur.stop, cost: newCost });
         }
       }
@@ -1481,10 +1635,16 @@
         let rideMeters = 0;
         const fromMeta = reverseIdx.get(s.fromStop);
         const toMeta = reverseIdx.get(s.toStop);
-        if (fromMeta && toMeta &&
-            Number.isFinite(fromMeta.lat) && Number.isFinite(fromMeta.lng) &&
-            Number.isFinite(toMeta.lat) && Number.isFinite(toMeta.lng)) {
-          rideMeters = haversine(fromMeta.lat, fromMeta.lng, toMeta.lat, toMeta.lng) * 1000;
+        if (
+          fromMeta &&
+          toMeta &&
+          Number.isFinite(fromMeta.lat) &&
+          Number.isFinite(fromMeta.lng) &&
+          Number.isFinite(toMeta.lat) &&
+          Number.isFinite(toMeta.lng)
+        ) {
+          rideMeters =
+            busetaUtils.haversine(fromMeta.lat, fromMeta.lng, toMeta.lat, toMeta.lng) * 1000;
         }
         legs.push({
           kind: 'ride',
@@ -1501,10 +1661,10 @@
         // cryptic same-station ↔.
         const prevStep = steps[i - 1];
         const nextStep = steps[i + 1];
-        const fromName = (prevStep && prevStep.kind === 'ride')
-          ? pickLineName(routeMetaFor(prevStep.seg)) : '';
-        const toName = (nextStep && nextStep.kind === 'ride')
-          ? pickLineName(routeMetaFor(nextStep.seg)) : '';
+        const fromName =
+          prevStep && prevStep.kind === 'ride' ? pickLineName(routeMetaFor(prevStep.seg)) : '';
+        const toName =
+          nextStep && nextStep.kind === 'ride' ? pickLineName(routeMetaFor(nextStep.seg)) : '';
         legs.push({
           kind: 'walk',
           transfer: true,
@@ -1526,8 +1686,9 @@
         // v42 — sum meters across consecutive single-station ride legs so a
         // multi-station ride on the same line shows the full km, not just
         // the first hop's km.
-        tail.meters = (Number.isFinite(tail.meters) ? tail.meters : 0)
-                    + (Number.isFinite(l.meters) ? l.meters : 0);
+        tail.meters =
+          (Number.isFinite(tail.meters) ? tail.meters : 0) +
+          (Number.isFinite(l.meters) ? l.meters : 0);
       } else {
         merged.push({ ...l });
       }
@@ -1538,28 +1699,42 @@
     // the limit (e.g. user typed the station name but is actually far
     // away — we still offer the MTR route but cap the walk cost).
     const originLL = stopLatLng(idx, origin.stop);
-    const destLL   = stopLatLng(idx, dest.stop);
+    const destLL = stopLatLng(idx, dest.stop);
     // v47 — real walking path for the rail planner's outer walk legs.
-    const walkOut = (originLL && Number.isFinite(origin.lat) && Number.isFinite(origin.lng))
-      ? await walkLeg(origin.lat, origin.lng, originLL.lat, originLL.lng)
-      : { meters: 0, minutes: 0, geometry: null, routed: false };
-    const walkIn  = (destLL && Number.isFinite(dest.lat) && Number.isFinite(dest.lng))
-      ? await walkLeg(dest.lat, dest.lng, destLL.lat, destLL.lng)
-      : { meters: 0, minutes: 0, geometry: null, routed: false };
+    const walkOut =
+      originLL && Number.isFinite(origin.lat) && Number.isFinite(origin.lng)
+        ? await walkLeg(origin.lat, origin.lng, originLL.lat, originLL.lng)
+        : { meters: 0, minutes: 0, geometry: null, routed: false };
+    const walkIn =
+      destLL && Number.isFinite(dest.lat) && Number.isFinite(dest.lng)
+        ? await walkLeg(dest.lat, dest.lng, destLL.lat, destLL.lng)
+        : { meters: 0, minutes: 0, geometry: null, routed: false };
     const includeWalkOut = walkOut.meters > 0 && walkOut.meters <= ORIGIN_WALK_LIMIT_M;
-    const includeWalkIn  = walkIn.meters > 0  && walkIn.meters  <= DEST_WALK_LIMIT_M;
+    const includeWalkIn = walkIn.meters > 0 && walkIn.meters <= DEST_WALK_LIMIT_M;
 
     const fullLegs = [];
     if (includeWalkOut) {
-      fullLegs.push({ kind: 'walk', from: 'origin', to: origin.stop,
-        meters: walkOut.meters, minutes: walkOut.minutes,
-        geometry: walkOut.geometry, routed: walkOut.routed });
+      fullLegs.push({
+        kind: 'walk',
+        from: 'origin',
+        to: origin.stop,
+        meters: walkOut.meters,
+        minutes: walkOut.minutes,
+        geometry: walkOut.geometry,
+        routed: walkOut.routed,
+      });
     }
     for (const l of merged) fullLegs.push(l);
     if (includeWalkIn) {
-      fullLegs.push({ kind: 'walk', from: dest.stop, to: 'dest',
-        meters: walkIn.meters, minutes: walkIn.minutes,
-        geometry: walkIn.geometry, routed: walkIn.routed });
+      fullLegs.push({
+        kind: 'walk',
+        from: dest.stop,
+        to: 'dest',
+        meters: walkIn.meters,
+        minutes: walkIn.minutes,
+        geometry: walkIn.geometry,
+        routed: walkIn.routed,
+      });
     }
 
     const totalMin = fullLegs.reduce((s, l) => s + l.minutes, 0);
@@ -1567,7 +1742,7 @@
     const journey = {
       legs: fullLegs,
       totalMin,
-      kind: transfers === 0 ? 'direct' : (transfers === 1 ? 'one' : 'two'),
+      kind: transfers === 0 ? 'direct' : transfers === 1 ? 'one' : 'two',
     };
 
     const out = { direct: [], oneTransfer: [] };
@@ -1596,10 +1771,23 @@
     }
     const routeMetaFor = (lineCode) => {
       const m = idx.mtr.get('MTR|' + lineCode);
-      if (m) return { co: 'MTR', route: lineCode, origTc: m.origTc, origEn: m.origEn, destTc: m.destTc, destEn: m.destEn };
+      if (m)
+        return {
+          co: 'MTR',
+          route: lineCode,
+          origTc: m.origTc,
+          origEn: m.origEn,
+          destTc: m.destTc,
+          destEn: m.destEn,
+        };
       return { co: 'MTR', route: lineCode };
     };
-    const opts = { co: 'MTR', perStationMin: MTR_PER_STATION_MIN, transferMin: RAIL_TRANSFER_MIN, routeMetaFor };
+    const opts = {
+      co: 'MTR',
+      perStationMin: MTR_PER_STATION_MIN,
+      transferMin: RAIL_TRANSFER_MIN,
+      routeMetaFor,
+    };
 
     // v48 — cross-mode handling. If dest.stop is not an MTR station (e.g.
     // it's a KMB bus stop like MA180 馬鞍山警署), route the MTR Dijkstra to
@@ -1615,8 +1803,8 @@
     // appended walk from the rail station to the bus stop.
     let railDest = dest;
     let railOrigin = origin;
-    let crossWalkStart = null;  // { stop, lat, lng } — start of stitched walk
-    let crossWalkEnd   = null;
+    let crossWalkStart = null; // { stop, lat, lng } — start of stitched walk
+    let crossWalkEnd = null;
     if (!idx.mtr.has(dest.stop) && Number.isFinite(dest.lat) && Number.isFinite(dest.lng)) {
       const n = findNearestMtrStop(idx, dest.lat, dest.lng);
       if (!n || n.length === 0) return { direct: [], oneTransfer: [] };
@@ -1644,7 +1832,7 @@
         [].concat(result.direct, result.oneTransfer),
         { stop: 'origin', lat: origin.lat, lng: origin.lng },
         crossWalkStart,
-        origin.stop,
+        origin.stop
       );
     }
     if (crossWalkEnd && result.direct.length + result.oneTransfer.length > 0) {
@@ -1653,7 +1841,7 @@
         [].concat(result.direct, result.oneTransfer),
         crossWalkEnd,
         { stop: 'dest', lat: dest.lat, lng: dest.lng },
-        dest.stop,
+        dest.stop
       );
     }
 
@@ -1687,10 +1875,23 @@
     }
     const routeMetaFor = (routeNo) => {
       const m = idx.lrt.routes.get('LRT|' + routeNo);
-      if (m) return { co: 'LRT', route: routeNo, origTc: m.origTc, origEn: m.origEn, destTc: m.destTc, destEn: m.destEn };
+      if (m)
+        return {
+          co: 'LRT',
+          route: routeNo,
+          origTc: m.origTc,
+          origEn: m.origEn,
+          destTc: m.destTc,
+          destEn: m.destEn,
+        };
       return { co: 'LRT', route: routeNo };
     };
-    const opts = { co: 'LRT', perStationMin: LRT_PER_STATION_MIN, transferMin: LRT_TRANSFER_MIN, routeMetaFor };
+    const opts = {
+      co: 'LRT',
+      perStationMin: LRT_PER_STATION_MIN,
+      transferMin: LRT_TRANSFER_MIN,
+      routeMetaFor,
+    };
 
     // v48 — cross-mode handling (mirror of findMtrRoutes above). When the
     // user picks a KMB / CTB / MTR stop as one side, route the LRT side
@@ -1704,14 +1905,18 @@
     let railDest = dest;
     let railOrigin = origin;
     let crossWalkStart = null;
-    let crossWalkEnd   = null;
+    let crossWalkEnd = null;
     if (!idx.lrt.stops.has(dest.stop) && Number.isFinite(dest.lat) && Number.isFinite(dest.lng)) {
       const n = findNearestLrtStop(idx, dest.lat, dest.lng);
       if (!n || n.length === 0) return { direct: [], oneTransfer: [] };
       railDest = { stop: n[0].code, lat: n[0].lat, lng: n[0].lng };
       crossWalkEnd = { stop: n[0].code, lat: n[0].lat, lng: n[0].lng };
     }
-    if (!idx.lrt.stops.has(origin.stop) && Number.isFinite(origin.lat) && Number.isFinite(origin.lng)) {
+    if (
+      !idx.lrt.stops.has(origin.stop) &&
+      Number.isFinite(origin.lat) &&
+      Number.isFinite(origin.lng)
+    ) {
       const n = findNearestLrtStop(idx, origin.lat, origin.lng);
       if (!n || n.length === 0) return { direct: [], oneTransfer: [] };
       railOrigin = { stop: n[0].code, lat: n[0].lat, lng: n[0].lng };
@@ -1729,7 +1934,7 @@
         [].concat(result.direct, result.oneTransfer),
         { stop: 'origin', lat: origin.lat, lng: origin.lng },
         crossWalkStart,
-        origin.stop,
+        origin.stop
       );
     }
     if (crossWalkEnd && result.direct.length + result.oneTransfer.length > 0) {
@@ -1738,7 +1943,7 @@
         [].concat(result.direct, result.oneTransfer),
         crossWalkEnd,
         { stop: 'dest', lat: dest.lat, lng: dest.lng },
-        dest.stop,
+        dest.stop
       );
     }
 
@@ -1771,34 +1976,40 @@
   // Each mixed candidate requires 0-2 extra findDirect() calls
   // (each fetchRoutesServingStop pre-warm costs ~250ms API RTT).
   // Capped at MAX_MIXED_PER_RAIL to bound the worst-case work.
-  const MAX_MIXED_PER_RAIL = 1;       // only the shortest pre/post bus per rail
+  const MAX_MIXED_PER_RAIL = 1; // only the shortest pre/post bus per rail
   async function buildMixedJourneys(idx, origin, dest, railJourneys, railCo) {
     const out = [];
     // Each rail journey's entry/exit station is looked up once; we
     // dedupe findDirect() calls across all rail journeys so multiple
     // rails through the same entry don't trigger duplicate pre-warms.
-    const preBusCache = new Map();   // entryStation → shortest bus journey
-    const postBusCache = new Map();  // exitStation  → shortest bus journey
+    const preBusCache = new Map(); // entryStation → shortest bus journey
+    const postBusCache = new Map(); // exitStation  → shortest bus journey
     const entryMetaOf = (s) => {
       if (railCo === 'MTR') {
         const m = idx.mtr && idx.mtr.get(s);
-        return (m && Number.isFinite(m.lat) && Number.isFinite(m.lng)) ? m : null;
+        return m && Number.isFinite(m.lat) && Number.isFinite(m.lng) ? m : null;
       }
       const m = idx.lrt && idx.lrt.stops && idx.lrt.stops.get(s);
-      return (m && Number.isFinite(m.lat) && Number.isFinite(m.lng)) ? m : null;
+      return m && Number.isFinite(m.lat) && Number.isFinite(m.lng) ? m : null;
     };
     async function getPreBus(entry) {
       if (origin.stop === entry) return Promise.resolve(null);
       if (preBusCache.has(entry)) return preBusCache.get(entry);
       const m = entryMetaOf(entry);
-      if (!m) { preBusCache.set(entry, null); return null; }
+      if (!m) {
+        preBusCache.set(entry, null);
+        return null;
+      }
       // v52.2 — MTR/LRT station codes never appear in a bus route's stop
       // list (KMB uses 16-hex, CTB uses 6-digit, GMB uses numeric IDs).
       // Resolve the closest bus stop within ~500m so findDirect() can
       // actually find a route; the extra walk from that bus stop to the
       // rail entry is added as a tail leg in the splice below.
       const near = findNearestBusStop(idx, m.lat, m.lng, 500);
-      if (!near) { preBusCache.set(entry, null); return null; }
+      if (!near) {
+        preBusCache.set(entry, null);
+        return null;
+      }
       const stopObj = { stop: near.stop, lat: near.lat, lng: near.lng };
       const direct = await findDirect(idx, origin, stopObj);
       const best = direct.length > 0 ? direct[0] : null;
@@ -1809,11 +2020,17 @@
       if (exit === dest.stop) return Promise.resolve(null);
       if (postBusCache.has(exit)) return postBusCache.get(exit);
       const m = entryMetaOf(exit);
-      if (!m) { postBusCache.set(exit, null); return null; }
+      if (!m) {
+        postBusCache.set(exit, null);
+        return null;
+      }
       // v52.2 — same fix as getPreBus. Resolve the nearest bus stop to
       // the rail exit so findDirect() can return a real route.
       const near = findNearestBusStop(idx, m.lat, m.lng, 500);
-      if (!near) { postBusCache.set(exit, null); return null; }
+      if (!near) {
+        postBusCache.set(exit, null);
+        return null;
+      }
       const stopObj = { stop: near.stop, lat: near.lat, lng: near.lng };
       const direct = await findDirect(idx, stopObj, dest);
       const best = direct.length > 0 ? direct[0] : null;
@@ -1823,7 +2040,8 @@
     for (const rj of railJourneys) {
       if (!rj.legs || rj.legs.length === 0) continue;
       // Find rail entry/exit stations (first / last ride leg's from/to).
-      let entry = null, exit = null;
+      let entry = null,
+        exit = null;
       for (const l of rj.legs) {
         if (l && l.kind === 'ride') {
           if (!entry) entry = l.from;
@@ -1840,7 +2058,9 @@
       // `to='dest'` in pureRail — match either.
       const legs = rj.legs;
       const walkOut = legs.find((l) => l && l.kind === 'walk' && l.from === 'origin');
-      const walkIn = legs.find((l) => l && l.kind === 'walk' && (l.to === 'dest' || l.to === dest.stop));
+      const walkIn = legs.find(
+        (l) => l && l.kind === 'walk' && (l.to === 'dest' || l.to === dest.stop)
+      );
       const rideLegs = legs.filter((l) => l && l.kind === 'ride');
       // Transfer walks (railRoute's between-line hops) keep their position
       // relative to the rides; we just rebuild the journey in logical
@@ -1861,9 +2081,13 @@
           if (aMeta && eMeta && Number.isFinite(aMeta.lat) && Number.isFinite(aMeta.lng)) {
             const w = await walkLeg(aMeta.lat, aMeta.lng, eMeta.lat, eMeta.lng);
             newLegs.push({
-              kind: 'walk', from: alightStop, to: entry,
-              meters: w.meters, minutes: w.minutes,
-              geometry: w.geometry, routed: w.routed,
+              kind: 'walk',
+              from: alightStop,
+              to: entry,
+              meters: w.meters,
+              minutes: w.minutes,
+              geometry: w.geometry,
+              routed: w.routed,
             });
           }
         }
@@ -1879,15 +2103,24 @@
         // postBus.legs[0] and keep the rest (ride + walkIn to user's dest).
         const exitMeta = entryMetaOf(exit);
         const firstLeg = postBus.legs[0];
-        const busBoardingStop = (firstLeg && firstLeg.kind === 'walk') ? firstLeg.to : null;
+        const busBoardingStop = firstLeg && firstLeg.kind === 'walk' ? firstLeg.to : null;
         if (exitMeta && busBoardingStop && busBoardingStop !== exit) {
           const busBoardingMeta = stopLatLng(idx, busBoardingStop);
           if (busBoardingMeta && Number.isFinite(busBoardingMeta.lat)) {
-            const w = await walkLeg(exitMeta.lat, exitMeta.lng, busBoardingMeta.lat, busBoardingMeta.lng);
+            const w = await walkLeg(
+              exitMeta.lat,
+              exitMeta.lng,
+              busBoardingMeta.lat,
+              busBoardingMeta.lng
+            );
             newLegs.push({
-              kind: 'walk', from: exit, to: busBoardingStop,
-              meters: w.meters, minutes: w.minutes,
-              geometry: w.geometry, routed: w.routed,
+              kind: 'walk',
+              from: exit,
+              to: busBoardingStop,
+              meters: w.meters,
+              minutes: w.minutes,
+              geometry: w.geometry,
+              routed: w.routed,
             });
           }
         }
@@ -1913,7 +2146,8 @@
 
   // ---- Top-level search ----------------------------------------------
   async function search(originStop, destStop) {
-    const t0 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+    const t0 =
+      typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now();
     _resetReq();
 
     const idx = (window.state && window.state.index) || null;
@@ -1924,16 +2158,24 @@
     // Normalise inputs
     const origin = {
       stop: String(originStop),
-      lat: NaN, lng: NaN,
+      lat: NaN,
+      lng: NaN,
     };
     const dest = {
       stop: String(destStop),
-      lat: NaN, lng: NaN,
+      lat: NaN,
+      lng: NaN,
     };
     const oMeta = stopMeta(idx, origin.stop);
     const dMeta = stopMeta(idx, dest.stop);
-    if (oMeta) { if (Number.isFinite(oMeta.lat)) origin.lat = oMeta.lat; if (Number.isFinite(oMeta.lng)) origin.lng = oMeta.lng; }
-    if (dMeta) { if (Number.isFinite(dMeta.lat)) dest.lat = dMeta.lat; if (Number.isFinite(dMeta.lng)) dest.lng = dMeta.lng; }
+    if (oMeta) {
+      if (Number.isFinite(oMeta.lat)) origin.lat = oMeta.lat;
+      if (Number.isFinite(oMeta.lng)) origin.lng = oMeta.lng;
+    }
+    if (dMeta) {
+      if (Number.isFinite(dMeta.lat)) dest.lat = dMeta.lat;
+      if (Number.isFinite(dMeta.lng)) dest.lng = dMeta.lng;
+    }
 
     if (origin.stop === dest.stop) {
       return { direct: [], oneTransfer: [], twoTransfer: [], sameStop: true };
@@ -1947,10 +2189,12 @@
     // bus work makes pure-rail searches effectively instant (Dijkstra
     // over the 97-station graph is sub-millisecond) and avoids polluting
     // the localStorage route-stop cache with entries we will never use.
-    const originIsRail = !!(idx.mtr && idx.mtr.has(origin.stop)) ||
-                          !!(idx.lrt && idx.lrt.stops && idx.lrt.stops.has(origin.stop));
-    const destIsRail = !!(idx.mtr && idx.mtr.has(dest.stop)) ||
-                        !!(idx.lrt && idx.lrt.stops && idx.lrt.stops.has(dest.stop));
+    const originIsRail =
+      !!(idx.mtr && idx.mtr.has(origin.stop)) ||
+      !!(idx.lrt && idx.lrt.stops && idx.lrt.stops.has(origin.stop));
+    const destIsRail =
+      !!(idx.mtr && idx.mtr.has(dest.stop)) ||
+      !!(idx.lrt && idx.lrt.stops && idx.lrt.stops.has(dest.stop));
     const pureRail = originIsRail && destIsRail;
 
     // Direct first: this prefills `_routeStopsCache` for every candidate
@@ -1994,10 +2238,20 @@
     // rail outputs. Each mixed candidate costs 0-2 extra
     // findDirect() calls; the worst case is ~4 extra RTTs per search.
     const [mixedFromMtr, mixedFromLrt] = await Promise.all([
-      buildMixedJourneys(idx, origin, dest,
-        [].concat(mtrRoutes.direct, mtrRoutes.oneTransfer), 'MTR'),
-      buildMixedJourneys(idx, origin, dest,
-        [].concat(lrtRoutes.direct, lrtRoutes.oneTransfer), 'LRT'),
+      buildMixedJourneys(
+        idx,
+        origin,
+        dest,
+        [].concat(mtrRoutes.direct, mtrRoutes.oneTransfer),
+        'MTR'
+      ),
+      buildMixedJourneys(
+        idx,
+        origin,
+        dest,
+        [].concat(lrtRoutes.direct, lrtRoutes.oneTransfer),
+        'LRT'
+      ),
     ]);
     const mixedJourneys = [].concat(mixedFromMtr, mixedFromLrt);
 
@@ -2023,15 +2277,15 @@
     // sorted by totalMin. A `best` pointer lets the UI mark the rank-1
     // card in each section.
     const strategyOf = (j) => {
-      let hasBus = false, hasRail = false;
+      let hasBus = false,
+        hasRail = false;
       const legs = (j && j.legs) || [];
       for (const leg of legs) {
         if (leg.kind !== 'ride' || !leg.routeMeta) continue;
         const co = leg.routeMeta.co;
         if (co === 'MTR' || co === 'LRT') hasRail = true;
-        else if (co === 'KMB' || co === 'LWB' ||
-                 co === 'CTB' || co === 'NWFB' ||
-                 co === 'GMB') hasBus = true;
+        else if (co === 'KMB' || co === 'LWB' || co === 'CTB' || co === 'NWFB' || co === 'GMB')
+          hasBus = true;
       }
       if (hasRail && hasBus) return 'mixed';
       if (hasRail) return 'rail';
@@ -2040,22 +2294,22 @@
     };
     const bucketOf = (j) => {
       const s = strategyOf(j);
-      if (s === 'bus')   return 'bus';
-      if (s === 'rail')  return 'rail';
+      if (s === 'bus') return 'bus';
+      if (s === 'rail') return 'rail';
       return 'mixed';
     };
     const buckets = { bus: [], rail: [], mixed: [] };
     // Bus-only feed draws from the bus sub-planners (no rail merge).
-    for (const j of busDirect)      buckets[bucketOf(j)].push(j);
-    for (const j of busOneTransfer)  buckets[bucketOf(j)].push(j);
-    for (const j of busTwoTransfer)  buckets[bucketOf(j)].push(j);
+    for (const j of busDirect) buckets[bucketOf(j)].push(j);
+    for (const j of busOneTransfer) buckets[bucketOf(j)].push(j);
+    for (const j of busTwoTransfer) buckets[bucketOf(j)].push(j);
     // Rail-only feed draws from the rail sub-planners (no bus merge).
-    for (const j of railDirect)      buckets[bucketOf(j)].push(j);
+    for (const j of railDirect) buckets[bucketOf(j)].push(j);
     for (const j of railOneTransfer) buckets[bucketOf(j)].push(j);
     // Mixed feed draws from the fully-merged legacy arrays.
-    for (const j of direct)          buckets[bucketOf(j)].push(j);
-    for (const j of oneTransfer)     buckets[bucketOf(j)].push(j);
-    for (const j of twoTransfer)     buckets[bucketOf(j)].push(j);
+    for (const j of direct) buckets[bucketOf(j)].push(j);
+    for (const j of oneTransfer) buckets[bucketOf(j)].push(j);
+    for (const j of twoTransfer) buckets[bucketOf(j)].push(j);
     // v52 — mixed bus+rail candidates (spliced into the merged arrays
     // so strategyOf() correctly classifies them as "mixed" — they have
     // at least one bus leg AND one rail leg). We append them to the
@@ -2066,7 +2320,11 @@
       buckets[bucketOf(j)].push(j);
     }
 
-    const strategies = { bus: { journeys: [], best: null }, rail: { journeys: [], best: null }, mixed: { journeys: [], best: null } };
+    const strategies = {
+      bus: { journeys: [], best: null },
+      rail: { journeys: [], best: null },
+      mixed: { journeys: [], best: null },
+    };
     for (const k of Object.keys(buckets)) {
       const arr = buckets[k]
         .slice()
@@ -2075,7 +2333,8 @@
       strategies[k] = { journeys: arr, best: arr[0] || null };
     }
 
-    const t1 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+    const t1 =
+      typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now();
     const elapsed = Math.round(t1 - t0);
     // Single line, easy to grep / spot regressions in DevTools.
     // Format: planner.search | N requests | Nms | direct=… one=… two=… cache=…
@@ -2083,20 +2342,24 @@
       // v42 — extended log: cov = number of strategies with ≥1 journey
       // (e.g. "1" = only bus fired, "3" = all three strategies fired).
       // empty = 1 when the user got the no-results state.
-      const coveredStrats = Object.keys(strategies).filter((k) => strategies[k].journeys.length > 0).length;
+      const coveredStrats = Object.keys(strategies).filter(
+        (k) => strategies[k].journeys.length > 0
+      ).length;
       const empty = coveredStrats === 0 ? 1 : 0;
       console.log(
         `planner.search | req=${_reqCounter} | ${elapsed}ms ` +
-        `| direct=${direct.length} one=${oneTransfer.length} two=${twoTransfer.length} ` +
-        `| strategy bus=${strategies.bus.journeys.length} ` +
-        `rail=${strategies.rail.journeys.length} ` +
-        `mixed=${strategies.mixed.journeys.length} ` +
-        `| cov=${coveredStrats} empty=${empty} ` +
-        `| cache rs=${_routeStopsCache.size} sr=${_stopRoutesCache.size} ` +
-        `| rail mtr=${mtrRoutes.direct.length + mtrRoutes.oneTransfer.length} ` +
-        `lrt=${lrtRoutes.direct.length + lrtRoutes.oneTransfer.length}`
+          `| direct=${direct.length} one=${oneTransfer.length} two=${twoTransfer.length} ` +
+          `| strategy bus=${strategies.bus.journeys.length} ` +
+          `rail=${strategies.rail.journeys.length} ` +
+          `mixed=${strategies.mixed.journeys.length} ` +
+          `| cov=${coveredStrats} empty=${empty} ` +
+          `| cache rs=${_routeStopsCache.size} sr=${_stopRoutesCache.size} ` +
+          `| rail mtr=${mtrRoutes.direct.length + mtrRoutes.oneTransfer.length} ` +
+          `lrt=${lrtRoutes.direct.length + lrtRoutes.oneTransfer.length}`
       );
-    } catch (e) { /* console may be missing */ }
+    } catch (e) {
+      /* console may be missing */
+    }
 
     return { direct, oneTransfer, twoTransfer, origin, dest, strategies };
   }
@@ -2104,14 +2367,15 @@
   // ---- UI helpers (depend on the parent's el()/t_str() helpers) -----
   function el(tag, attrs, ...rest) {
     const node = document.createElement(tag);
-    if (attrs) for (const [k, v] of Object.entries(attrs)) {
-      if (v == null || v === false) continue;
-      if (k === 'class') node.className = v;
-      else if (k === 'dataset') Object.assign(node.dataset, v);
-      else if (k === 'style') node.setAttribute('style', v);
-      else if (k === 'html') node.innerHTML = v;
-      else node.setAttribute(k, v === true ? '' : v);
-    }
+    if (attrs)
+      for (const [k, v] of Object.entries(attrs)) {
+        if (v == null || v === false) continue;
+        if (k === 'class') node.className = v;
+        else if (k === 'dataset') Object.assign(node.dataset, v);
+        else if (k === 'style') node.setAttribute('style', v);
+        else if (k === 'html') node.innerHTML = v;
+        else node.setAttribute(k, v === true ? '' : v);
+      }
     for (const c of rest.flat()) {
       if (c == null || c === false) continue;
       node.appendChild(c instanceof Node ? c : document.createTextNode(String(c)));
@@ -2131,64 +2395,64 @@
   // touch app.js. Idempotent on re-entry; missing locales get the same
   // default so the dropdown is never blank.
   function patchPlannerStrings() {
-    const S = window.STRINGS = window.STRINGS || {};
+    const S = (window.STRINGS = window.STRINGS || {});
     const ensure = (lang, k, v) => {
       S[lang] = S[lang] || {};
       if (S[lang][k] == null) S[lang][k] = v;
     };
     ensure('zh-Hant', 'plannerSuggestEmpty', '搵唔到匹配嘅車站，試下其他字。');
-    ensure('en',      'plannerSuggestEmpty', 'No matching stops. Try other characters.');
+    ensure('en', 'plannerSuggestEmpty', 'No matching stops. Try other characters.');
     ensure('zh-Hans', 'plannerSuggestEmpty', '未找到匹配嘅车站，试下其他字。');
     ensure('zh-Hant', 'plannerSuggestSectionMtr', '港鐵站');
-    ensure('en',      'plannerSuggestSectionMtr', 'MTR / Light Rail');
+    ensure('en', 'plannerSuggestSectionMtr', 'MTR / Light Rail');
     ensure('zh-Hans', 'plannerSuggestSectionMtr', '港铁站');
     ensure('zh-Hant', 'plannerSuggestSectionBus', '巴士站');
-    ensure('en',      'plannerSuggestSectionBus', 'Bus & minibus stops');
+    ensure('en', 'plannerSuggestSectionBus', 'Bus & minibus stops');
     ensure('zh-Hans', 'plannerSuggestSectionBus', '巴士站');
     ensure('zh-Hant', 'plannerSuggestDistance', (km) => `約 ${km.toFixed(1)} 公里`);
-    ensure('en',      'plannerSuggestDistance', (km) => `~${km.toFixed(1)} km`);
+    ensure('en', 'plannerSuggestDistance', (km) => `~${km.toFixed(1)} km`);
     ensure('zh-Hans', 'plannerSuggestDistance', (km) => `约 ${km.toFixed(1)} 公里`);
     ensure('zh-Hant', 'plannerSuggestAria', (q) => `車站建議，輸入緊「${q}」`);
-    ensure('en',      'plannerSuggestAria', (q) => `Stop suggestions for "${q}"`);
+    ensure('en', 'plannerSuggestAria', (q) => `Stop suggestions for "${q}"`);
     ensure('zh-Hans', 'plannerSuggestAria', (q) => `车站建议，输入紧「${q}」`);
-    ensure('zh-Hant', 'plannerDepartNow',  '現在出發');
-    ensure('en',      'plannerDepartNow',  'Depart now');
-    ensure('zh-Hans', 'plannerDepartNow',  '现在出发');
-    ensure('zh-Hant', 'plannerDepartBy',   '指定時間出發');
-    ensure('en',      'plannerDepartBy',   'Depart by time');
-    ensure('zh-Hans', 'plannerDepartBy',   '指定时间出发');
-    ensure('zh-Hant', 'plannerArriveBy',   '目標到達時間');
-    ensure('en',      'plannerArriveBy',   'Target arrival time');
-    ensure('zh-Hans', 'plannerArriveBy',   '目标到达时间');
-    ensure('zh-Hant', 'plannerDepartAt',   '出發時間');
-    ensure('en',      'plannerDepartAt',   'Departure time');
-    ensure('zh-Hans', 'plannerDepartAt',   '出发时间');
+    ensure('zh-Hant', 'plannerDepartNow', '現在出發');
+    ensure('en', 'plannerDepartNow', 'Depart now');
+    ensure('zh-Hans', 'plannerDepartNow', '现在出发');
+    ensure('zh-Hant', 'plannerDepartBy', '指定時間出發');
+    ensure('en', 'plannerDepartBy', 'Depart by time');
+    ensure('zh-Hans', 'plannerDepartBy', '指定时间出发');
+    ensure('zh-Hant', 'plannerArriveBy', '目標到達時間');
+    ensure('en', 'plannerArriveBy', 'Target arrival time');
+    ensure('zh-Hans', 'plannerArriveBy', '目标到达时间');
+    ensure('zh-Hant', 'plannerDepartAt', '出發時間');
+    ensure('en', 'plannerDepartAt', 'Departure time');
+    ensure('zh-Hans', 'plannerDepartAt', '出发时间');
     ensure('zh-Hant', 'plannerNeedLeaveBy', (hhmm) => `需 ${hhmm} 出發`);
-    ensure('en',      'plannerNeedLeaveBy', (hhmm) => `Leave by ${hhmm}`);
+    ensure('en', 'plannerNeedLeaveBy', (hhmm) => `Leave by ${hhmm}`);
     ensure('zh-Hans', 'plannerNeedLeaveBy', (hhmm) => `需 ${hhmm} 出发`);
     // v47 — meta-row walk-minute prefix. Reads as "步行 0.3 km · 約 4 分鐘".
     ensure('zh-Hant', 'plannerWalkMinPrefix', '約 ');
-    ensure('en',      'plannerWalkMinPrefix', '~');
+    ensure('en', 'plannerWalkMinPrefix', '~');
     ensure('zh-Hans', 'plannerWalkMinPrefix', '约 ');
     // v41 — route strategy sections (Bus / Rail / Mixed).
-    ensure('zh-Hant', 'plannerStrategyBus',   '巴士');
-    ensure('en',      'plannerStrategyBus',   'Bus');
-    ensure('zh-Hans', 'plannerStrategyBus',   '巴士');
-    ensure('zh-Hant', 'plannerStrategyRail',  '港鐵 / 輕鐵');
-    ensure('en',      'plannerStrategyRail',  'Rail');
-    ensure('zh-Hans', 'plannerStrategyRail',  '港铁 / 轻铁');
+    ensure('zh-Hant', 'plannerStrategyBus', '巴士');
+    ensure('en', 'plannerStrategyBus', 'Bus');
+    ensure('zh-Hans', 'plannerStrategyBus', '巴士');
+    ensure('zh-Hant', 'plannerStrategyRail', '港鐵 / 輕鐵');
+    ensure('en', 'plannerStrategyRail', 'Rail');
+    ensure('zh-Hans', 'plannerStrategyRail', '港铁 / 轻铁');
     ensure('zh-Hant', 'plannerStrategyMixed', '混合');
-    ensure('en',      'plannerStrategyMixed', 'Mixed');
+    ensure('en', 'plannerStrategyMixed', 'Mixed');
     ensure('zh-Hans', 'plannerStrategyMixed', '混合');
     // Per-strategy card tag labels — short, ≤4 glyphs.
-    ensure('zh-Hant', 'plannerStrategyTagBus',   '巴士');
-    ensure('en',      'plannerStrategyTagBus',   'BUS');
-    ensure('zh-Hans', 'plannerStrategyTagBus',   '巴士');
-    ensure('zh-Hant', 'plannerStrategyTagRail',  '港鐵');
-    ensure('en',      'plannerStrategyTagRail',  'RAIL');
-    ensure('zh-Hans', 'plannerStrategyTagRail',  '港铁');
+    ensure('zh-Hant', 'plannerStrategyTagBus', '巴士');
+    ensure('en', 'plannerStrategyTagBus', 'BUS');
+    ensure('zh-Hans', 'plannerStrategyTagBus', '巴士');
+    ensure('zh-Hant', 'plannerStrategyTagRail', '港鐵');
+    ensure('en', 'plannerStrategyTagRail', 'RAIL');
+    ensure('zh-Hans', 'plannerStrategyTagRail', '港铁');
     ensure('zh-Hant', 'plannerStrategyTagMixed', '混合');
-    ensure('en',      'plannerStrategyTagMixed', 'MIX');
+    ensure('en', 'plannerStrategyTagMixed', 'MIX');
     ensure('zh-Hans', 'plannerStrategyTagMixed', '混合');
   }
   patchPlannerStrings();
@@ -2249,8 +2513,11 @@
         // Carry lat/lng so the suggestion row can show distance from
         // the user's location when available.
         push({
-          co: 'MTR', stop: code,
-          nameTc: s.nameTc, nameEn: s.nameEn, nameSc: '',
+          co: 'MTR',
+          stop: code,
+          nameTc: s.nameTc,
+          nameEn: s.nameEn,
+          nameSc: '',
           lat: Number.isFinite(s.lat) ? s.lat : null,
           lng: Number.isFinite(s.lng) ? s.lng : null,
           _score: score,
@@ -2268,8 +2535,11 @@
         if (text.toLowerCase().startsWith(lower)) score += 20;
         if (score > 0) {
           push({
-            co: 'LRT', stop: code,
-            nameTc: s.nameTc, nameEn: s.nameEn, nameSc: '',
+            co: 'LRT',
+            stop: code,
+            nameTc: s.nameTc,
+            nameEn: s.nameEn,
+            nameSc: '',
             _score: score,
           });
         }
@@ -2287,7 +2557,7 @@
       if (l.kind === 'walk') {
         icon.textContent = l.transfer ? '↔' : '↦';
       } else {
-        icon.textContent = l.routeMeta ? (l.routeMeta.route || 'B') : 'B';
+        icon.textContent = l.routeMeta ? l.routeMeta.route || 'B' : 'B';
       }
       node.appendChild(icon);
       const text = el('div');
@@ -2302,7 +2572,7 @@
           // it's clear what the user is changing onto.
           const here = stopNameFromState(l.from);
           const prevLine = l._fromLineName || '';
-          const nextLine = l._toLineName   || '';
+          const nextLine = l._toLineName || '';
           if (prevLine && nextLine && prevLine !== nextLine) {
             label = `${here} · ${prevLine} → ${nextLine}`;
           } else {
@@ -2319,7 +2589,7 @@
         if (co === 'MTR' || co === 'LRT') {
           const lineName = pickLineName(rm);
           const fromName = stopNameFromState(l.from);
-          const toName   = stopNameFromState(l.to);
+          const toName = stopNameFromState(l.to);
           if (lineName) {
             label = `${lineName} · ${fromName} → ${toName}`;
           } else {
@@ -2356,8 +2626,9 @@
           if (Number.isFinite(l.fare)) rideParts.push(`$${Number(l.fare).toFixed(1)}`);
           text.appendChild(el('div', { class: 'leg-sub' }, rideParts.join(' · ')));
         } else {
-          text.appendChild(el('div', { class: 'leg-sub' },
-            `${t_str('plannerRide')} ${fmtDistance(l.meters || 0)}`));
+          text.appendChild(
+            el('div', { class: 'leg-sub' }, `${t_str('plannerRide')} ${fmtDistance(l.meters || 0)}`)
+          );
         }
       }
       node.appendChild(text);
@@ -2392,7 +2663,7 @@
   // the existing `.planner-chip.co-X` palette via SVG class names.
   const CANVAS_W = 120;
   const CANVAS_H = 80;
-  const CANVAS_PAD = 8;        // px around the bounding box
+  const CANVAS_PAD = 8; // px around the bounding box
   function buildJourneyCanvas(legs) {
     const idx = window.state && window.state.index;
     if (!idx) return null;
@@ -2436,8 +2707,10 @@
     if (uniq.length < 2) return null;
 
     // Bounding box with padding.
-    let minLat = uniq[0].lat, maxLat = uniq[0].lat;
-    let minLng = uniq[0].lng, maxLng = uniq[0].lng;
+    let minLat = uniq[0].lat,
+      maxLat = uniq[0].lat;
+    let minLng = uniq[0].lng,
+      maxLng = uniq[0].lng;
     for (const p of uniq) {
       if (p.lat < minLat) minLat = p.lat;
       if (p.lat > maxLat) maxLat = p.lat;
@@ -2467,7 +2740,13 @@
       const co = (l.routeMeta && l.routeMeta.co) || 'BUS';
       const [x1, y1] = project(fromLL.lat, fromLL.lng);
       const [x2, y2] = project(toLL.lat, toLL.lng);
-      lines.push({ co, x1: x1.toFixed(2), y1: y1.toFixed(2), x2: x2.toFixed(2), y2: y2.toFixed(2) });
+      lines.push({
+        co,
+        x1: x1.toFixed(2),
+        y1: y1.toFixed(2),
+        x2: x2.toFixed(2),
+        y2: y2.toFixed(2),
+      });
       if (firstPts == null) firstPts = [x1, y1, co];
     }
     if (lines.length === 0) return null;
@@ -2480,8 +2759,10 @@
     // One polyline per ride leg, coloured by operator.
     for (const ln of lines) {
       const polyline = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      polyline.setAttribute('x1', ln.x1); polyline.setAttribute('y1', ln.y1);
-      polyline.setAttribute('x2', ln.x2); polyline.setAttribute('y2', ln.y2);
+      polyline.setAttribute('x1', ln.x1);
+      polyline.setAttribute('y1', ln.y1);
+      polyline.setAttribute('x2', ln.x2);
+      polyline.setAttribute('y2', ln.y2);
       polyline.setAttribute('class', `planner-canvas-line co-${ln.co}`);
       svg.appendChild(polyline);
     }
@@ -2530,23 +2811,38 @@
     // code below doesn't need to redeclare.
     const [ox, oy, oco] = firstPts;
     const lastLn = lines[lines.length - 1];
-    if (firstLeg && firstLeg.kind === 'walk' && firstLeg.from === 'origin' &&
-        !(firstLeg.geometry && firstLeg.geometry.length > 1)) {
+    if (
+      firstLeg &&
+      firstLeg.kind === 'walk' &&
+      firstLeg.from === 'origin' &&
+      !(firstLeg.geometry && firstLeg.geometry.length > 1)
+    ) {
       // Anchor at the top-left corner — a "you came from off-canvas".
-      const ax = CANVAS_PAD, ay = CANVAS_PAD;
+      const ax = CANVAS_PAD,
+        ay = CANVAS_PAD;
       const w = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      w.setAttribute('x1', ax.toFixed(2)); w.setAttribute('y1', ay.toFixed(2));
-      w.setAttribute('x2', ox); w.setAttribute('y2', oy);
+      w.setAttribute('x1', ax.toFixed(2));
+      w.setAttribute('y1', ay.toFixed(2));
+      w.setAttribute('x2', ox);
+      w.setAttribute('y2', oy);
       w.setAttribute('class', 'planner-canvas-walk');
       svg.appendChild(w);
     }
-    if (lastLeg && lastLeg.kind === 'walk' && lastLeg.to === 'dest' && lines.length > 0 &&
-        !(lastLeg.geometry && lastLeg.geometry.length > 1)) {
+    if (
+      lastLeg &&
+      lastLeg.kind === 'walk' &&
+      lastLeg.to === 'dest' &&
+      lines.length > 0 &&
+      !(lastLeg.geometry && lastLeg.geometry.length > 1)
+    ) {
       // Anchor at the bottom-right corner.
-      const ax = CANVAS_W - CANVAS_PAD, ay = CANVAS_H - CANVAS_PAD;
+      const ax = CANVAS_W - CANVAS_PAD,
+        ay = CANVAS_H - CANVAS_PAD;
       const w = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      w.setAttribute('x1', lastLn.x2); w.setAttribute('y1', lastLn.y2);
-      w.setAttribute('x2', ax.toFixed(2)); w.setAttribute('y2', ay.toFixed(2));
+      w.setAttribute('x1', lastLn.x2);
+      w.setAttribute('y1', lastLn.y2);
+      w.setAttribute('x2', ax.toFixed(2));
+      w.setAttribute('y2', ay.toFixed(2));
       w.setAttribute('class', 'planner-canvas-walk');
       svg.appendChild(w);
     }
@@ -2557,11 +2853,15 @@
     const last = lines[lines.length - 1];
     const [dx, dy, dco] = [last.x2, last.y2, last.co];
     const oDot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-    oDot.setAttribute('cx', ox); oDot.setAttribute('cy', oy); oDot.setAttribute('r', '3');
+    oDot.setAttribute('cx', ox);
+    oDot.setAttribute('cy', oy);
+    oDot.setAttribute('r', '3');
     oDot.setAttribute('class', `planner-canvas-dot dot--origin co-${oco}`);
     svg.appendChild(oDot);
     const dDot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-    dDot.setAttribute('cx', dx); dDot.setAttribute('cy', dy); dDot.setAttribute('r', '3');
+    dDot.setAttribute('cx', dx);
+    dDot.setAttribute('cy', dy);
+    dDot.setAttribute('r', '3');
     dDot.setAttribute('class', `planner-canvas-dot dot--dest co-${dco}`);
     svg.appendChild(dDot);
     return svg;
@@ -2581,34 +2881,58 @@
       const co = rm.co || 'BUS';
       const label = rm.route || '';
       const title = pickLineName(rm) || label;
-      routes.appendChild(el('span', {
-        class: `planner-chip co-${co}`,
-        title: title || label,
-      }, label));
-      if (i < rideLegs.length - 1) routes.appendChild(el('span', { class: 'planner-card-arrow' }, '→'));
+      routes.appendChild(
+        el(
+          'span',
+          {
+            class: `planner-chip co-${co}`,
+            title: title || label,
+          },
+          label
+        )
+      );
+      if (i < rideLegs.length - 1)
+        routes.appendChild(el('span', { class: 'planner-card-arrow' }, '→'));
     });
     head.appendChild(routes);
     if (opts.bestBadge) {
-      head.appendChild(el('span', { class: 'planner-chip', style: 'background: var(--accent); color:#fff; margin-left: 4px;' },
-        t_str('plannerBest')));
+      head.appendChild(
+        el(
+          'span',
+          {
+            class: 'planner-chip',
+            style: 'background: var(--accent); color:#fff; margin-left: 4px;',
+          },
+          t_str('plannerBest')
+        )
+      );
     }
     if (opts.strategyTag) {
       // v41 — strategy badge next to the best-badge (or in its place if no
       // best-badge). Coloured to match the strategy section header.
-      const tagKey = ({
-        bus:   'plannerStrategyTagBus',
-        rail:  'plannerStrategyTagRail',
-        mixed: 'plannerStrategyTagMixed',
-      })[opts.strategyTag] || null;
+      const tagKey =
+        {
+          bus: 'plannerStrategyTagBus',
+          rail: 'plannerStrategyTagRail',
+          mixed: 'plannerStrategyTagMixed',
+        }[opts.strategyTag] || null;
       if (tagKey) {
-        head.appendChild(el('span', {
-          class: `planner-strategy-tag is-${opts.strategyTag}`,
-          title: t_str({
-            bus:   'plannerStrategyBus',
-            rail:  'plannerStrategyRail',
-            mixed: 'plannerStrategyMixed',
-          }[opts.strategyTag]),
-        }, t_str(tagKey)));
+        head.appendChild(
+          el(
+            'span',
+            {
+              class: `planner-strategy-tag is-${opts.strategyTag}`,
+              title: t_str(
+                {
+                  bus: 'plannerStrategyBus',
+                  rail: 'plannerStrategyRail',
+                  mixed: 'plannerStrategyMixed',
+                }[opts.strategyTag]
+              ),
+            },
+            t_str(tagKey)
+          )
+        );
       }
     }
     main.appendChild(head);
@@ -2623,25 +2947,55 @@
     // Summary meta row (total walk + walk minutes, total ride, transfer count).
     const walkLegs = journey.legs.filter((l) => l.kind === 'walk');
     const totalWalkM = walkLegs.reduce((s, l) => s + (l.meters || 0), 0);
-    const totalWalkMin = walkLegs.reduce((s, l) => s + (Number.isFinite(l.minutes) ? l.minutes : 0), 0);
-    const totalRideM = journey.legs.filter((l) => l.kind === 'ride').reduce((s, l) => s + (l.meters || 0), 0);
+    const totalWalkMin = walkLegs.reduce(
+      (s, l) => s + (Number.isFinite(l.minutes) ? l.minutes : 0),
+      0
+    );
+    const totalRideM = journey.legs
+      .filter((l) => l.kind === 'ride')
+      .reduce((s, l) => s + (l.meters || 0), 0);
     const transfers = rideLegs.length - 1;
     const meta = el('div', { class: 'planner-card-meta' });
     // v47 — append walk minutes alongside the distance ("步行 0.3 km · 約 4 分鐘").
     // Omit the minutes when totalWalkM is 0 (no walk at all) to keep the
     // header compact for straight bus / rail pairs.
     if (totalWalkM > 0 && totalWalkMin > 0) {
-      meta.appendChild(el('span', { class: 'item' },
-        `${t_str('plannerWalk')} `,
-        el('strong', {}, fmtDistance(totalWalkM)),
-        ` · ${t_str('plannerWalkMinPrefix')}${mins(totalWalkMin)}`));
+      meta.appendChild(
+        el(
+          'span',
+          { class: 'item' },
+          `${t_str('plannerWalk')} `,
+          el('strong', {}, fmtDistance(totalWalkM)),
+          ` · ${t_str('plannerWalkMinPrefix')}${mins(totalWalkMin)}`
+        )
+      );
     } else {
-      meta.appendChild(el('span', { class: 'item' }, `${t_str('plannerWalk')} `, el('strong', {}, fmtDistance(totalWalkM))));
+      meta.appendChild(
+        el(
+          'span',
+          { class: 'item' },
+          `${t_str('plannerWalk')} `,
+          el('strong', {}, fmtDistance(totalWalkM))
+        )
+      );
     }
-    meta.appendChild(el('span', { class: 'item' }, `${t_str('plannerRide')} `, el('strong', {}, fmtDistance(totalRideM))));
+    meta.appendChild(
+      el(
+        'span',
+        { class: 'item' },
+        `${t_str('plannerRide')} `,
+        el('strong', {}, fmtDistance(totalRideM))
+      )
+    );
     if (transfers > 0) {
-      meta.appendChild(el('span', { class: 'item' }, `${t_str('plannerTransfers')} `,
-        el('strong', {}, String(transfers))));
+      meta.appendChild(
+        el(
+          'span',
+          { class: 'item' },
+          `${t_str('plannerTransfers')} `,
+          el('strong', {}, String(transfers))
+        )
+      );
     }
     main.appendChild(meta);
 
@@ -2663,15 +3017,13 @@
     if (opts.targetArrival) {
       const dep = computeDepartureTime(opts.targetArrival, journey.totalMin);
       const hhmm = dep ? formatHHMM(dep) : '--:--';
-      timeBox.appendChild(el('span', { class: 'small' },
-          t_str('plannerNeedLeaveBy', hhmm)));
+      timeBox.appendChild(el('span', { class: 'small' }, t_str('plannerNeedLeaveBy', hhmm)));
     } else {
       const now = new Date();
       const eta = new Date(now.getTime() + journey.totalMin * 60000);
       const hh = String(eta.getHours()).padStart(2, '0');
       const mm = String(eta.getMinutes()).padStart(2, '0');
-      timeBox.appendChild(el('span', { class: 'small' },
-        `${t_str('plannerArrive')} ${hh}:${mm}`));
+      timeBox.appendChild(el('span', { class: 'small' }, `${t_str('plannerArrive')} ${hh}:${mm}`));
     }
     card.appendChild(timeBox);
     return card;
@@ -2680,10 +3032,22 @@
   function buildSummary(direct, origin, dest) {
     const summary = el('section', { class: 'planner-summary' });
     const left = el('div', { class: 'planner-summary-main' });
-    left.appendChild(el('div', { class: 'planner-summary-line' },
-      el('span', { style: 'color: var(--accent);' }, '●'), stopNameFromState(origin.stop)));
-    left.appendChild(el('div', { class: 'planner-summary-line' },
-      el('span', { style: 'color: var(--accent-2);' }, '●'), stopNameFromState(dest.stop)));
+    left.appendChild(
+      el(
+        'div',
+        { class: 'planner-summary-line' },
+        el('span', { style: 'color: var(--accent);' }, '●'),
+        stopNameFromState(origin.stop)
+      )
+    );
+    left.appendChild(
+      el(
+        'div',
+        { class: 'planner-summary-line' },
+        el('span', { style: 'color: var(--accent-2);' }, '●'),
+        stopNameFromState(dest.stop)
+      )
+    );
     const sub = el('div', { class: 'planner-summary-sub' });
     if (direct.length === 0) {
       sub.textContent = t_str('plannerNoDirect');
@@ -2705,8 +3069,9 @@
         return s + (Number.isFinite(l.meters) ? l.meters : 0);
       }, 0);
       if (sumMeters > 0) {
-        right.appendChild(el('span', { class: 'small planner-summary-km' },
-          fmtDistance(sumMeters)));
+        right.appendChild(
+          el('span', { class: 'small planner-summary-km' }, fmtDistance(sumMeters))
+        );
       }
       summary.appendChild(right);
     }
@@ -2715,8 +3080,15 @@
 
   function buildSection(title, count, color) {
     const sec = el('div', { class: 'planner-section' });
-    sec.appendChild(el('h2', { class: 'planner-section-title', style: `color: ${color || 'var(--muted)'};` }, title));
-    if (count != null) sec.appendChild(el('span', { class: 'planner-section-count' }, String(count)));
+    sec.appendChild(
+      el(
+        'h2',
+        { class: 'planner-section-title', style: `color: ${color || 'var(--muted)'};` },
+        title
+      )
+    );
+    if (count != null)
+      sec.appendChild(el('span', { class: 'planner-section-count' }, String(count)));
     return sec;
   }
 
@@ -2729,20 +3101,28 @@
     // ---- header ----
     const header = el('div', { class: 'planner-header' });
     const topbar = el('div', { class: 'planner-topbar' });
-    topbar.appendChild(el('a', { class: 'planner-back', href: '#/', 'aria-label': t_str('back') },
-      (() => {
-        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        svg.setAttribute('viewBox', '0 0 24 24');
-        svg.setAttribute('width', '22'); svg.setAttribute('height', '22');
-        svg.setAttribute('aria-hidden', 'true');
-        const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        p.setAttribute('fill', 'none'); p.setAttribute('stroke', 'currentColor');
-        p.setAttribute('stroke-width', '2'); p.setAttribute('stroke-linecap', 'round');
-        p.setAttribute('stroke-linejoin', 'round'); p.setAttribute('d', 'M15 6l-6 6 6 6');
-        svg.appendChild(p);
-        return svg;
-      })()
-    ));
+    topbar.appendChild(
+      el(
+        'a',
+        { class: 'planner-back', href: '#/', 'aria-label': t_str('back') },
+        (() => {
+          const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+          svg.setAttribute('viewBox', '0 0 24 24');
+          svg.setAttribute('width', '22');
+          svg.setAttribute('height', '22');
+          svg.setAttribute('aria-hidden', 'true');
+          const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          p.setAttribute('fill', 'none');
+          p.setAttribute('stroke', 'currentColor');
+          p.setAttribute('stroke-width', '2');
+          p.setAttribute('stroke-linecap', 'round');
+          p.setAttribute('stroke-linejoin', 'round');
+          p.setAttribute('d', 'M15 6l-6 6 6 6');
+          svg.appendChild(p);
+          return svg;
+        })()
+      )
+    );
     header.appendChild(topbar);
     header.appendChild(el('h1', { class: 'planner-title' }, t_str('plannerTitle')));
     header.appendChild(el('p', { class: 'planner-subtitle' }, t_str('plannerSubtitle')));
@@ -2753,43 +3133,63 @@
     const originWrap = el('div', { class: 'planner-suggest-wrap' });
     const originInput = el('label', { class: 'planner-input is-origin' });
     originInput.appendChild(el('span', { class: 'planner-input-label' }, t_str('plannerFrom')));
-    const originField = el('input', { type: 'search', placeholder: t_str('plannerFromPh'), autocomplete: 'off' });
+    const originField = el('input', {
+      type: 'search',
+      placeholder: t_str('plannerFromPh'),
+      autocomplete: 'off',
+    });
     originInput.appendChild(originField);
     originWrap.appendChild(originInput);
     const originSuggest = el('div', { class: 'planner-suggest' });
     originWrap.appendChild(originSuggest);
     form.appendChild(originWrap);
 
-    const swapBtn = el('button', {
-      type: 'button',
-      class: 'planner-swap',
-      'aria-label': t_str('plannerSwap'),
-      onclick: () => {
-        // Swap the three pieces of state per field together: visible
-        // label, the hidden stop id, and the `_selected` slot.
-        const swapField = (src, dst) => {
-          const label = src.value;
-          const id    = src.dataset.stopId || null;
-          src.value = dst.value;
-          if (dst.dataset.stopId) src.setAttribute('data-stop-id', dst.dataset.stopId);
-          else { delete src.dataset.stopId; src.removeAttribute('data-stop-id'); }
-          dst.value = label;
-          if (id) dst.setAttribute('data-stop-id', id);
-          else { delete dst.dataset.stopId; dst.removeAttribute('data-stop-id'); }
-        };
-        swapField(originField, destField);
-        const tmp = _selected.origin; _selected.origin = _selected.dest; _selected.dest = tmp;
-        // Close any open dropdown — both fields are now "selected".
-        originSuggestCtl.close();
-        destSuggestCtl.close();
+    const swapBtn = el(
+      'button',
+      {
+        type: 'button',
+        class: 'planner-swap',
+        'aria-label': t_str('plannerSwap'),
+        onclick: () => {
+          // Swap the three pieces of state per field together: visible
+          // label, the hidden stop id, and the `_selected` slot.
+          const swapField = (src, dst) => {
+            const label = src.value;
+            const id = src.dataset.stopId || null;
+            src.value = dst.value;
+            if (dst.dataset.stopId) src.setAttribute('data-stop-id', dst.dataset.stopId);
+            else {
+              delete src.dataset.stopId;
+              src.removeAttribute('data-stop-id');
+            }
+            dst.value = label;
+            if (id) dst.setAttribute('data-stop-id', id);
+            else {
+              delete dst.dataset.stopId;
+              dst.removeAttribute('data-stop-id');
+            }
+          };
+          swapField(originField, destField);
+          const tmp = _selected.origin;
+          _selected.origin = _selected.dest;
+          _selected.dest = tmp;
+          // Close any open dropdown — both fields are now "selected".
+          originSuggestCtl.close();
+          destSuggestCtl.close();
+        },
       },
-    }, '↕');
+      '↕'
+    );
     form.appendChild(swapBtn);
 
     const destWrap = el('div', { class: 'planner-suggest-wrap' });
     const destInput = el('label', { class: 'planner-input is-dest' });
     destInput.appendChild(el('span', { class: 'planner-input-label' }, t_str('plannerTo')));
-    const destField = el('input', { type: 'search', placeholder: t_str('plannerToPh'), autocomplete: 'off' });
+    const destField = el('input', {
+      type: 'search',
+      placeholder: t_str('plannerToPh'),
+      autocomplete: 'off',
+    });
     destInput.appendChild(destField);
     destWrap.appendChild(destInput);
     const destSuggest = el('div', { class: 'planner-suggest' });
@@ -2809,29 +3209,52 @@
     // fire before both stops are selected.
     let _hasRunOnce = false;
 
-    const modeRow = el('div', { class: 'planner-mode-row', role: 'radiogroup',
-      'aria-label': t_str('plannerDepartNow') });
-    const modeNowInput = el('input', { type: 'radio', name: 'planner-mode',
-      value: 'now', id: 'planner-mode-now' });
+    const modeRow = el('div', {
+      class: 'planner-mode-row',
+      role: 'radiogroup',
+      'aria-label': t_str('plannerDepartNow'),
+    });
+    const modeNowInput = el('input', {
+      type: 'radio',
+      name: 'planner-mode',
+      value: 'now',
+      id: 'planner-mode-now',
+    });
     modeNowInput.checked = true;
-    const modeByInput  = el('input', { type: 'radio', name: 'planner-mode',
-      value: 'departBy', id: 'planner-mode-by' });
-    const modeNowLabel = el('label', { class: 'planner-mode-opt is-active', for: 'planner-mode-now' },
-      t_str('plannerDepartNow'));
-    const modeByLabel  = el('label', { class: 'planner-mode-opt', for: 'planner-mode-by' },
-      t_str('plannerDepartBy'));
+    const modeByInput = el('input', {
+      type: 'radio',
+      name: 'planner-mode',
+      value: 'departBy',
+      id: 'planner-mode-by',
+    });
+    const modeNowLabel = el(
+      'label',
+      { class: 'planner-mode-opt is-active', for: 'planner-mode-now' },
+      t_str('plannerDepartNow')
+    );
+    const modeByLabel = el(
+      'label',
+      { class: 'planner-mode-opt', for: 'planner-mode-by' },
+      t_str('plannerDepartBy')
+    );
     modeNowLabel.appendChild(modeNowInput);
     modeByLabel.appendChild(modeByInput);
     modeRow.appendChild(modeNowLabel);
     modeRow.appendChild(modeByLabel);
     form.appendChild(modeRow);
 
-    const timeRow = el('div', { class: 'planner-time-row is-hidden',
-      'aria-hidden': 'true' });
-    const timeLabel = el('label', { class: 'planner-time-label', for: 'planner-target-time' },
-      t_str('plannerArriveBy'));
-    const timeField = el('input', { type: 'time', id: 'planner-target-time',
-      class: 'planner-time-field', step: '60' });
+    const timeRow = el('div', { class: 'planner-time-row is-hidden', 'aria-hidden': 'true' });
+    const timeLabel = el(
+      'label',
+      { class: 'planner-time-label', for: 'planner-target-time' },
+      t_str('plannerArriveBy')
+    );
+    const timeField = el('input', {
+      type: 'time',
+      id: 'planner-target-time',
+      class: 'planner-time-field',
+      step: '60',
+    });
     // Default target: 30 minutes from now, rounded up to next 5 minutes.
     const defaultTarget = new Date(Date.now() + 30 * 60000);
     defaultTarget.setMinutes(Math.ceil(defaultTarget.getMinutes() / 5) * 5, 0, 0);
@@ -2842,9 +3265,9 @@
 
     const setDepartByMode = (on) => {
       modeNowInput.checked = !on;
-      modeByInput.checked  = on;
+      modeByInput.checked = on;
       modeNowLabel.classList.toggle('is-active', !on);
-      modeByLabel.classList.toggle('is-active',  on);
+      modeByLabel.classList.toggle('is-active', on);
       timeRow.classList.toggle('is-hidden', !on);
       timeRow.setAttribute('aria-hidden', on ? 'false' : 'true');
     };
@@ -2879,7 +3302,9 @@
     recentSec.appendChild(recentList);
     const refreshRecent = () => {
       recentList.innerHTML = '';
-      const recents = (window.state && window.state.recent || []).filter((r) => r.kind === 'planner');
+      const recents = ((window.state && window.state.recent) || []).filter(
+        (r) => r.kind === 'planner'
+      );
       if (recents.length === 0) {
         recentList.appendChild(el('p', { class: 'empty' }, t_str('plannerRecentEmpty')));
         return;
@@ -2887,10 +3312,15 @@
       recents.slice(0, 8).forEach((r) => {
         const idx = window.state && window.state.index;
         const fromName = idx ? stopName(idx, r.from) : r.from;
-        const toName   = idx ? stopName(idx, r.to)   : r.to;
+        const toName = idx ? stopName(idx, r.to) : r.to;
         const a = el('a', { class: 'planner-recent-row', href: '#/planner' });
-        a.appendChild(el('div', { class: 'from-to' },
-          el('div', { class: 'pair' }, fromName, el('span', { class: 'sep' }, '→'), toName)));
+        a.appendChild(
+          el(
+            'div',
+            { class: 'from-to' },
+            el('div', { class: 'pair' }, fromName, el('span', { class: 'sep' }, '→'), toName)
+          )
+        );
         a.addEventListener('click', () => {
           // Mirror the selectMatch() pattern: keep `field.dataset.stopId`
           // in lock-step with `_selected`. Without this, runSearch()
@@ -2925,17 +3355,23 @@
     function operatorFor(match) {
       const code = match && match.co;
       if (code && code !== 'STOP') {
-        const key = ({
-          KMB: 'kmb', LWB: 'lwb', CTB: 'ctb', NWFB: 'nwfb',
-          GMB: 'gmb', MTR: 'mtr', LRT: 'lrt',
-        })[code] || null;
+        const key =
+          {
+            KMB: 'kmb',
+            LWB: 'lwb',
+            CTB: 'ctb',
+            NWFB: 'nwfb',
+            GMB: 'gmb',
+            MTR: 'mtr',
+            LRT: 'lrt',
+          }[code] || null;
         return key ? { code, key } : null;
       }
-      const id = String(match && match.stop || '');
+      const id = String((match && match.stop) || '');
       if (/^[A-Z]{2,4}$/.test(id)) return { code: 'MTR', key: 'mtr' };
-      if (/^\d{1,3}$/.test(id))     return { code: 'LRT', key: 'lrt' };
-      if (/^\d{8}$/.test(id))       return { code: 'KMB', key: 'kmb' };
-      if (/^\d{6}$/.test(id))       return { code: 'CTB', key: 'ctb' };
+      if (/^\d{1,3}$/.test(id)) return { code: 'LRT', key: 'lrt' };
+      if (/^\d{8}$/.test(id)) return { code: 'KMB', key: 'kmb' };
+      if (/^\d{6}$/.test(id)) return { code: 'CTB', key: 'ctb' };
       return null;
     }
 
@@ -2950,7 +3386,10 @@
         suggest.innerHTML = '';
         active = -1;
         lastMatches = [];
-        if (debounceTimer) { clearTimeout(debounceTimer); debounceTimer = null; }
+        if (debounceTimer) {
+          clearTimeout(debounceTimer);
+          debounceTimer = null;
+        }
       }
 
       function selectMatch(match) {
@@ -2971,24 +3410,37 @@
           tabindex: '-1',
         });
         const op = operatorFor(match);
-        const ll = (match && Number.isFinite(match.lat) && Number.isFinite(match.lng))
-          ? { lat: match.lat, lng: match.lng } : null;
+        const ll =
+          match && Number.isFinite(match.lat) && Number.isFinite(match.lng)
+            ? { lat: match.lat, lng: match.lng }
+            : null;
         const userLoc = (window.state && window.state.userLoc) || null;
 
-        const title = el('div', { class: 'planner-suggest-title' }, nameFor(match) || String(match.stop));
+        const title = el(
+          'div',
+          { class: 'planner-suggest-title' },
+          nameFor(match) || String(match.stop)
+        );
 
         const sub = el('div', { class: 'planner-suggest-sub' });
         if (op) {
-          sub.appendChild(el('span', {
-            class: 'planner-suggest-op co-' + op.code,
-            title: op.code,
-          }, t_str(op.key)));
+          sub.appendChild(
+            el(
+              'span',
+              {
+                class: 'planner-suggest-op co-' + op.code,
+                title: op.code,
+              },
+              t_str(op.key)
+            )
+          );
         }
         sub.appendChild(el('span', { class: 'planner-suggest-id' }, String(match.stop)));
         if (userLoc && ll) {
-          const km = haversine(userLoc.lat, userLoc.lng, ll.lat, ll.lng);
-          sub.appendChild(el('span', { class: 'planner-suggest-dist' },
-            t_str('plannerSuggestDistance', km)));
+          const km = busetaUtils.haversine(userLoc.lat, userLoc.lng, ll.lat, ll.lng);
+          sub.appendChild(
+            el('span', { class: 'planner-suggest-dist' }, t_str('plannerSuggestDistance', km))
+          );
         }
         row.appendChild(title);
         row.appendChild(sub);
@@ -3026,8 +3478,9 @@
           suggest.setAttribute('aria-label', t_str('plannerSuggestAria', field.value.trim()));
           return;
         }
-        const mtr = lastMatches.filter((m) => (operatorFor(m) || {}).code === 'MTR'
-          || (operatorFor(m) || {}).code === 'LRT');
+        const mtr = lastMatches.filter(
+          (m) => (operatorFor(m) || {}).code === 'MTR' || (operatorFor(m) || {}).code === 'LRT'
+        );
         const bus = lastMatches.filter((m) => {
           const c = (operatorFor(m) || {}).code;
           return c !== 'MTR' && c !== 'LRT';
@@ -3058,7 +3511,10 @@
         debounceTimer = setTimeout(() => {
           debounceTimer = null;
           const q = (query != null ? query : field.value).trim();
-          if (!q) { close(); return; }
+          if (!q) {
+            close();
+            return;
+          }
           render(searchStopsLite(q));
         }, 150);
       }
@@ -3078,7 +3534,10 @@
       });
 
       field.addEventListener('focus', () => {
-        if (blurTimer) { clearTimeout(blurTimer); blurTimer = null; }
+        if (blurTimer) {
+          clearTimeout(blurTimer);
+          blurTimer = null;
+        }
         if (_selected[side]) return;
         const q = field.value.trim();
         if (q) schedule(q);
@@ -3096,7 +3555,10 @@
         const rows = Array.from(suggest.querySelectorAll('.planner-suggest-row'));
         const isOpen = suggest.classList.contains('is-open');
         if (e.key === 'ArrowDown') {
-          if (!isOpen) { schedule(); return; }
+          if (!isOpen) {
+            schedule();
+            return;
+          }
           if (rows.length === 0) return;
           active = Math.min(active + 1, rows.length - 1);
           rows.forEach((r, i) => r.classList.toggle('is-active', i === active));
@@ -3115,7 +3577,10 @@
           }
           // If dropdown isn't open, let the form submit (default Enter).
         } else if (e.key === 'Escape') {
-          if (isOpen) { close(); e.preventDefault(); }
+          if (isOpen) {
+            close();
+            e.preventDefault();
+          }
         }
       });
 
@@ -3136,11 +3601,13 @@
     }
 
     const originSuggestCtl = attachAutocomplete(originField, originSuggest, 'origin');
-    const destSuggestCtl   = attachAutocomplete(destField,   destSuggest,   'dest');
+    const destSuggestCtl = attachAutocomplete(destField, destSuggest, 'dest');
 
     // Pre-fill from the recent planner entry (if any) when the view first
     // opens. The user can still type a new query.
-    const lastPlanner = (window.state && window.state.recent || []).find((r) => r.kind === 'planner');
+    const lastPlanner = ((window.state && window.state.recent) || []).find(
+      (r) => r.kind === 'planner'
+    );
     if (lastPlanner) {
       const idx = window.state && window.state.index;
       originField.value = idx ? stopName(idx, lastPlanner.from) : lastPlanner.from;
@@ -3159,41 +3626,56 @@
       // input, then the `_selected` slot from the dropdown, then fall back
       // to a fresh `searchStopsLite` lookup against the typed text.
       let originId = originField.dataset.stopId || _selected.origin;
-      let destId   = destField.dataset.stopId   || _selected.dest;
+      let destId = destField.dataset.stopId || _selected.dest;
       if (!originId) {
         const matches = searchStopsLite(originField.value.trim());
-        if (matches.length > 0) { originId = matches[0].stop; _selected.origin = originId; }
+        if (matches.length > 0) {
+          originId = matches[0].stop;
+          _selected.origin = originId;
+        }
       }
       if (!destId) {
         const matches = searchStopsLite(destField.value.trim());
-        if (matches.length > 0) { destId = matches[0].stop; _selected.dest = destId; }
+        if (matches.length > 0) {
+          destId = matches[0].stop;
+          _selected.dest = destId;
+        }
       }
       if (!originId || !destId) {
         results.innerHTML = '';
-        results.appendChild(el('div', { class: 'planner-empty' },
-          el('p', {}, t_str('plannerNoStops'))));
+        results.appendChild(
+          el('div', { class: 'planner-empty' }, el('p', {}, t_str('plannerNoStops')))
+        );
         return;
       }
 
       submitBtn.disabled = true;
       results.innerHTML = '';
-      results.appendChild(el('div', { class: 'planner-loading' },
-        el('div', { class: 'spinner' }), el('span', {}, t_str('plannerSearching'))));
+      results.appendChild(
+        el(
+          'div',
+          { class: 'planner-loading' },
+          el('div', { class: 'spinner' }),
+          el('span', {}, t_str('plannerSearching'))
+        )
+      );
 
       try {
         const result = await search(originId, destId);
         results.innerHTML = '';
 
         if (result.error === 'noIndex') {
-          results.appendChild(el('div', { class: 'planner-empty' },
-            el('p', {}, t_str('fetchFailed'))));
+          results.appendChild(
+            el('div', { class: 'planner-empty' }, el('p', {}, t_str('fetchFailed')))
+          );
           submitBtn.disabled = false;
           return;
         }
 
         if (result.sameStop) {
-          results.appendChild(el('div', { class: 'planner-empty' },
-            el('p', {}, t_str('plannerSameStop'))));
+          results.appendChild(
+            el('div', { class: 'planner-empty' }, el('p', {}, t_str('plannerSameStop')))
+          );
           submitBtn.disabled = false;
           return;
         }
@@ -3201,8 +3683,16 @@
         const idx = window.state && window.state.index;
         const originLL = idx && stopLatLng(idx, originId);
         const destLL = idx && stopLatLng(idx, destId);
-        const origin = { stop: originId, lat: originLL ? originLL.lat : NaN, lng: originLL ? originLL.lng : NaN };
-        const dest = { stop: destId, lat: destLL ? destLL.lat : NaN, lng: destLL ? destLL.lng : NaN };
+        const origin = {
+          stop: originId,
+          lat: originLL ? originLL.lat : NaN,
+          lng: originLL ? originLL.lng : NaN,
+        };
+        const dest = {
+          stop: destId,
+          lat: destLL ? destLL.lat : NaN,
+          lng: destLL ? destLL.lng : NaN,
+        };
 
         // In "depart by HH:MM" mode we pass a target arrival date through to
         // each journey card so it can show the latest recommended departure
@@ -3219,8 +3709,8 @@
         // sees genuinely different ways to get from A to B side-by-side.
         // Strategies with zero journeys are silently absent.
         const STRATEGY_LABELS = {
-          bus:   { key: 'plannerStrategyBus',   color: 'var(--accent)' },
-          rail:  { key: 'plannerStrategyRail',  color: 'var(--accent-2)' },
+          bus: { key: 'plannerStrategyBus', color: 'var(--accent)' },
+          rail: { key: 'plannerStrategyRail', color: 'var(--accent-2)' },
           mixed: { key: 'plannerStrategyMixed', color: 'var(--muted)' },
         };
         const STRATEGY_ORDER = ['bus', 'rail', 'mixed'];
@@ -3243,16 +3733,24 @@
         _hasRunOnce = true;
 
         const totalStrategyJourneys = STRATEGY_ORDER.reduce(
-          (s, k) => s + ((strategies[k] && strategies[k].journeys.length) || 0), 0);
+          (s, k) => s + ((strategies[k] && strategies[k].journeys.length) || 0),
+          0
+        );
         if (totalStrategyJourneys === 0) {
-          results.appendChild(el('div', { class: 'planner-empty' },
-            el('p', {}, t_str('plannerNoResults'))));
+          results.appendChild(
+            el('div', { class: 'planner-empty' }, el('p', {}, t_str('plannerNoResults')))
+          );
         }
 
         // Save into recent.
         if (window.state && window.state.recent) {
           const entry = { kind: 'planner', from: originId, to: destId, t: Date.now() };
-          window.state.recent = [entry, ...window.state.recent.filter((r) => !(r.kind === 'planner' && r.from === originId && r.to === destId))].slice(0, 20);
+          window.state.recent = [
+            entry,
+            ...window.state.recent.filter(
+              (r) => !(r.kind === 'planner' && r.from === originId && r.to === destId)
+            ),
+          ].slice(0, 20);
           try {
             localStorage.setItem('buseta.recent', JSON.stringify(window.state.recent));
           } catch {}
@@ -3260,14 +3758,18 @@
         }
       } catch (err) {
         results.innerHTML = '';
-        results.appendChild(el('div', { class: 'planner-empty' },
-          el('p', {}, t_str('plannerError'))));
+        results.appendChild(
+          el('div', { class: 'planner-empty' }, el('p', {}, t_str('plannerError')))
+        );
       } finally {
         submitBtn.disabled = false;
       }
     }
 
-    form.addEventListener('submit', (e) => { e.preventDefault(); runSearch(); });
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      runSearch();
+    });
   }
 
   // ---- Recent (X → Y) helpers ---------------------------------------
