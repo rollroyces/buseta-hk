@@ -88,6 +88,16 @@ client). No analytics. No accounts. No server.
 See [CHANGELOG.md](./CHANGELOG.md) for the full per-PR release history
 (Phases 1–20).
 
+## Documentation
+
+| Doc                                                              | Purpose                                                                      |
+| ---------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| [CONTRIBUTING.md](./CONTRIBUTING.md)                             | Local dev setup, PR conventions, "what won't be merged" rules                |
+| [SECURITY.md](./SECURITY.md)                                     | Vulnerability reporting + 7d / 14d / 30d SLAs                                |
+| [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md)                       | Community standards                                                          |
+| [docs/cache-strategy.md](./docs/cache-strategy.md)               | The cache-buster discipline (6 knobs, invariants, worked examples)           |
+| [docs/new-operator-research.md](./docs/new-operator-research.md) | New-operator backlog: Hong Kong Tramways (Phase 38 ✓), Star Ferry, Peak Tram |
+
 ## License
 
 MIT — see [LICENSE](./LICENSE).
