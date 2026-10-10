@@ -70,10 +70,25 @@ export function parseCsvLine(line) {
   return out;
 }
 
+/**
+ * Strip every HTML tag from a string. Used by the disruption pipeline to
+ * scrub markup noise out of the TD content bodies before severity sniffing
+ * — TD ships `<div>...<strong>...` around the same keywords the title uses
+ * and we want the prose text only.
+ *
+ * @param {unknown} s - The input string (nullish values return '').
+ * @returns {string} The text with HTML markup replaced by a single space.
+ */
+export function stripTags(s) {
+  if (!s) return '';
+  return String(s).replace(/<[^>]*>/g, ' ');
+}
+
 if (typeof globalThis !== 'undefined') {
   globalThis.busetaUtils = Object.assign(globalThis.busetaUtils || {}, {
     stripKmbOpSuffix,
     pickName,
     parseCsvLine,
+    stripTags,
   });
 }

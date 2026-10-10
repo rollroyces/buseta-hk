@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { stripKmbOpSuffix, pickName, parseCsvLine } from '../../src/utils/text.js';
+import { stripKmbOpSuffix, pickName, parseCsvLine, stripTags } from '../../src/utils/text.js';
 
 describe('stripKmbOpSuffix', () => {
   it('strips a trailing (OPCODE) suffix', () => {
@@ -121,5 +121,36 @@ describe('parseCsvLine', () => {
 
   it('handles a single quoted field as the whole line', () => {
     expect(parseCsvLine('"only"')).toEqual(['only']);
+  });
+});
+
+describe('stripTags', () => {
+  it('strips a single tag', () => {
+    expect(stripTags('<div>hello</div>')).toBe(' hello ');
+  });
+  it('strips nested tags', () => {
+    expect(stripTags('<div><strong>service</strong> suspended</div>')).toBe(
+      '  service  suspended '
+    );
+  });
+  it('returns "" for null / undefined / empty input', () => {
+    expect(stripTags(null)).toBe('');
+    expect(stripTags(undefined)).toBe('');
+    expect(stripTags('')).toBe('');
+  });
+  it('returns plain text unchanged', () => {
+    expect(stripTags('no markup here')).toBe('no markup here');
+  });
+  it('strips self-closing tags', () => {
+    expect(stripTags('line 1<br/>line 2')).toBe('line 1 line 2');
+  });
+  it('replaces tags with a single space (not empty)', () => {
+    // Important: a separator is needed so joined words ("<b>suspend</b>ed")
+    // don't merge into nonsense like "suspended".
+    const out = stripTags('<b>suspend</b>ed');
+    expect(out).toContain(' ');
+  });
+  it('handles tag attributes', () => {
+    expect(stripTags('<a href="x" class="y">link</a>')).toBe(' link ');
   });
 });
