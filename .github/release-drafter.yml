@@ -1,0 +1,29 @@
+name-template: 'v$RESOLVED_VERSION'
+tag-template: 'BusETA-v$RESOLVED_VERSION'
+version-resolver:
+  major:
+    labels: ['breaking']
+  minor:
+    labels: ['feat', 'enhancement']
+  patch:
+    labels: ['fix', 'bug', 'chore', 'docs', 'dependencies', 'refactor', 'perf']
+  default: 'patch'
+categories:
+  - title: '🚨 Breaking changes'
+    labels: ['breaking']
+  - title: '✨ New features'
+    labels: ['feat', 'enhancement']
+  - title: '🐛 Bug fixes'
+    labels: ['fix', 'bug']
+  - title: '🔧 Maintenance'
+    labels: ['chore', 'refactor', 'perf', 'dependencies']
+  - title: '📝 Documentation'
+    labels: ['docs']
+change-template: '- $TITLE (#$NUMBER)'
+exclude-labels: ['skip-changelog']
+template: |
+  ## Changes
+
+  $CHANGES
+
+  **Full Changelog**: https://github.com/rollroyces/buseta-hk/compare/$PREVIOUS_TAG...$RESOLVED_VERSION

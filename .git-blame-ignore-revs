@@ -1,0 +1,11 @@
+# .git-blame-ignore-revs
+#
+# Use:  git config blame.ignoreRevsFile .git-blame-ignore-revs
+#
+# Add the SHA of commits that should be ignored by `git blame`.
+# Typical candidates: bulk-format commits, rename commits, import commits.
+#
+# Format: one SHA per line. Lines starting with `#` are ignored.
+#
+# Example (once a "format codebase" commit lands in a follow-up PR):
+# a1b2c3d4e5f67890... chore: format codebase with prettier

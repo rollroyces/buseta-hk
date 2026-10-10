@@ -1,0 +1,40 @@
+name: Documentation request
+description: Report missing, incorrect, or unclear documentation
+title: '📝 '
+labels:
+  - documentation
+body:
+  - type: dropdown
+    id: doc-location
+    attributes:
+      label: Where?
+      options:
+        - README.md
+        - CONTRIBUTING.md
+        - CHANGELOG.md
+        - ARCHITECTURE.md
+        - docs/ folder
+        - In-source comments
+        - Other / not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What's wrong?
+      description: What's missing, incorrect, or unclear?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed
+    attributes:
+      label: Proposed fix
+      description: How would you write it? (link, paragraph, example)
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Screenshots, links, references.

@@ -1,0 +1,79 @@
+name: Performance issue
+description: Report slow page load, janky scrolling, or high memory usage
+title: '⚡ '
+labels:
+  - performance
+body:
+  - type: input
+    id: buseta-version
+    attributes:
+      label: App version
+    validations:
+      required: true
+
+  - type: dropdown
+    id: device
+    attributes:
+      label: Device / browser
+      options:
+        - iPhone — Safari
+        - iPhone — Chrome
+        - iPhone — Other
+        - Android — Chrome
+        - Android — Samsung Internet
+        - Android — Other
+        - Desktop — Chrome
+        - Desktop — Safari
+        - Desktop — Firefox
+        - Desktop — Edge
+    validations:
+      required: true
+
+  - type: dropdown
+    id: network
+    attributes:
+      label: Network condition
+      options:
+        - Wi-Fi (fast)
+        - 4G / LTE
+        - 3G
+        - 2G / Edge
+        - Offline
+    validations:
+      required: true
+
+  - type: dropdown
+    id: view
+    attributes:
+      label: View / action
+      description: Where did the slowdown happen?
+      options:
+        - Initial page load
+        - Search
+        - Trip planner
+        - Stop detail
+        - Route detail
+        - Saved / recent tab
+        - Geolocation
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: symptom
+    attributes:
+      label: Symptom
+      description: What did you observe? (e.g. "spinner for 5 s", "scrolling stutters on stop detail")
+    validations:
+      required: true
+
+  - type: textarea
+    id: metrics
+    attributes:
+      label: Measurements (optional)
+      description: If you opened DevTools → Performance, paste a summary
+      placeholder: |
+        FCP: 1.2 s
+        LCP: 2.4 s
+        TTI: 3.1 s
+        TBT: 280 ms

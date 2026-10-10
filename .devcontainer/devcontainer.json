@@ -1,0 +1,31 @@
+{
+  "name": "BusETA HK",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:20",
+  "features": {
+    "ghcr.io/devcontainers/features/python:1": {}
+  },
+  "postCreateCommand": "npm install",
+  "forwardPorts": [8765],
+  "portsAttributes": {
+    "8765": {
+      "label": "Local server (python3 -m http.server 8765)",
+      "onAutoForward": "notify"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "vitest.explorer"
+      ],
+      "settings": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.tabSize": 2,
+        "files.eol": "\n",
+        "eslint.validate": ["javascript"]
+      }
+    }
+  }
+}

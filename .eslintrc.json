@@ -1,0 +1,45 @@
+{
+  "root": true,
+  "env": {
+    "browser": true,
+    "es2022": true
+  },
+  "extends": ["eslint:recommended"],
+  "parserOptions": {
+    "ecmaVersion": 2022,
+    "sourceType": "script"
+  },
+  "rules": {
+    "no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }],
+    "no-undef": ["warn"],
+    "no-empty": ["error", { "allowEmptyCatch": true }],
+    "no-prototype-builtins": "off",
+    "no-useless-escape": "warn"
+  },
+  "ignorePatterns": [
+    "node_modules/",
+    "planner.min.js",
+    "planner.min.css",
+    "assets/qrcode.js",
+    "assets/vehicle-positions.js"
+  ],
+  "overrides": [
+    {
+      "files": ["tests/**/*.js", "tests/**/*.mjs", "vitest.config.js"],
+      "env": {
+        "node": true,
+        "browser": true
+      },
+      "parserOptions": {
+        "sourceType": "module"
+      }
+    },
+    {
+      "files": ["*.min.js", "assets/qrcode.js", "assets/vehicle-positions.js"],
+      "rules": {
+        "no-undef": "off",
+        "no-unused-vars": "off"
+      }
+    }
+  ]
+}

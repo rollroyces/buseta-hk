@@ -1,0 +1,27 @@
+# Normalize line endings to LF across platforms.
+* text=auto eol=lf
+
+# Markdown / config — text with explicit LF
+*.md text eol=lf
+*.json text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.toml text eol=lf
+*.js text eol=lf
+*.cjs text eol=lf
+*.mjs text eol=lf
+*.css text eol=lf
+*.html text eol=lf
+
+# Pre-minified assets — never diff or auto-merge
+planner.min.js -diff merge=ours linguist-generated=true
+planner.min.css -diff merge=ours linguist-generated=true
+
+# Binary assets
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.svg binary
+*.gz binary
