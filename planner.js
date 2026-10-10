@@ -2313,21 +2313,27 @@
       // v42 — extended log: cov = number of strategies with ≥1 journey
       // (e.g. "1" = only bus fired, "3" = all three strategies fired).
       // empty = 1 when the user got the no-results state.
-      const coveredStrats = Object.keys(strategies).filter(
-        (k) => strategies[k].journeys.length > 0
-      ).length;
-      const empty = coveredStrats === 0 ? 1 : 0;
-      console.log(
-        `planner.search | req=${_reqCounter} | ${elapsed}ms ` +
-          `| direct=${direct.length} one=${oneTransfer.length} two=${twoTransfer.length} ` +
-          `| strategy bus=${strategies.bus.journeys.length} ` +
-          `rail=${strategies.rail.journeys.length} ` +
-          `mixed=${strategies.mixed.journeys.length} ` +
-          `| cov=${coveredStrats} empty=${empty} ` +
-          `| cache rs=${_routeStopsCache.size} sr=${_stopRoutesCache.size} ` +
-          `| rail mtr=${mtrRoutes.direct.length + mtrRoutes.oneTransfer.length} ` +
-          `lrt=${lrtRoutes.direct.length + lrtRoutes.oneTransfer.length}`
-      );
+      //
+      // Phase 32 — gated behind `window.busetaDebug`. Production users
+      // don't see this noise; the maintainer can enable it via
+      // DevTools: `window.busetaDebug = true; location.reload()`.
+      if (window.busetaDebug) {
+        const coveredStrats = Object.keys(strategies).filter(
+          (k) => strategies[k].journeys.length > 0
+        ).length;
+        const empty = coveredStrats === 0 ? 1 : 0;
+        console.log(
+          `planner.search | req=${_reqCounter} | ${elapsed}ms ` +
+            `| direct=${direct.length} one=${oneTransfer.length} two=${twoTransfer.length} ` +
+            `| strategy bus=${strategies.bus.journeys.length} ` +
+            `rail=${strategies.rail.journeys.length} ` +
+            `mixed=${strategies.mixed.journeys.length} ` +
+            `| cov=${coveredStrats} empty=${empty} ` +
+            `| cache rs=${_routeStopsCache.size} sr=${_stopRoutesCache.size} ` +
+            `| rail mtr=${mtrRoutes.direct.length + mtrRoutes.oneTransfer.length} ` +
+            `lrt=${lrtRoutes.direct.length + lrtRoutes.oneTransfer.length}`
+        );
+      }
     } catch (e) {
       /* console may be missing */
     }

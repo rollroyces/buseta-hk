@@ -2861,11 +2861,16 @@
   }
   function logGeoStatus(msg) {
     try {
-      console.log('[geo]', msg, {
-        status: state.locationStatus,
-        asked: !!state._geoAsked,
-        hasLoc: !!state.userLoc,
-      });
+      // Phase 32 — gated behind `window.busetaDebug`. Production users
+      // don't see this noise; the maintainer can enable it via
+      // DevTools: `window.busetaDebug = true; location.reload()`.
+      if (window.busetaDebug) {
+        console.log('[geo]', msg, {
+          status: state.locationStatus,
+          asked: !!state._geoAsked,
+          hasLoc: !!state.userLoc,
+        });
+      }
     } catch {}
   }
 
