@@ -4,13 +4,13 @@
  * upstream API calls. Static JSON in /assets/ is cached lazily on first
  * fetch via the same code path.
  *
- * CACHE bumped to v32: forces a clean install after v44's
- * planner walking-segments on the route-shape canvas. App.js still
- * fetches the Transport Department's public-data XML feed; the
- * dedicated SW cross-origin branch below caches it under
- * TD_DISRUPTION_CACHE with a 24h TTL + If-Modified-Since so repeat
- * visits stay O(1) and don't spam the upstream on every home-view
- * mount.
+ * v33 is the v60→v61 cache-buster bump (PWA install icons + favicon PNG
+ * variants + iOS apple-touch-icon). The PNGs are committed to assets/
+ * via scripts/build-icons.py so re-running keeps the SVG and PNG copies
+ * in lock-step.
+ *
+ * v32 was the v54 cache-buster bump (planner walking-segments on the
+ * route-shape canvas).
  *
  * v27 was the v39 cache-buster bump (disruption banner hide via
  * short-circuit). The dedicated /assets/disruptions.json SWR branch
@@ -29,7 +29,7 @@
  * v21 was the same forced-update after v32's QW-1 → QW-10 batch.
  * v20 was the same forced-update after the v30→v31 layout revert.
  */
-const CACHE = 'buseta-v49';
+const CACHE = 'buseta-v50';
 const SHELL = ['/', '/index.html', '/app.js', '/style.css', '/manifest.json'];
 
 // Runtime caches — separate buckets so we can evolve each strategy
