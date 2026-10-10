@@ -56,7 +56,8 @@
       homeEmptyLocateUpdate: '更新定位',
       homeEmptyHot: '熱門路線',
       homeEmptyTip: '提示：長按路線即可加入收藏',
-      footerAttribution: '資料來源：運輸署資料一線通。到站時間來自九巴、龍運、城巴、專線小巴及港鐵（包括輕鐵）；車費來自公共交通路線及收費資料。預計時間約每分鐘更新，只供參考。',
+      footerAttribution:
+        '資料來源：運輸署資料一線通。到站時間來自九巴、龍運、城巴、專線小巴及港鐵（包括輕鐵）；車費來自公共交通路線及收費資料。預計時間約每分鐘更新，只供參考。',
       searchPlaceholder: '路線、地點、車站或港鐵站',
       filterAll: '全部',
       filterKMB: '九巴',
@@ -72,10 +73,12 @@
       locationUnavailable: '未能取得位置，未能提供附近路線。',
       locationGranted: '已取得位置',
       locationUnavailableShort: '位置不可用',
-      locationBlockedHint: '瀏覽器已封鎖呢個網站嘅位置請求。請撳網址列嘅鎖頭／圖示，將「位置」改為「允許」或「詢問」，然後重新載入。',
+      locationBlockedHint:
+        '瀏覽器已封鎖呢個網站嘅位置請求。請撳網址列嘅鎖頭／圖示，將「位置」改為「允許」或「詢問」，然後重新載入。',
       retryLocation: '再試一次',
       geoBannerTitle: '想睇附近嘅車站同路線？',
-      geoBannerBody: '授權使用你嘅位置，我哋會列出最近嘅巴士站、港鐵站同常見路線，仲可以幫你直接跳到最近嗰個車站。',
+      geoBannerBody:
+        '授權使用你嘅位置，我哋會列出最近嘅巴士站、港鐵站同常見路線，仲可以幫你直接跳到最近嗰個車站。',
       geoBannerCta: '啟用位置',
       geoBannerDeniedTitle: '位置被拒絕',
       geoBannerDeniedBody: '如想用附近車站功能，請喺瀏覽器設定允許位置。',
@@ -102,6 +105,12 @@
       noEta: '暫無到站時間',
       nextArrivals: '下一班到站',
       etaCount: (n) => `仲有 ${n} 班`,
+      // Phase 18 — dedicated aria-live summary for the stop-view live
+      // region. Takes (count, soonestMinutes) and emits a sentence a
+      // screen-reader user can act on. Kept as a function so the
+      // phrasing can localise grammar (Chinese doesn't use "in the next"
+      // — the duration leads).
+      ariaSummary: (count, mins) => `${count} 班車喺 ${mins} 分鐘內到站`,
       errorTitle: '搵唔到嗰頁',
       errorBody: '你跟蹤嘅連結可能已經過期，或者資料未能成功載入。',
       retry: '再試一次',
@@ -138,7 +147,8 @@
       mapHeader: '地圖',
       settingsTitle: '設定',
       gmapsKeyLabel: 'Google Maps API key',
-      gmapsKeyHint: '用 Google Maps Embed API 嘅 key（網站 HTTP referrer 已限制）。留空就會用連結到 Google Maps 而唔係內嵌地圖。',
+      gmapsKeyHint:
+        '用 Google Maps Embed API 嘅 key（網站 HTTP referrer 已限制）。留空就會用連結到 Google Maps 而唔係內嵌地圖。',
       gmapsKeySave: '儲存',
       gmapsKeySaved: '已儲存',
       schoolTag: 'school',
@@ -279,7 +289,7 @@
       stopNoUpcomingEtaHint: '該路線暫未有實時到站資料。',
       stopNoUpcomingEtaCta: '睇時間表',
     },
-    'en': {
+    en: {
       brandSub: 'Hong Kong Bus',
       tagline: 'Real-time arrivals',
       loading: 'Loading data…',
@@ -290,7 +300,8 @@
       savedStops: 'Saved stops',
       recentSearches: 'Recent searches',
       operatorsTitle: 'Supported transit',
-      operatorsNote: 'Independent third-party app. Data published via Transport Department open data.',
+      operatorsNote:
+        'Independent third-party app. Data published via Transport Department open data.',
       emptyRoutes: 'No saved routes yet.',
       emptyStops: 'No saved stops yet.',
       emptyRecent: 'No recent searches.',
@@ -303,11 +314,13 @@
       onboardTitle: 'Welcome to BusETA HK',
       onboardLead: 'Three quick ways to get started:',
       onboardPlannerTitle: 'Plan a trip',
-      onboardPlannerBody: 'Enter an origin and a destination — fastest, cheapest, or fewest transfers.',
+      onboardPlannerBody:
+        'Enter an origin and a destination — fastest, cheapest, or fewest transfers.',
       onboardSearchTitle: 'Search routes & stops',
       onboardSearchBody: 'Type a route, bus stop, MTR station or place name to see live arrivals.',
       onboardNearbyTitle: 'Turn on location',
-      onboardNearbyBody: 'Once enabled, nearby bus stops, MTR stations and popular routes appear here.',
+      onboardNearbyBody:
+        'Once enabled, nearby bus stops, MTR stations and popular routes appear here.',
       onboardDismiss: 'Got it',
       homeEmptyTitle: 'Discover routes near you and plan your trip',
       homeEmptySearch: 'Search routes',
@@ -315,7 +328,8 @@
       homeEmptyLocateUpdate: 'Update location',
       homeEmptyHot: 'Popular routes',
       homeEmptyTip: 'Tip: long-press a route to save it',
-      footerAttribution: 'Data source: Transport Department Data One. Arrivals from KMB, LWB, Citybus, Green Minibus and MTR (including Light Rail); fares from public transport data. ETAs refresh about every minute, for reference only.',
+      footerAttribution:
+        'Data source: Transport Department Data One. Arrivals from KMB, LWB, Citybus, Green Minibus and MTR (including Light Rail); fares from public transport data. ETAs refresh about every minute, for reference only.',
       searchPlaceholder: 'Route, place, stop or MTR station',
       filterAll: 'All',
       filterKMB: 'KMB',
@@ -331,13 +345,16 @@
       locationUnavailable: 'Location unavailable — nearby routes unavailable.',
       locationGranted: 'Location received',
       locationUnavailableShort: 'Location unavailable',
-      locationBlockedHint: 'This site has been blocked from accessing your location. Open the address-bar lock/icon, change Location to "Allow" or "Ask", then reload.',
+      locationBlockedHint:
+        'This site has been blocked from accessing your location. Open the address-bar lock/icon, change Location to "Allow" or "Ask", then reload.',
       retryLocation: 'Try again',
       geoBannerTitle: 'See nearby stops and routes?',
-      geoBannerBody: 'Allow location access to list the closest bus stops, MTR stations and frequent routes — and jump straight to the nearest stop.',
+      geoBannerBody:
+        'Allow location access to list the closest bus stops, MTR stations and frequent routes — and jump straight to the nearest stop.',
       geoBannerCta: 'Use my location',
       geoBannerDeniedTitle: 'Location permission denied',
-      geoBannerDeniedBody: 'Enable location in your browser settings to use the nearby stops feature.',
+      geoBannerDeniedBody:
+        'Enable location in your browser settings to use the nearby stops feature.',
       geoBannerUnavailableTitle: 'Geolocation not supported',
       geoBannerUnavailableBody: 'You can still search for routes and stops above.',
       nearestStopLabel: 'Nearest stop',
@@ -361,6 +378,10 @@
       noEta: 'No ETA',
       nextArrivals: 'Next arrivals',
       etaCount: (n) => `${n} more`,
+      // Phase 18 — aria-live summary for the stop-view live region.
+      // `${count} buses arriving in the next ${mins} minutes` — English
+      // grammar needs the duration between the subject and the verb.
+      ariaSummary: (count, mins) => `${count} buses arriving in the next ${mins} minutes`,
       errorTitle: 'Page not found',
       errorBody: 'The link may be out of date, or the data could not load.',
       retry: 'Try again',
@@ -397,7 +418,8 @@
       mapHeader: 'Map',
       settingsTitle: 'Settings',
       gmapsKeyLabel: 'Google Maps API key',
-      gmapsKeyHint: 'Use a Google Maps Embed API key (with your site URL restricted as HTTP referrer). Leave blank to fall back to opening Google Maps in a new tab.',
+      gmapsKeyHint:
+        'Use a Google Maps Embed API key (with your site URL restricted as HTTP referrer). Leave blank to fall back to opening Google Maps in a new tab.',
       gmapsKeySave: 'Save',
       gmapsKeySaved: 'Saved',
       schoolTag: 'school',
@@ -419,7 +441,8 @@
       tabScheduleEn: '時間表',
       loadingSchedule: 'Loading timetable…',
       scheduleEmpty: 'No timetable data available.',
-      scheduleNote: 'Scheduled arrival times from operator open-data feeds (updated around 05:00 daily).',
+      scheduleNote:
+        'Scheduled arrival times from operator open-data feeds (updated around 05:00 daily).',
       scheduleHour: (h) => `${h}:00`,
       lastBusAlert: 'Last bus has departed — no more services today',
       affectedServices: (n) => `${n} services affected`,
@@ -427,7 +450,8 @@
       dismissAlert: 'Dismiss',
       navPlanner: 'Planner',
       plannerTitle: 'Trip planner',
-      plannerSubtitle: 'Enter your origin and destination — find the fastest direct route or a quick transfer.',
+      plannerSubtitle:
+        'Enter your origin and destination — find the fastest direct route or a quick transfer.',
       plannerFrom: 'From',
       plannerTo: 'To',
       plannerFromPh: 'Stop, station or place',
@@ -509,7 +533,8 @@
       settingsDataSource: 'Data source',
       settingsBackHome: 'Back to home',
       settingsEmptyStopTitle: 'No arrival times',
-      settingsEmptyStopSub: 'The bus may have already passed. Try the Schedule tab or wait a minute.',
+      settingsEmptyStopSub:
+        'The bus may have already passed. Try the Schedule tab or wait a minute.',
       settingsEmptyStopCtaSchedule: 'View schedule',
       settingsEmptyStopCtaRetry: 'Try again',
       refreshProgressLabel: (s) => `Next refresh in ${s}s`,
@@ -519,12 +544,14 @@
       notifThreshold5: '5 min before',
       notifThreshold10: '10 min before',
       notifMinutesAway: (n) => `${n} min away`,
-      notifPermissionDenied: 'Notifications are blocked. Please allow them in your browser settings and reload.',
+      notifPermissionDenied:
+        'Notifications are blocked. Please allow them in your browser settings and reload.',
       offlineMode: 'Offline',
       offlineShowingLastKnown: 'showing last known data',
       vehicleMap: 'Live vehicle positions',
       vehicleLive: 'Live GPS positions',
-      vehicleNoData: 'No live GPS data available right now. Showing estimated positions based on the timetable.',
+      vehicleNoData:
+        'No live GPS data available right now. Showing estimated positions based on the timetable.',
       vehiclePosition: 'Vehicle position',
       vehiclePlaceholder: 'Estimated',
       vehicleRefreshing: 'Refreshing…',
@@ -574,7 +601,8 @@
       homeEmptyLocateUpdate: '更新定位',
       homeEmptyHot: '热门路线',
       homeEmptyTip: '提示：长按路线即可加入收藏',
-      footerAttribution: '资料来源：运输署资料一线通。到站时间嚟自九巴、龙运、城巴、专线小巴及港铁（包括轻铁）；车费嚟自公共交通路线及收费资料。预计时间约每分钟更新，只供参考。',
+      footerAttribution:
+        '资料来源：运输署资料一线通。到站时间嚟自九巴、龙运、城巴、专线小巴及港铁（包括轻铁）；车费嚟自公共交通路线及收费资料。预计时间约每分钟更新，只供参考。',
       searchPlaceholder: '路线、地点、车站或港铁站',
       filterAll: '全部',
       filterKMB: '九巴',
@@ -582,12 +610,17 @@
       filterCTB: '城巴',
       filterGMB: '小巴',
       filterMTR: '港铁',
+      nearbyRoutes: '附近路线',
+      nearbyStops: '附近车站',
+      nearbyStations: '附近港铁站',
       dirUp: '上行',
       dirDown: '下行',
       inbound: '去程',
       outbound: '回程',
       line: '路线',
       platform: '月台',
+      trains: '班列车',
+      station: '车站',
       noFavHint: '搜寻后可以加入收藏，方便日後对咭查阅。',
       save: '收藏',
       saved: '已收藏',
@@ -600,6 +633,9 @@
       noEta: '暂无到站时间',
       nextArrivals: '下一班到站',
       etaCount: (n) => `仲有 ${n} 班`,
+      // Phase 18 — aria-live summary for the stop-view live region.
+      // Mirrors the zh-Hant structure (count + duration leads).
+      ariaSummary: (count, mins) => `${count} 班车在 ${mins} 分钟内到站`,
       errorTitle: '揫唔到呢页',
       errorBody: '你跟蹤嘅连结可能已经过期，或者资料未能成功载入。',
       retry: '再试一次',
@@ -623,6 +659,11 @@
       toStop: '去呢个车站',
       toRoute: '睇路线详情',
       allLines: '全部路线',
+      noResults: '找不到相关的路线、车站或港铁站。',
+      back: '返回',
+      route: '路线',
+      stop: '车站',
+      to: '→',
       selectStation: '揾该站',
       loadingRoutes: '揾紧小巴路线…',
       gmbProgress: (done, total) => `已载入 ${done}/${total} 条小巴路线`,
@@ -631,7 +672,8 @@
       mapHeader: '地图',
       settingsTitle: '设定',
       gmapsKeyLabel: 'Google Maps API key',
-      gmapsKeyHint: '用 Google Maps Embed API 嘅 key（网站 HTTP referrer 已限制）。留空就会用连结去 Google Maps 而唔系内嵌地图。',
+      gmapsKeyHint:
+        '用 Google Maps Embed API 嘅 key（网站 HTTP referrer 已限制）。留空就会用连结去 Google Maps 而唔系内嵌地图。',
       gmapsKeySave: '储存',
       gmapsKeySaved: '已储存',
       schoolTag: 'school',
@@ -660,7 +702,8 @@
       noServiceAlert: '暂无班次',
       dismissAlert: '关闭通知',
       geoBannerTitle: '想睇附近嘅车站同路线？',
-      geoBannerBody: '授权使用你嘅位置，我哋会列出最近嘅巴士站、港铁站同常见路线，仲可以帮你直接跳到最近嗰个车站。',
+      geoBannerBody:
+        '授权使用你嘅位置，我哋会列出最近嘅巴士站、港铁站同常见路线，仲可以帮你直接跳到最近嗰个车站。',
       geoBannerCta: '启用位置',
       geoBannerDeniedTitle: '位置被拒绝',
       geoBannerDeniedBody: '如想用附近车站功能，请喺浏览器设定允许位置。',
@@ -671,6 +714,8 @@
       locationUnavailable: '未能取得位置，未能提供附近路线。',
       locationGranted: '已取得位置',
       locationUnavailableShort: '位置不可用',
+      locationBlockedHint:
+        '浏览器已封锁此网站的位置请求。请点击网址栏的锁头／图标，将「位置」改为「允许」或「询问」，然后重新载入。',
       retryLocation: '再试一次',
       nearestStopLabel: '最近车站',
       navPlanner: '行程',
@@ -820,6 +865,11 @@
     GMB_LIST: 'buseta.gmb.list',
     GMB_LIST_TS: 'buseta.gmb.list.ts',
     GMB_PROGRESS: 'buseta.gmb.progress',
+    // Phase 14 — persisted snapshot of the prefetched /route-stop map so
+    // repeat visits can serve via-stops without re-paying the 75s prefetch
+    // (and the network) once the SW 24h TTL has expired.
+    ROUTE_STOPS: 'buseta.route.stops',
+    ROUTE_STOPS_TS: 'buseta.route.stops.ts',
     GMAPS_KEY: 'buseta.gmapsKey',
     CONFIG: 'assets/config.json',
     META: 'buseta.meta',
@@ -839,7 +889,9 @@
   const systemPrefersLight = () => {
     try {
       return window.matchMedia('(prefers-color-scheme: light)').matches;
-    } catch { return false; }
+    } catch {
+      return false;
+    }
   };
   // Resolve a stored preference to the effective on-the-wire theme
   // ('dark' or 'light'). 'system' falls through to matchMedia.
@@ -873,17 +925,23 @@
       try {
         const v = localStorage.getItem(STORAGE_KEYS.THEME);
         return VALID_THEMES.has(v) ? v : 'system';
-      } catch { return 'system'; }
+      } catch {
+        return 'system';
+      }
     })();
     const next = cur === 'dark' ? 'light' : cur === 'light' ? 'system' : 'dark';
-    try { localStorage.setItem(STORAGE_KEYS.THEME, next); } catch {}
+    try {
+      localStorage.setItem(STORAGE_KEYS.THEME, next);
+    } catch {}
     setTheme(next);
   }
   function loadThemePreference() {
     let stored;
     try {
       stored = localStorage.getItem(STORAGE_KEYS.THEME);
-    } catch { stored = null; }
+    } catch {
+      stored = null;
+    }
     // Normalise legacy / missing values to 'system' so the CSS media
     // query handles the visual choice on first load.
     const t = VALID_THEMES.has(stored) ? stored : 'system';
@@ -911,14 +969,19 @@
   // ------------------------------------------------------------------
   let isOffline = false;
   function readOfflineFlag() {
-    try { return localStorage.getItem(STORAGE_KEYS.OFFLINE) === '1'; }
-    catch { return false; }
+    try {
+      return localStorage.getItem(STORAGE_KEYS.OFFLINE) === '1';
+    } catch {
+      return false;
+    }
   }
   function writeOfflineFlag(next) {
     try {
       if (next) localStorage.setItem(STORAGE_KEYS.OFFLINE, '1');
       else localStorage.removeItem(STORAGE_KEYS.OFFLINE);
-    } catch { /* private mode etc. */ }
+    } catch {
+      /* private mode etc. */
+    }
   }
   function setOffline(next) {
     const flag = !!next;
@@ -930,7 +993,9 @@
       if (typeof currentRoute === 'function' && currentRoute() === 'home') {
         renderHome();
       }
-    } catch { /* currentRoute / renderHome may not be defined yet */ }
+    } catch {
+      /* currentRoute / renderHome may not be defined yet */
+    }
   }
 
   // ------------------------------------------------------------------
@@ -1006,7 +1071,8 @@
       if (k === 'class') node.className = v;
       else if (k === 'dataset') Object.assign(node.dataset, v);
       else if (k === 'style') node.setAttribute('style', v);
-      else if (k.startsWith('on') && typeof v === 'function') node.addEventListener(k.slice(2).toLowerCase(), v);
+      else if (k.startsWith('on') && typeof v === 'function')
+        node.addEventListener(k.slice(2).toLowerCase(), v);
       else if (k === 'html') node.innerHTML = v;
       else node.setAttribute(k, v === true ? '' : v);
     }
@@ -1036,28 +1102,18 @@
   // trailing "(ST905)" / "(PA100)" / "(LS001)" suffix in both Chinese and
   // English. Strip that suffix for display; keep the operator code itself
   // for the `kmbOperatorId` reverse-lookup table built in buildIndex().
-  function stripKmbOpSuffix(name) {
-    if (!name) return '';
-    return String(name).replace(/\s*\([A-Z][A-Z0-9]{1,5}\)\s*$/, '').trim();
-  }
+  // stripKmbOpSuffix moved to src/utils/text.js — Phase 5 modularization
 
   // Pick a stop / route name in the current UI language. Falls back to the
   // other Chinese variant (tc ↔ sc) if the requested variant is empty, then
   // to English. Operator APIs return `name_tc` / `name_sc` / `name_en`.
-  function pickName(obj, lang) {
-    if (!obj) return '';
-    const wantTc = lang !== 'zh-Hans';
-    const tc = obj.name_tc || obj.nameTc || '';
-    const sc = obj.name_sc || obj.nameSc || '';
-    const en = obj.name_en || obj.nameEn || '';
-    if (lang === 'en') return en || tc || sc;
-    if (wantTc) return tc || sc || en;
-    return sc || tc || en;
-  }
+  // pickName moved to src/utils/text.js — Phase 5 modularization
 
   // Convenience: pick a stop / route name in the *current* UI language.
-  // Wraps `pickName(obj, state.lang)` for the common case.
-  function nameFor(obj) { return pickName(obj, state.lang); }
+  // Wraps `busetaUtils.pickName(obj, state.lang)` for the common case.
+  function nameFor(obj) {
+    return busetaUtils.pickName(obj, state.lang);
+  }
 
   const makeRouteKey = (co, route, dir, service) => `${co}|${route}|${dir}|${service}`;
   const sameRoute = (a, b) =>
@@ -1065,36 +1121,25 @@
   const sameStop = (a, b) =>
     String(a.stop) === String(b.stop) && (a.co || 'STOP') === (b.co || 'STOP');
 
-  function classifyKmbOp(route, origTc, destTc) {
-    const r = String(route || '').toUpperCase().trim();
-    if (/^[AEN]/.test(r)) return 'LWB';
-    if (/^R\d/.test(r)) return 'LWB';
-    if (/^S\d/.test(r)) return 'LWB';
-    if (/^T\d/.test(r)) return 'LWB';
-    if (/^X\d/.test(r) && /(機場|博覽|東涌|昂坪|港珠澳|口岸)/.test((origTc || '') + (destTc || ''))) return 'LWB';
-    return 'KMB';
-  }
-
-  function opCoKey(co) {
-    if (co === 'KMB') return 'kmb';
-    if (co === 'LWB') return 'lwb';
-    if (co === 'CTB') return 'ctb';
-    if (co === 'NWFB') return 'nwfb';
-    if (co === 'GMB') return 'gmb';
-    if (co === 'MTR') return 'mtr';
-    if (co === 'LRT') return 'lrt';
-    return co;
-  }
+  // classifyKmbOp / opCoKey moved to src/utils/operators.js — Phase 4 modularization
 
   // ------------------------------------------------------------------
   // Persistence
   // ------------------------------------------------------------------
   const storage = {
     get(key, fallback) {
-      try { const v = JSON.parse(localStorage.getItem(key)); return v == null ? fallback : v; }
-      catch { return fallback; }
+      try {
+        const v = JSON.parse(localStorage.getItem(key));
+        return v == null ? fallback : v;
+      } catch {
+        return fallback;
+      }
     },
-    set(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch {} },
+    set(key, value) {
+      try {
+        localStorage.setItem(key, JSON.stringify(value));
+      } catch {}
+    },
   };
 
   function loadState() {
@@ -1110,9 +1155,8 @@
     // the settings UI flips back to the disabled state and we don't try
     // to fire on `permission === 'denied'` (which throws).
     const wantsNotif = storage.get(STORAGE_KEYS.NOTIF_ENABLED, false);
-    state.notifEnabled = !!wantsNotif
-      && typeof Notification !== 'undefined'
-      && Notification.permission === 'granted';
+    state.notifEnabled =
+      !!wantsNotif && typeof Notification !== 'undefined' && Notification.permission === 'granted';
   }
   function persist() {
     storage.set(STORAGE_KEYS.LANG, state.lang);
@@ -1180,20 +1224,21 @@
   }
 
   async function buildIndex() {
-    const [kmbRoutes, kmbStops, ctbRoutes, mtrLines, lrtRoutes, lrtStops, hkStops, mtrStops] = await Promise.all([
-      fetchJSON(`${API.KMB}/route/`).catch(() => null),
-      fetchJSON(`${API.KMB}/stop/`).catch(() => null),
-      fetchJSON(`${API.CITYBUS}/route/ctb`).catch(() => null),
-      fetchJSON(API.MTR_LINES).catch(() => null),
-      fetchJSON(API.LRT_ROUTES).catch(() => null),
-      // v45 — LRT stop coordinates; merged into lrt.stops below so the
-      // planner's railRoute() haversine helper can compute km for LRT
-      // ride legs. Best-effort: missing file or shape just leaves lat
-      // null (legacy behaviour: leg meters fall back to 0).
-      fetchJSON(API.LRT_STOPS).catch(() => null),
-      fetchJSON(API.HK_STOPS).catch(() => null),
-      fetchJSON(API.MTR_STOPS).catch(() => null),
-    ]);
+    const [kmbRoutes, kmbStops, ctbRoutes, mtrLines, lrtRoutes, lrtStops, hkStops, mtrStops] =
+      await Promise.all([
+        busetaUtils.fetchJSON(`${API.KMB}/route/`).catch(() => null),
+        busetaUtils.fetchJSON(`${API.KMB}/stop/`).catch(() => null),
+        busetaUtils.fetchJSON(`${API.CITYBUS}/route/ctb`).catch(() => null),
+        busetaUtils.fetchJSON(API.MTR_LINES).catch(() => null),
+        busetaUtils.fetchJSON(API.LRT_ROUTES).catch(() => null),
+        // v45 — LRT stop coordinates; merged into lrt.stops below so the
+        // planner's railRoute() haversine helper can compute km for LRT
+        // ride legs. Best-effort: missing file or shape just leaves lat
+        // null (legacy behaviour: leg meters fall back to 0).
+        busetaUtils.fetchJSON(API.LRT_STOPS).catch(() => null),
+        busetaUtils.fetchJSON(API.HK_STOPS).catch(() => null),
+        busetaUtils.fetchJSON(API.MTR_STOPS).catch(() => null),
+      ]);
 
     const routes = new Map();
     const stops = new Map();
@@ -1210,11 +1255,16 @@
     if (kmbRoutes && Array.isArray(kmbRoutes.data)) {
       for (const r of kmbRoutes.data) {
         const key = makeRouteKey('KMB', r.route, r.bound, r.service_type);
-        const op = classifyKmbOp(r.route, r.orig_tc || '', r.dest_tc || '');
+        const op = busetaUtils.classifyKmbOp(r.route, r.orig_tc || '', r.dest_tc || '');
         routes.set(key, {
-          co: op, route: r.route, dir: r.bound, service: r.service_type,
-          origTc: r.orig_tc, origEn: r.orig_en,
-          destTc: r.dest_tc, destEn: r.dest_en,
+          co: op,
+          route: r.route,
+          dir: r.bound,
+          service: r.service_type,
+          origTc: r.orig_tc,
+          origEn: r.orig_en,
+          destTc: r.dest_tc,
+          destEn: r.dest_en,
         });
       }
     }
@@ -1226,8 +1276,11 @@
         stops.set(s.stop, {
           stop: s.stop,
           co: 'KMB',
-          nameTc: s.name_tc, nameSc: s.name_sc || '', nameEn: s.name_en,
-          lat: parseFloat(s.lat), lng: parseFloat(s.long),
+          nameTc: s.name_tc,
+          nameSc: s.name_sc || '',
+          nameEn: s.name_en,
+          lat: parseFloat(s.lat),
+          lng: parseFloat(s.long),
         });
         // KMB stop names carry the operator-facing stop code as a trailing
         // `(ST905)` suffix (cn) / `(ST905)` suffix (en) — parse it once so
@@ -1238,9 +1291,9 @@
         if (opId && !kmbOperatorId.has(opId)) {
           kmbOperatorId.set(opId, {
             internalId: s.stop,
-            nameTc: stripKmbOpSuffix(s.name_tc),
-            nameEn: stripKmbOpSuffix(s.name_en),
-            nameSc: stripKmbOpSuffix(s.name_sc || ''),
+            nameTc: busetaUtils.stripKmbOpSuffix(s.name_tc),
+            nameEn: busetaUtils.stripKmbOpSuffix(s.name_en),
+            nameSc: busetaUtils.stripKmbOpSuffix(s.name_sc || ''),
             lat: parseFloat(s.lat),
             lng: parseFloat(s.long),
           });
@@ -1254,9 +1307,14 @@
         const op = r.co === 'NWFB' ? 'NWFB' : 'CTB';
         const key = makeRouteKey(op, r.route, 'O', '1');
         ctb.set(key, {
-          co: op, route: r.route, dir: 'O', service: '1',
-          origTc: r.orig_tc, origEn: r.orig_en,
-          destTc: r.dest_tc, destEn: r.dest_en,
+          co: op,
+          route: r.route,
+          dir: 'O',
+          service: '1',
+          origTc: r.orig_tc,
+          origEn: r.orig_en,
+          destTc: r.dest_tc,
+          destEn: r.dest_en,
         });
       }
     }
@@ -1290,7 +1348,8 @@
             co,
             nameTc: info.zh || '',
             nameEn: info.en || '',
-            lat, lng,
+            lat,
+            lng,
           });
         }
       }
@@ -1300,29 +1359,37 @@
     if (mtrLines && Array.isArray(mtrLines)) {
       const lineNames = {
         AEL: { zh: '機場快綫', en: 'Airport Express' },
-        TCL: { zh: '東涌綫',   en: 'Tung Chung Line' },
+        TCL: { zh: '東涌綫', en: 'Tung Chung Line' },
         TKL: { zh: '將軍澳綫', en: 'Tseung Kwan O Line' },
-        TML: { zh: '屯馬綫',   en: 'Tuen Ma Line' },
-        EAL: { zh: '東鐵綫',   en: 'East Rail Line' },
+        TML: { zh: '屯馬綫', en: 'Tuen Ma Line' },
+        EAL: { zh: '東鐵綫', en: 'East Rail Line' },
         SIL: { zh: '南港島綫', en: 'South Island Line' },
-        TWL: { zh: '荃灣綫',   en: 'Tsuen Wan Line' },
-        ISL: { zh: '港島綫',   en: 'Island Line' },
-        KTL: { zh: '觀塘綫',   en: 'Kwun Tong Line' },
+        TWL: { zh: '荃灣綫', en: 'Tsuen Wan Line' },
+        ISL: { zh: '港島綫', en: 'Island Line' },
+        KTL: { zh: '觀塘綫', en: 'Kwun Tong Line' },
         DRL: { zh: '迪士尼綫', en: 'Disneyland Resort Line' },
       };
       const seenStations = new Map();
       for (const row of mtrLines) {
-        const lineCode = row.line, direction = row.dir, stationCode = row.station;
+        const lineCode = row.line,
+          direction = row.dir,
+          stationCode = row.station;
         if (!lineCode || !stationCode) continue;
         const lineLabel = lineNames[lineCode] || { zh: lineCode, en: lineCode };
 
         const routeKey = `MTR|${lineCode}`;
         if (!mtr.has(routeKey)) {
           mtr.set(routeKey, {
-            co: 'MTR', route: lineCode, dir: '', service: '',
-            origTc: lineLabel.zh, origEn: lineLabel.en,
-            destTc: lineLabel.zh, destEn: lineLabel.en,
-            _isLine: true, _directions: new Set(),
+            co: 'MTR',
+            route: lineCode,
+            dir: '',
+            service: '',
+            origTc: lineLabel.zh,
+            origEn: lineLabel.en,
+            destTc: lineLabel.zh,
+            destEn: lineLabel.en,
+            _isLine: true,
+            _directions: new Set(),
           });
         }
         mtr.get(routeKey)._directions.add(direction);
@@ -1332,18 +1399,23 @@
         const lng = coordInfo ? Number(coordInfo.lng) : NaN;
         if (!seenStations.has(stationCode)) {
           seenStations.set(stationCode, {
-            co: 'MTR', stop: stationCode,
-            nameTc: row.zh, nameEn: row.en,
+            co: 'MTR',
+            stop: stationCode,
+            nameTc: row.zh,
+            nameEn: row.en,
             lat: Number.isFinite(lat) ? lat : null,
             lng: Number.isFinite(lng) ? lng : null,
-            lines: [lineCode], _dirs: [direction], _seq: row.seq || 0,
+            lines: [lineCode],
+            _dirs: [direction],
+            _seq: row.seq || 0,
           });
         } else {
           const st = seenStations.get(stationCode);
           if (!st.lines.includes(lineCode)) st.lines.push(lineCode);
           if (!st._dirs.includes(direction)) st._dirs.push(direction);
           if ((!Number.isFinite(st.lat) || st.lat == null) && Number.isFinite(lat)) {
-            st.lat = lat; st.lng = lng;
+            st.lat = lat;
+            st.lng = lng;
           }
         }
       }
@@ -1355,18 +1427,38 @@
       const routeMeta = new Map();
       const stopMeta = new Map();
       for (const row of lrtRoutes) {
-        const routeNo = row.route, dir = row.dir, stopCode = row.stop;
+        const routeNo = row.route,
+          dir = row.dir,
+          stopCode = row.stop;
         if (!routeNo || !stopCode) continue;
         const routeKey = `LRT|${routeNo}`;
         if (!routeMeta.has(routeKey)) {
-          routeMeta.set(routeKey, { co: 'LRT', route: routeNo, dir: '', service: '', origTc: '', origEn: '', destTc: '', destEn: '', _dirs: new Set(), _stops: [] });
+          routeMeta.set(routeKey, {
+            co: 'LRT',
+            route: routeNo,
+            dir: '',
+            service: '',
+            origTc: '',
+            origEn: '',
+            destTc: '',
+            destEn: '',
+            _dirs: new Set(),
+            _stops: [],
+          });
         }
         const meta = routeMeta.get(routeKey);
         meta._dirs.add(dir);
         meta._stops.push({ stop: stopCode, dir, seq: row.seq || 0, id: row.id });
 
         if (!stopMeta.has(stopCode)) {
-          stopMeta.set(stopCode, { co: 'LRT', stop: stopCode, nameTc: row.zh, nameEn: row.en, id: row.id, _routes: new Set() });
+          stopMeta.set(stopCode, {
+            co: 'LRT',
+            stop: stopCode,
+            nameTc: row.zh,
+            nameEn: row.en,
+            id: row.id,
+            _routes: new Set(),
+          });
         }
         stopMeta.get(stopCode)._routes.add(routeNo);
       }
@@ -1412,52 +1504,225 @@
     storage.set(STORAGE_KEYS.INDEX_TS, Date.now());
     storage.set(STORAGE_KEYS.INDEX_VER, INDEX_SCHEMA_VERSION);
 
+    // Restore previously-persisted /route-stop snapshot so via-stops are
+    // visible immediately on repeat visits (within ROUTE_STOPS_MAX_AGE),
+    // even after the SW 24h TTL has expired. The prefetcher (Phase 12)
+    // then top-ups any routes that are missing or stale since the last
+    // save.
+    restoreRouteStopsFromStorage();
+
     // Kick off GMB route list build in the background.
     ensureGmbList().catch(() => {});
+
+    // Kick off /route-stop prefetch so via-stops light up gradually
+    // (Phase 12). Fire-and-forget: failures are per-route and don't
+    // affect the loadIndex() return value. Results land in
+    // state.routeStopsByRoute + state.routesByStop; refreshBusStopView
+    // picks them up on the next render.
+    prefetchRouteStops().catch(() => {});
 
     return state.index;
   }
 
-  // Light CSV parser for the MTR/LRT files: handles quoted fields with commas.
-  function parseCsvLine(line) {
-    const out = [];
-    let cur = '';
-    let inQuote = false;
-    for (let i = 0; i < line.length; i++) {
-      const ch = line[i];
-      if (inQuote) {
-        if (ch === '"') {
-          if (line[i + 1] === '"') { cur += '"'; i++; }
-          else inQuote = false;
-        } else cur += ch;
-      } else if (ch === '"') inQuote = true;
-      else if (ch === ',') { out.push(cur); cur = ''; }
-      else cur += ch;
-    }
-    out.push(cur);
-    return out;
+  // ------------------------------------------------------------------
+  // Prefetch: /route-stop for every KMB / LWB / CTB / NWFB route
+  //   v53 (Phase 12). Resolves TODO(v38) for via-stops lookup by
+  //   populating state.routeStopsByRoute with each route's stop list.
+  //   Concurrency-capped at 8 so we don't hammer upstream during cold
+  //   load (3000+ routes × ~200ms ÷ 8 ≈ 75s wall-clock; SW caches each
+  //   response for 24h so the second visit is O(1)).
+  //
+  //   Each successful fetch incrementally rebuilds state.routesByStop
+  //   via busetaUtils.buildRoutesByStopMap — small rebuilds keep the
+  //   reverse lookup fresh as data arrives. Failures are tolerated
+  //   (just skip the route); the live panel falls back to the terminus
+  //   scan via busetaUtils.findRoutesServingStop({..., terminusMatches}).
+  // ------------------------------------------------------------------
+  function routeKey(r) {
+    return `${r.co}|${r.route}|${r.dir}|${r.service}`;
   }
 
-  // ------------------------------------------------------------------
-  // Network
-  // ------------------------------------------------------------------
-  async function fetchJSON(url, signal) {
-    const res = await fetch(url, { signal });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return res.json();
+  // Phase 14 — localStorage persistence for the prefetched route-stops
+  // snapshot. Repeat visits within ROUTE_STOPS_MAX_AGE avoid re-paying
+  // the 75s prefetch (and any upstream 4xx/5xx the prefetcher swallows)
+  // by restoring the cached state immediately. The persisted snapshot
+  // lives across the SW 24h TTL — it's the longer-lived layer.
+  const ROUTE_STOPS_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+
+  // Serialize state.routeStopsByRoute + state.routesByStop into a
+  // JSON-safe form. Both are Map<_, Array<_>> / Map<_, Set<_>> so we
+  // round-trip via Array.from(entries) and an inner Array.from(set)
+  // for the Set values. Round-trippable by rehydrateRouteStops.
+  function dehydrateRouteStops() {
+    if (!state.routeStopsByRoute || !state.routesByStop) return null;
+    return {
+      // Map<routeKey, Array<stopInfo>> → [[routeKey, stopInfo[]], ...]
+      r: Array.from(state.routeStopsByRoute.entries()),
+      // Map<stopName, Set<routeInfo>> → [[stopName, routeInfo[]], ...]
+      s: Array.from(state.routesByStop.entries()).map(([k, set]) => [k, Array.from(set)]),
+    };
   }
-  async function fetchText(url, signal) {
-    const res = await fetch(url, { signal });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return res.text();
+
+  function rehydrateRouteStops(raw) {
+    if (!raw || typeof raw !== 'object') return false;
+    const rMap = new Map();
+    if (Array.isArray(raw.r)) {
+      for (const [k, stops] of raw.r) {
+        if (typeof k === 'string' && Array.isArray(stops)) rMap.set(k, stops);
+      }
+    }
+    const sMap = new Map();
+    if (Array.isArray(raw.s)) {
+      for (const [k, arr] of raw.s) {
+        if (typeof k === 'string' && Array.isArray(arr)) sMap.set(k, new Set(arr));
+      }
+    }
+    state.routeStopsByRoute = rMap;
+    state.routesByStop = sMap;
+    return rMap.size > 0 || sMap.size > 0;
   }
+
+  // Pull the persisted snapshot back into state on boot, if it's recent
+  // enough. Returns true on a successful restore.
+  function restoreRouteStopsFromStorage() {
+    const ts = storage.get(STORAGE_KEYS.ROUTE_STOPS_TS, 0);
+    if (!ts || Date.now() - ts > ROUTE_STOPS_MAX_AGE_MS) return false;
+    const raw = storage.get(STORAGE_KEYS.ROUTE_STOPS, null);
+    if (!raw) return false;
+    try {
+      return rehydrateRouteStops(raw);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  // Debounced saver — called from inside prefetchRouteStops after every
+  // successful fetch. Coalesces 3000+ small writes into a handful of
+  // localStorage.setItem calls per cold load.
+  let _saveRouteStopsTimer = null;
+  function schedulePersistRouteStops() {
+    if (_saveRouteStopsTimer) return;
+    _saveRouteStopsTimer = setTimeout(() => {
+      _saveRouteStopsTimer = null;
+      try {
+        const raw = dehydrateRouteStops();
+        if (!raw) return;
+        storage.set(STORAGE_KEYS.ROUTE_STOPS, raw);
+        storage.set(STORAGE_KEYS.ROUTE_STOPS_TS, Date.now());
+      } catch (_) {
+        /* quota / serialization — ignore */
+      }
+    }, 2000);
+  }
+  // Final flush on page-hide so we don't lose progress when the user
+  // closes the tab mid-prefetch (cold-load scenario).
+  if (typeof window !== 'undefined' && window.addEventListener) {
+    window.addEventListener('pagehide', () => {
+      if (!_saveRouteStopsTimer) return;
+      clearTimeout(_saveRouteStopsTimer);
+      _saveRouteStopsTimer = null;
+      try {
+        const raw = dehydrateRouteStops();
+        if (!raw) return;
+        storage.set(STORAGE_KEYS.ROUTE_STOPS, raw);
+        storage.set(STORAGE_KEYS.ROUTE_STOPS_TS, Date.now());
+      } catch (_) {
+        /* ignore */
+      }
+    });
+  }
+
+  async function prefetchRouteStops() {
+    if (!state.index) return;
+    if (state.routeStopsByRoute && state.routeStopsByRoute.size > 0) return; // already restored
+    const routes = Array.from(state.index.routes.values()).concat(
+      Array.from(state.index.ctbRoutes.values())
+    );
+    // Same filter as findTerminusRoutesForStop — KMB / LWB / CTB / NWFB
+    // only. GMB / LRT / MTR are excluded (different stop enumeration
+    // model; their routes never serve a KMB-style 巴士總站).
+    const candidates = routes.filter(
+      (r) => r.co === 'KMB' || r.co === 'LWB' || r.co === 'CTB' || r.co === 'NWFB'
+    );
+    if (candidates.length === 0) return;
+
+    // If we restored from localStorage, top-up only the missing routes
+    // (Phase 14). Otherwise start empty.
+    if (!state.routeStopsByRoute) state.routeStopsByRoute = new Map();
+    if (!state.routesByStop) state.routesByStop = new Map();
+    const seen = new Set(state.routeStopsByRoute.keys());
+
+    await busetaUtils.mapWithCap(candidates, 8, async (r) => {
+      const key = routeKey(r);
+      if (seen.has(key)) return null; // already restored
+      let raw;
+      try {
+        raw =
+          r.co === 'KMB' || r.co === 'LWB'
+            ? await fetchKmbRouteStop(r.route, r.dir, r.service)
+            : await fetchCtbRouteStop(r.route, r.dir);
+      } catch (_) {
+        return null;
+      }
+      const arr = Array.isArray(raw && raw.data) ? raw.data : [];
+      const stops = arr
+        .map((it) => ({
+          stop: String(it.stop),
+          seq: parseInt(it.seq, 10),
+          nameTc: it.name_tc || '',
+          nameEn: it.name_en || '',
+        }))
+        .filter((x) => Number.isFinite(x.seq));
+      state.routeStopsByRoute.set(key, stops);
+      // Incremental rebuild — keep state.routesByStop current as data
+      // arrives. Cheap (typically <100µs per route).
+      const merged = busetaUtils.buildRoutesByStopMap(new Map([[key, r]]), new Map([[key, stops]]));
+      for (const [stopName, set] of merged.entries()) {
+        if (!state.routesByStop.has(stopName)) state.routesByStop.set(stopName, new Set());
+        for (const item of set) state.routesByStop.get(stopName).add(item);
+      }
+      // Debounced save — coalesces 3000+ small writes into a handful of
+      // localStorage.setItem calls per cold load.
+      schedulePersistRouteStops();
+      return key;
+    });
+    // Final flush once the prefetch completes so the snapshot is up to
+    // date regardless of the debounce window.
+    if (_saveRouteStopsTimer) {
+      clearTimeout(_saveRouteStopsTimer);
+      _saveRouteStopsTimer = null;
+    }
+    try {
+      const raw = dehydrateRouteStops();
+      if (raw) {
+        storage.set(STORAGE_KEYS.ROUTE_STOPS, raw);
+        storage.set(STORAGE_KEYS.ROUTE_STOPS_TS, Date.now());
+      }
+    } catch (_) {
+      /* ignore */
+    }
+  }
+
+  // Light CSV parser for the MTR/LRT files: handles quoted fields with commas.
+  // parseCsvLine moved to src/utils/text.js — Phase 5 modularization
+
+  // fetchJSON / fetchText moved to src/utils/network.js — Phase 4 modularization
 
   const fetchKmbRouteStop = (route, dir, service) =>
-    fetchJSON(`${API.KMB}/route-stop/${encodeURIComponent(route)}/${dir === 'I' ? 'inbound' : 'outbound'}/${encodeURIComponent(service)}`);
+    busetaUtils.fetchJSON(
+      `${API.KMB}/route-stop/${encodeURIComponent(route)}/${dir === 'I' ? 'inbound' : 'outbound'}/${encodeURIComponent(service)}`
+    );
+  // CTB / NWFB share the Citybus endpoint shape (service type defaults to 1
+  // for both — these operators don't expose per-service variants). Used by
+  // prefetchRouteStops() in Phase 12.
+  const fetchCtbRouteStop = (route, dir) =>
+    busetaUtils.fetchJSON(
+      `${API.CITYBUS}/route-stop/ctb/${encodeURIComponent(route)}/${dir === 'I' ? 'inbound' : 'outbound'}`
+    );
   const fetchKmbStop = (stopId) =>
-    fetchJSON(`${API.KMB}/stop/${encodeURIComponent(stopId)}`);
+    busetaUtils.fetchJSON(`${API.KMB}/stop/${encodeURIComponent(stopId)}`);
   const fetchKmbStopEta = (stopId) =>
-    fetchJSON(`${API.KMB}/stop-eta/${encodeURIComponent(stopId)}`);
+    busetaUtils.fetchJSON(`${API.KMB}/stop-eta/${encodeURIComponent(stopId)}`);
   // Per-stop section fares for KMB / LWB (same endpoint). Returns a
   // Map<seq, fare>, a flat number, or null on failure. The upstream
   // /route-fare endpoint returns per-stop seq fares (`front_board` is the
@@ -1474,32 +1739,44 @@
     let flat = null;
     try {
       const dirSeg = dir === 'I' ? 'inbound' : 'outbound';
-      const resp = await fetchJSON(`${API.KMB}/route-fare/${encodeURIComponent(route)}/${dirSeg}/${encodeURIComponent(service)}`);
-      const arr = (resp && Array.isArray(resp.data)) ? resp.data : [];
+      const resp = await busetaUtils.fetchJSON(
+        `${API.KMB}/route-fare/${encodeURIComponent(route)}/${dirSeg}/${encodeURIComponent(service)}`
+      );
+      const arr = resp && Array.isArray(resp.data) ? resp.data : [];
       if (arr.length > 0) {
         map = new Map();
         for (const it of arr) {
           const seq = parseInt(it.seq, 10);
           if (!Number.isFinite(seq)) continue;
           // Prefer front_board; fall back to rear_board when upstream is sparse.
-          const fare = (it.front_board != null && it.front_board !== '') ? it.front_board
-            : ((it.rear_board != null && it.rear_board !== '') ? it.rear_board : null);
+          const fare =
+            it.front_board != null && it.front_board !== ''
+              ? it.front_board
+              : it.rear_board != null && it.rear_board !== ''
+                ? it.rear_board
+                : null;
           if (fare != null) map.set(seq, fare);
         }
         if (map.size === 0) map = null;
       }
-    } catch (e) { map = null; }
+    } catch (e) {
+      map = null;
+    }
     if (!map) {
       // Hardcoded fallback: assets/kmb-fares.json — KMB's official
       // fare_increment page publishes a flat Octopus fare per route;
       // the file is keyed by route number with `{co: 'KMB', fare, octopus}`.
       try {
-        const all = await fetchJSON(`assets/kmb-fares.json`);
+        const all = await busetaUtils.fetchJSON(`assets/kmb-fares.json`);
         const entry = (all && all[route]) || null;
-        const f = entry && Number.isFinite(Number(entry.octopus || entry.fare))
-          ? Number(entry.octopus || entry.fare) : null;
+        const f =
+          entry && Number.isFinite(Number(entry.octopus || entry.fare))
+            ? Number(entry.octopus || entry.fare)
+            : null;
         flat = f;
-      } catch (e) { flat = null; }
+      } catch (e) {
+        flat = null;
+      }
     }
     // Cache the result — prefer the per-stop map (upstream), otherwise the
     // flat number (JSON fallback). `null` means "no data, do not retry".
@@ -1520,7 +1797,7 @@
   //      well-known routes with published fares).
   //   3) `null` — the UI hides the per-stop pill rather than ship an
   //      empty placeholder.
-  const _fareFlatCache = new Map();  // route/coKey → number | null
+  const _fareFlatCache = new Map(); // route/coKey → number | null
   // CTB + NWFB flat fare: try upstream `/route-fare` (404 / 422 in current
   // upstream state) then fall back to assets/ctb-fares.json. Always
   // returns a flat Map<seq, fare> for the route, never per-stop.
@@ -1529,20 +1806,27 @@
     if (_fareFlatCache.has(cacheKey)) return _fareFlatCache.get(cacheKey);
     let entry = null;
     try {
-      const resp = await fetchJSON(`${API.CITYBUS}/route-fare/ctb/${encodeURIComponent(route)}/${dir === 'I' ? 'inbound' : 'outbound'}/1`);
+      const resp = await busetaUtils.fetchJSON(
+        `${API.CITYBUS}/route-fare/ctb/${encodeURIComponent(route)}/${dir === 'I' ? 'inbound' : 'outbound'}/1`
+      );
       if (resp && Array.isArray(resp.data) && resp.data.length > 0) {
         entry = resp.data[0];
       }
-    } catch (e) { entry = null; }
+    } catch (e) {
+      entry = null;
+    }
     if (!entry) {
       try {
-        const all = await fetchJSON(`assets/ctb-fares.json`);
+        const all = await busetaUtils.fetchJSON(`assets/ctb-fares.json`);
         entry = (all && all[route]) || null;
-      } catch (e) { entry = null; }
+      } catch (e) {
+        entry = null;
+      }
     }
-    const flat = entry && Number.isFinite(Number(entry.octopus || entry.fare))
-      ? Number(entry.octopus || entry.fare)
-      : null;
+    const flat =
+      entry && Number.isFinite(Number(entry.octopus || entry.fare))
+        ? Number(entry.octopus || entry.fare)
+        : null;
     _fareFlatCache.set(cacheKey, flat);
     return flat;
   };
@@ -1555,14 +1839,17 @@
     if (_fareFlatCache.has(cacheKey)) return _fareFlatCache.get(cacheKey);
     let entry = null;
     try {
-      const all = await fetchJSON(`assets/gmb-fares.json`);
+      const all = await busetaUtils.fetchJSON(`assets/gmb-fares.json`);
       const key1 = `${region}/${code}`;
       const key2 = route ? `${region}/${route}` : null;
       entry = (all && (all[key1] || (key2 && all[key2]))) || null;
-    } catch (e) { entry = null; }
-    const flat = entry && Number.isFinite(Number(entry.octopus || entry.fare))
-      ? Number(entry.octopus || entry.fare)
-      : null;
+    } catch (e) {
+      entry = null;
+    }
+    const flat =
+      entry && Number.isFinite(Number(entry.octopus || entry.fare))
+        ? Number(entry.octopus || entry.fare)
+        : null;
     _fareFlatCache.set(cacheKey, flat);
     return flat;
   };
@@ -1572,12 +1859,15 @@
     if (_fareFlatCache.has(cacheKey)) return _fareFlatCache.get(cacheKey);
     let entry = null;
     try {
-      const all = await fetchJSON(`assets/lrt-fares.json`);
+      const all = await busetaUtils.fetchJSON(`assets/lrt-fares.json`);
       entry = (all && all[route]) || null;
-    } catch (e) { entry = null; }
-    const flat = entry && Number.isFinite(Number(entry.octopus || entry.fare))
-      ? Number(entry.octopus || entry.fare)
-      : null;
+    } catch (e) {
+      entry = null;
+    }
+    const flat =
+      entry && Number.isFinite(Number(entry.octopus || entry.fare))
+        ? Number(entry.octopus || entry.fare)
+        : null;
     _fareFlatCache.set(cacheKey, flat);
     return flat;
   };
@@ -1593,7 +1883,7 @@
     const n = Number(fare);
     if (!Number.isFinite(n)) return null;
     stops.forEach((s) => {
-      const seq = (s && Number.isFinite(s._seq)) ? s._seq : null;
+      const seq = s && Number.isFinite(s._seq) ? s._seq : null;
       if (seq != null) m.set(seq, n);
     });
     return m.size > 0 ? m : null;
@@ -1604,10 +1894,14 @@
     if (fare == null) return null;
     if (typeof fare === 'number') return { min: fare, max: fare };
     if (!(fare instanceof Map) || fare.size === 0) return null;
-    let min = Infinity, max = -Infinity;
+    let min = Infinity,
+      max = -Infinity;
     fare.forEach((v) => {
       const n = Number(v);
-      if (Number.isFinite(n)) { if (n < min) min = n; if (n > max) max = n; }
+      if (Number.isFinite(n)) {
+        if (n < min) min = n;
+        if (n > max) max = n;
+      }
     });
     if (min === Infinity || max === -Infinity) return null;
     return { min, max };
@@ -1622,42 +1916,60 @@
 
   // Citybus + NWFB (CTB uses 6-digit numeric stop IDs)
   const fetchCitybusRouteStop = (route, dir) =>
-    fetchJSON(`${API.CITYBUS}/route-stop/ctb/${encodeURIComponent(route)}/${dir === 'I' ? 'inbound' : 'outbound'}`);
+    busetaUtils.fetchJSON(
+      `${API.CITYBUS}/route-stop/ctb/${encodeURIComponent(route)}/${dir === 'I' ? 'inbound' : 'outbound'}`
+    );
   const fetchCitybusStopEta = (stopId, route) =>
-    fetchJSON(`${API.CITYBUS}/eta/ctb/${encodeURIComponent(stopId)}/${encodeURIComponent(route)}`);
+    busetaUtils.fetchJSON(
+      `${API.CITYBUS}/eta/ctb/${encodeURIComponent(stopId)}/${encodeURIComponent(route)}`
+    );
   // CTB stop metadata (name includes "Stop, Location" for many stops).
   const fetchCitybusStop = (stopId) =>
-    fetchJSON(`${API.CITYBUS}/stop/${encodeURIComponent(stopId)}`);
+    busetaUtils.fetchJSON(`${API.CITYBUS}/stop/${encodeURIComponent(stopId)}`);
   // Per-stop ETA feed (CTB uses 6-digit numeric stop IDs).
   const fetchCitybusBatchStopEta = (stopId) =>
-    fetchJSON(`https://rt.data.gov.hk/v1/transport/batch/stop-eta/CTB/${encodeURIComponent(stopId)}`);
+    busetaUtils.fetchJSON(
+      `https://rt.data.gov.hk/v1/transport/batch/stop-eta/CTB/${encodeURIComponent(stopId)}`
+    );
   // Returns the right ETA fetcher for a stop_id + route + dir.
   function fetchEtaForStop(stopId, route, dir) {
-    if (typeof stopId === 'string' && /^[0-9a-fA-F]{16}$/.test(stopId)) return fetchKmbStopEta(stopId);
-    if (typeof stopId === 'string' && /^[0-9]{6}$/.test(stopId)) return fetchCitybusStopEta(stopId, route);
+    if (typeof stopId === 'string' && /^[0-9a-fA-F]{16}$/.test(stopId))
+      return fetchKmbStopEta(stopId);
+    if (typeof stopId === 'string' && /^[0-9]{6}$/.test(stopId))
+      return fetchCitybusStopEta(stopId, route);
     // Generic KMB route-stop lookup works for any operator's KMB-format stop.
     return fetchKmbStopEta(stopId);
   }
 
   // GMB (Green Minibus / 專線小巴)
   const fetchGmbRoute = (region, code) =>
-    fetchJSON(`${API.GMB}/route/${encodeURIComponent(region)}/${encodeURIComponent(code)}`);
+    busetaUtils.fetchJSON(
+      `${API.GMB}/route/${encodeURIComponent(region)}/${encodeURIComponent(code)}`
+    );
   const fetchGmbRouteStops = (routeId, routeSeq) =>
-    fetchJSON(`${API.GMB}/route-stop/${encodeURIComponent(String(routeId))}/${encodeURIComponent(String(routeSeq))}`);
+    busetaUtils.fetchJSON(
+      `${API.GMB}/route-stop/${encodeURIComponent(String(routeId))}/${encodeURIComponent(String(routeSeq))}`
+    );
   const fetchGmbStopEta = (routeId, routeSeq, stopSeq) =>
-    fetchJSON(`${API.GMB}/eta/route-stop/${encodeURIComponent(String(routeId))}/${encodeURIComponent(String(routeSeq))}/${encodeURIComponent(String(stopSeq))}`);
+    busetaUtils.fetchJSON(
+      `${API.GMB}/eta/route-stop/${encodeURIComponent(String(routeId))}/${encodeURIComponent(String(routeSeq))}/${encodeURIComponent(String(stopSeq))}`
+    );
   const fetchGmbStopRoutes = (stopId) =>
-    fetchJSON(`${API.GMB}/stop-route/${encodeURIComponent(String(stopId))}`);
+    busetaUtils.fetchJSON(`${API.GMB}/stop-route/${encodeURIComponent(String(stopId))}`);
   const fetchGmbStopCoord = (stopId) =>
-    fetchJSON(`${API.GMB}/stop/${encodeURIComponent(String(stopId))}`);
+    busetaUtils.fetchJSON(`${API.GMB}/stop/${encodeURIComponent(String(stopId))}`);
 
   // MTR (heavy rail) — line/station codes are 3-letter strings.
   const fetchMtrSchedule = (line, station) =>
-    fetchJSON(`${API.MTR}/getSchedule.php?line=${encodeURIComponent(line)}&sta=${encodeURIComponent(station)}&lang=tc`);
+    busetaUtils.fetchJSON(
+      `${API.MTR}/getSchedule.php?line=${encodeURIComponent(line)}&sta=${encodeURIComponent(station)}&lang=tc`
+    );
 
   // Light Rail — station_id is 3-digit numeric string (e.g. "001").
   const fetchLrtSchedule = (stationId) =>
-    fetchJSON(`${API.MTR}/lrt/getSchedule?station_id=${encodeURIComponent(String(stationId))}`);
+    busetaUtils.fetchJSON(
+      `${API.MTR}/lrt/getSchedule?station_id=${encodeURIComponent(String(stationId))}`
+    );
 
   // Bounded-concurrency fetcher: runs up to `limit` fetches in parallel.
   async function mapWithConcurrency(items, limit, fn) {
@@ -1667,8 +1979,11 @@
       while (true) {
         const i = cursor++;
         if (i >= items.length) return;
-        try { results[i] = await fn(items[i], i); }
-        catch (e) { results[i] = { __error: e }; }
+        try {
+          results[i] = await fn(items[i], i);
+        } catch (e) {
+          results[i] = { __error: e };
+        }
       }
     });
     await Promise.all(workers);
@@ -1687,11 +2002,14 @@
   function loadGmapsConfig() {
     if (state.gmapsConfigLoaded) return Promise.resolve(state.gmapsKey);
     state.gmapsConfigLoaded = true;
-    return fetchJSON(API.CONFIG).then((cfg) => {
-      if (cfg && typeof cfg.gmapsKey === 'string') {
-        state.gmapsKey = cfg.gmapsKey.trim();
-      }
-    }).catch(() => {});
+    return busetaUtils
+      .fetchJSON(API.CONFIG)
+      .then((cfg) => {
+        if (cfg && typeof cfg.gmapsKey === 'string') {
+          state.gmapsKey = cfg.gmapsKey.trim();
+        }
+      })
+      .catch(() => {});
   }
   function getGmapsKey() {
     const userKey = storage.get(STORAGE_KEYS.GMAPS_KEY, '');
@@ -1750,7 +2068,10 @@
     svg.setAttribute('aria-hidden', 'true');
     svg.classList.add('stop-map-link-icon');
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    path.setAttribute('d', 'M12 2c-4.418 0-8 3.537-8 7.9 0 5.7 7.1 11.6 7.4 11.85a1 1 0 0 0 1.2 0c.3-.25 7.4-6.15 7.4-11.85 0-4.363-3.582-7.9-8-7.9zm0 10.9a3 3 0 1 1 0-6 3 3 0 0 1 0 6z');
+    path.setAttribute(
+      'd',
+      'M12 2c-4.418 0-8 3.537-8 7.9 0 5.7 7.1 11.6 7.4 11.85a1 1 0 0 0 1.2 0c.3-.25 7.4-6.15 7.4-11.85 0-4.363-3.582-7.9-8-7.9zm0 10.9a3 3 0 1 1 0-6 3 3 0 0 1 0 6z'
+    );
     path.setAttribute('fill', 'currentColor');
     svg.appendChild(path);
     return svg;
@@ -1772,7 +2093,7 @@
       const obj = Array.isArray(d) ? d[0] : d;
       const lat = Number(obj && obj.lat);
       const lng = Number(obj && (obj.long || obj.lng));
-      const out = (Number.isFinite(lat) && Number.isFinite(lng)) ? { lat, lng } : null;
+      const out = Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
       stopCoordCache.set(key, out);
       return out;
     } catch {
@@ -1841,9 +2162,11 @@
     const destination = points[points.length - 1];
 
     const section = el('section', { class: 'route-map', 'aria-label': t_str('mapHeader') });
-    const head = el('div', { class: 'route-map-head' },
+    const head = el(
+      'div',
+      { class: 'route-map-head' },
       el('span', { class: 'route-map-title' }, t_str('mapHeader')),
-      el('span', { class: 'route-map-meta' }, `${points.length}/${stops.length}`),
+      el('span', { class: 'route-map-meta' }, `${points.length}/${stops.length}`)
     );
     section.appendChild(head);
 
@@ -1890,13 +2213,13 @@
   // to the route's accent when we don't recognise the operator. Kept in
   // sync with the operator-strip chip colours used elsewhere.
   const VEHICLE_OP_COLOR = {
-    KMB: '#E11D48',      // crimson (KMB brand red)
-    LWB: '#B45309',      // amber (LWB brand gold-ish)
-    CTB: '#0284C2',      // CTB blue
-    NWFB: '#0EA5E9',     // NWFB sky-blue
-    GMB: '#16A34A',      // green for minibus
-    MTR: '#7C3AED',      // MTR purple
-    LRT: '#F59E0B',      // LRT yellow-orange
+    KMB: '#E11D48', // crimson (KMB brand red)
+    LWB: '#B45309', // amber (LWB brand gold-ish)
+    CTB: '#0284C2', // CTB blue
+    NWFB: '#0EA5E9', // NWFB sky-blue
+    GMB: '#16A34A', // green for minibus
+    MTR: '#7C3AED', // MTR purple
+    LRT: '#F59E0B', // LRT yellow-orange
   };
 
   // Promise-cached lazy-load of the vehicle-positions helper. Mirrors
@@ -2049,8 +2372,10 @@
         }
       });
     }
-    let minLat = allPts[0].lat, maxLat = allPts[0].lat;
-    let minLng = allPts[0].lng, maxLng = allPts[0].lng;
+    let minLat = allPts[0].lat,
+      maxLat = allPts[0].lat;
+    let minLng = allPts[0].lng,
+      maxLng = allPts[0].lng;
     for (const p of allPts) {
       if (p.lat < minLat) minLat = p.lat;
       if (p.lat > maxLat) maxLat = p.lat;
@@ -2060,8 +2385,10 @@
     // Pad the bbox so dots/buses don't sit on the frame edge.
     const padLat = (maxLat - minLat) * 0.12 || 0.005;
     const padLng = (maxLng - minLng) * 0.12 || 0.005;
-    minLat -= padLat; maxLat += padLat;
-    minLng -= padLng; maxLng += padLng;
+    minLat -= padLat;
+    maxLat += padLat;
+    minLng -= padLng;
+    maxLng += padLng;
     const bounds = { minLat, maxLat, minLng, maxLng };
     // Slightly taller than the pre-merge vehicle-map (was 200) since this
     // is now the only map on the route detail page.
@@ -2077,7 +2404,9 @@
 
     // ---- route polyline ----
     const polyPts = routePts.map((p) => projectLatLng(p.lat, p.lng, bounds, view));
-    const linePath = polyPts.map((pt, i) => `${i === 0 ? 'M' : 'L'} ${pt.x.toFixed(2)} ${pt.y.toFixed(2)}`).join(' ');
+    const linePath = polyPts
+      .map((pt, i) => `${i === 0 ? 'M' : 'L'} ${pt.x.toFixed(2)} ${pt.y.toFixed(2)}`)
+      .join(' ');
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     path.setAttribute('d', linePath);
     path.setAttribute('class', 'vehicle-route-line');
@@ -2105,7 +2434,9 @@
     });
 
     // ---- bus icons ----
-    const buses = (isPlaceholder ? placeholderVehiclePositions(stops, coordByStop, o.etasByStop, op).positions : positions);
+    const buses = isPlaceholder
+      ? placeholderVehiclePositions(stops, coordByStop, o.etasByStop, op).positions
+      : positions;
     buses.forEach((b, i) => {
       if (!Number.isFinite(b.lat) || !Number.isFinite(b.lng)) return;
       const pt = projectLatLng(b.lat, b.lng, bounds, view);
@@ -2151,9 +2482,13 @@
     });
     const head = el('div', { class: 'vehicle-map-inline-head' });
     head.appendChild(el('span', { class: 'vehicle-map-inline-title' }, t_str('vehicleMap')));
-    const badge = el('span', {
-      class: 'vehicle-map-badge' + (isPlaceholder ? ' is-placeholder' : ' is-live'),
-    }, isPlaceholder ? t_str('vehiclePlaceholder') : t_str('vehicleLive'));
+    const badge = el(
+      'span',
+      {
+        class: 'vehicle-map-badge' + (isPlaceholder ? ' is-placeholder' : ' is-live'),
+      },
+      isPlaceholder ? t_str('vehiclePlaceholder') : t_str('vehicleLive')
+    );
     head.appendChild(badge);
     wrapper.appendChild(head);
     const frame = el('div', { class: 'vehicle-map-frame' });
@@ -2183,7 +2518,9 @@
       return null;
     }
     try {
-      const result = await window.BusEtaVehicles.fetchPositions(co, route, dir, service, { signal });
+      const result = await window.BusEtaVehicles.fetchPositions(co, route, dir, service, {
+        signal,
+      });
       return Array.isArray(result) && result.length > 0 ? result : null;
     } catch (e) {
       return null;
@@ -2203,7 +2540,11 @@
   function startVehicleRefresh(refreshFn) {
     stopVehicleRefresh();
     state.vehicleTimer = setInterval(() => {
-      try { refreshFn(); } catch (e) { /* swallow — visual refresh only */ }
+      try {
+        refreshFn();
+      } catch (e) {
+        /* swallow — visual refresh only */
+      }
     }, VEHICLE_REFRESH_MS);
   }
 
@@ -2213,7 +2554,11 @@
       state.vehicleTimer = null;
     }
     if (state.vehicleAbort) {
-      try { state.vehicleAbort.abort(); } catch (e) { /* noop */ }
+      try {
+        state.vehicleAbort.abort();
+      } catch (e) {
+        /* noop */
+      }
       state.vehicleAbort = null;
     }
   }
@@ -2227,7 +2572,9 @@
       const ts = storage.get(STORAGE_KEYS.GMB_LIST_TS, 0);
       if (!raw || Date.now() - ts > GMB_LIST_MAX_AGE_MS) return null;
       return raw;
-    } catch { return null; }
+    } catch {
+      return null;
+    }
   }
 
   async function ensureGmbList() {
@@ -2241,7 +2588,7 @@
     }
     state.gmbListPromise = (async () => {
       try {
-        const resp = await fetchJSON(`${API.GMB}/route`);
+        const resp = await busetaUtils.fetchJSON(`${API.GMB}/route`);
         const raw = (resp && resp.data && resp.data.routes) || {};
         const list = [];
         for (const [region, codes] of Object.entries(raw)) {
@@ -2267,7 +2614,7 @@
   // caches into the main index so search picks them up immediately.
   async function primeGmbRoutes(list) {
     if (!state.index) return;
-    const cache = state.gmbEnrichCache = state.gmbEnrichCache || new Set();
+    const cache = (state.gmbEnrichCache = state.gmbEnrichCache || new Set());
     const missing = list.filter((it) => {
       // We treat "enriched" as having at least one entry under GMB in routes map.
       const key = makeRouteKey('GMB', `${it.region}-${it.code}`, 'O', '1');
@@ -2282,10 +2629,15 @@
         cache.add(`${item.region}/${item.code}`);
         try {
           const resp = await fetchGmbRoute(item.region, item.code);
-          const arr = (resp && Array.isArray(resp.data)) ? resp.data : [];
+          const arr = resp && Array.isArray(resp.data) ? resp.data : [];
           for (const r of arr) {
-            const dircode = (r.directions && r.directions.length) ? r.directions[0].route_seq : 1;
-            const key = makeRouteKey('GMB', `${item.region}-${item.code}`, String(dircode), String(r.route_id));
+            const dircode = r.directions && r.directions.length ? r.directions[0].route_seq : 1;
+            const key = makeRouteKey(
+              'GMB',
+              `${item.region}-${item.code}`,
+              String(dircode),
+              String(r.route_id)
+            );
             const dirInfo = (r.directions && r.directions[0]) || {};
             state.index.routes.set(key, {
               co: 'GMB',
@@ -2331,8 +2683,14 @@
       const lat = Number(data.coordinates.wgs84.latitude);
       const lng = Number(data.coordinates.wgs84.longitude);
       if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
-      const out = state.index.stops.get(stopId) || { stop: stopId, nameTc: '', nameSc: '', nameEn: '' };
-      out.lat = lat; out.lng = lng;
+      const out = state.index.stops.get(stopId) || {
+        stop: stopId,
+        nameTc: '',
+        nameSc: '',
+        nameEn: '',
+      };
+      out.lat = lat;
+      out.lng = lng;
       if (data.name_tc && !out.nameTc) out.nameTc = data.name_tc;
       if (data.name_sc && !out.nameSc) out.nameSc = data.name_sc;
       if (data.name_en && !out.nameEn) out.nameEn = data.name_en;
@@ -2381,7 +2739,10 @@
       geoPermissionState = r.state;
       // Track future changes (e.g. user resets in site settings).
       if (r.addEventListener) {
-        r.addEventListener('change', () => { geoPermissionState = r.state; logGeoStatus(`permission changed: ${r.state}`); });
+        r.addEventListener('change', () => {
+          geoPermissionState = r.state;
+          logGeoStatus(`permission changed: ${r.state}`);
+        });
       }
       logGeoStatus(`permission probed: ${r.state}`);
       return r.state;
@@ -2443,7 +2804,7 @@
         // Always update state on every error path — never leave it stuck
         // on 'pending' (which would block re-prompt via the old early-
         // return guard).
-        const code = (err && typeof err.code === 'number') ? err.code : null;
+        const code = err && typeof err.code === 'number' ? err.code : null;
         const next = code === GEO_ERR_PERMISSION_DENIED ? 'denied' : 'unavailable';
         if (next === 'denied') geoPermissionState = 'denied';
         setLocationStatus(next);
@@ -2499,7 +2860,13 @@
     logGeoStatus(`transition: ${prev} → ${next}`);
   }
   function logGeoStatus(msg) {
-    try { console.log('[geo]', msg, { status: state.locationStatus, asked: !!state._geoAsked, hasLoc: !!state.userLoc }); } catch {}
+    try {
+      console.log('[geo]', msg, {
+        status: state.locationStatus,
+        asked: !!state._geoAsked,
+        hasLoc: !!state.userLoc,
+      });
+    } catch {}
   }
 
   // Re-render whichever views depend on the user's location, so the
@@ -2536,17 +2903,27 @@
     if (m) return { view: 'stop', stop: decodeURIComponent(m[1]) };
     return { view: 'error' };
   }
-  function currentRoute() { return parseHash().view; }
+  function currentRoute() {
+    return parseHash().view;
+  }
 
   function showView(name) {
-    ['splash', 'view-home', 'view-search', 'view-route', 'view-stop', 'view-error', 'view-planner', 'view-settings']
-      .forEach((id) => {
-        const node = document.getElementById(id);
-        if (!node) return;
-        const isThis = id === name;
-        node.hidden = !isThis;
-        node.setAttribute('aria-hidden', String(!isThis));
-      });
+    [
+      'splash',
+      'view-home',
+      'view-search',
+      'view-route',
+      'view-stop',
+      'view-error',
+      'view-planner',
+      'view-settings',
+    ].forEach((id) => {
+      const node = document.getElementById(id);
+      if (!node) return;
+      const isThis = id === name;
+      node.hidden = !isThis;
+      node.setAttribute('aria-hidden', String(!isThis));
+    });
   }
 
   function renderInto(name, tplId) {
@@ -2559,14 +2936,18 @@
   }
 
   function applyI18n(root) {
-    $$('[data-i18n]', root).forEach((n) => { n.textContent = t_str(n.dataset.i18n); });
+    $$('[data-i18n]', root).forEach((n) => {
+      n.textContent = t_str(n.dataset.i18n);
+    });
     $$('[data-i18n-attr]', root).forEach((n) => {
       try {
         const map = JSON.parse(n.dataset.i18nAttr);
         for (const [attr, key] of Object.entries(map)) n.setAttribute(attr, t_str(key));
       } catch {}
     });
-    $$('[data-i18n-html]', root).forEach((n) => { n.innerHTML = t_str(n.dataset.i18nHtml); });
+    $$('[data-i18n-html]', root).forEach((n) => {
+      n.innerHTML = t_str(n.dataset.i18nHtml);
+    });
   }
 
   function onHashChange() {
@@ -2576,14 +2957,22 @@
     if (r.view === 'search') active = 'search';
     else if (r.view === 'planner') active = 'planner';
     else if (r.view === 'home') active = 'home';
-    else if (r.view === 'route' || r.view === 'stop') active = null; // QW-9: no nav item lit on detail
+    else if (r.view === 'route' || r.view === 'stop')
+      active = null; // QW-9: no nav item lit on detail
     else if (r.view === 'settings') active = null; // QW-3: settings has its own header link
     // QW-9: only the home nav item carries the "you're inside a sub-page"
     // dot indicator when on /route/... or /stop/...
-    const onDetail = (r.view === 'route' || r.view === 'stop');
+    const onDetail = r.view === 'route' || r.view === 'stop';
     $$('.nav-item').forEach((n) => {
       n.classList.toggle('is-active', n.dataset.route === active);
       n.classList.toggle('is-detail', onDetail && n.dataset.route === 'home');
+      // a11y (Phase 17): mirror `is-active` into aria-current="page" so
+      // screen readers announce "current page" on the active nav item
+      // instead of just trusting the visual underline. We clear the
+      // attribute on inactive items so it doesn't dangle on hashchange.
+      const isActive = n.dataset.route === active;
+      if (isActive) n.setAttribute('aria-current', 'page');
+      else n.removeAttribute('aria-current');
     });
 
     // Hide splash once we navigate
@@ -2591,15 +2980,37 @@
     if (splash && !splash.hidden) splash.hidden = true;
 
     switch (r.view) {
-      case 'home': renderHome(); break;
-      case 'search': renderSearch(); break;
-      case 'planner': renderPlannerView(); break;
-      case 'settings': renderSettings(); break;
-      case 'route': renderRoute(r); break;
-      case 'stop': renderStop(r); break;
-      default: renderError();
+      case 'home':
+        renderHome();
+        break;
+      case 'search':
+        renderSearch();
+        break;
+      case 'planner':
+        renderPlannerView();
+        break;
+      case 'settings':
+        renderSettings();
+        break;
+      case 'route':
+        renderRoute(r);
+        break;
+      case 'stop':
+        renderStop(r);
+        break;
+      default:
+        renderError();
     }
     window.scrollTo(0, 0);
+    // a11y: shift focus to the <main> region so screen readers announce
+    // the new view's heading after navigation. `<main>` has
+    // `tabindex="-1"` (index.html) so it can receive programmatic focus
+    // without entering the tab order. `preventScroll: true` keeps the
+    // explicit `scrollTo(0, 0)` above authoritative — focus() would
+    // otherwise scroll the focused element into view, which we don't
+    // want here. Phase 13 a11y fix.
+    const main = document.getElementById('main');
+    if (main) main.focus({ preventScroll: true });
   }
 
   // ------------------------------------------------------------------
@@ -2660,8 +3071,12 @@
     const hasLoc = !!state.userLoc;
     const locateLabel = hasLoc ? 'homeEmptyLocateUpdate' : 'homeEmptyLocate';
     const locateHandler = hasLoc
-      ? () => { retryLocation(); }
-      : () => { requestLocation(); };
+      ? () => {
+          retryLocation();
+        }
+      : () => {
+          requestLocation();
+        };
 
     const ctaSearch = el('a', {
       class: 'home-empty-cta home-empty-cta--primary',
@@ -2675,13 +3090,18 @@
     searchSvg.setAttribute('height', '18');
     searchSvg.setAttribute('aria-hidden', 'true');
     const sCirc = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-    sCirc.setAttribute('cx', '11'); sCirc.setAttribute('cy', '11'); sCirc.setAttribute('r', '7');
-    sCirc.setAttribute('fill', 'none'); sCirc.setAttribute('stroke', 'currentColor');
+    sCirc.setAttribute('cx', '11');
+    sCirc.setAttribute('cy', '11');
+    sCirc.setAttribute('r', '7');
+    sCirc.setAttribute('fill', 'none');
+    sCirc.setAttribute('stroke', 'currentColor');
     sCirc.setAttribute('stroke-width', '1.8');
     const sLine = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     sLine.setAttribute('d', 'M20 20l-3.5-3.5');
-    sLine.setAttribute('fill', 'none'); sLine.setAttribute('stroke', 'currentColor');
-    sLine.setAttribute('stroke-width', '1.8'); sLine.setAttribute('stroke-linecap', 'round');
+    sLine.setAttribute('fill', 'none');
+    sLine.setAttribute('stroke', 'currentColor');
+    sLine.setAttribute('stroke-width', '1.8');
+    sLine.setAttribute('stroke-linecap', 'round');
     searchSvg.appendChild(sCirc);
     searchSvg.appendChild(sLine);
     ctaSearchIcon.appendChild(searchSvg);
@@ -2701,8 +3121,10 @@
     pinSvg.setAttribute('aria-hidden', 'true');
     const pinPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     pinPath.setAttribute('fill', 'currentColor');
-    pinPath.setAttribute('d',
-      'M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z');
+    pinPath.setAttribute(
+      'd',
+      'M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z'
+    );
     pinSvg.appendChild(pinPath);
     ctaLocateIcon.appendChild(pinSvg);
     ctaLocate.appendChild(ctaLocateIcon);
@@ -2722,8 +3144,10 @@
     const hotPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     // Flame / star — generic "popular" glyph
     hotPath.setAttribute('fill', 'currentColor');
-    hotPath.setAttribute('d',
-      'M12 2c.5 3 2.5 4 2.5 7a2.5 2.5 0 0 1-5 0c0-1 .5-1.5.5-2.5C8 7 6 9 6 12a6 6 0 1 0 12 0c0-4-3-6-6-10z');
+    hotPath.setAttribute(
+      'd',
+      'M12 2c.5 3 2.5 4 2.5 7a2.5 2.5 0 0 1-5 0c0-1 .5-1.5.5-2.5C8 7 6 9 6 12a6 6 0 1 0 12 0c0-4-3-6-6-10z'
+    );
     hotSvg.appendChild(hotPath);
     ctaHotIcon.appendChild(hotSvg);
     ctaHot.appendChild(ctaHotIcon);
@@ -2766,9 +3190,10 @@
       class: 'onboard-card__close',
       'aria-label': t_str('onboardDismiss'),
     });
-    closeBtn.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">'
-      + '<path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M6 6l12 12M18 6L6 18"/>'
-      + '</svg>';
+    closeBtn.innerHTML =
+      '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">' +
+      '<path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M6 6l12 12M18 6L6 18"/>' +
+      '</svg>';
     closeBtn.addEventListener('click', () => dismissOnboardCard(card));
     card.appendChild(closeBtn);
 
@@ -2780,8 +3205,8 @@
     // lights up the brand chips / CTAs elsewhere.
     const rows = [
       { titleKey: 'onboardPlannerTitle', bodyKey: 'onboardPlannerBody', svg: 'planner' },
-      { titleKey: 'onboardSearchTitle',  bodyKey: 'onboardSearchBody',  svg: 'search'  },
-      { titleKey: 'onboardNearbyTitle',  bodyKey: 'onboardNearbyBody',  svg: 'pin'     },
+      { titleKey: 'onboardSearchTitle', bodyKey: 'onboardSearchBody', svg: 'search' },
+      { titleKey: 'onboardNearbyTitle', bodyKey: 'onboardNearbyBody', svg: 'pin' },
     ];
     const list = el('ul', { class: 'onboard-card__list' });
     rows.forEach((row) => {
@@ -2792,7 +3217,7 @@
 
       const txt = el('div', { class: 'onboard-card__row-text' });
       txt.appendChild(el('div', { class: 'onboard-card__row-title', 'data-i18n': row.titleKey }));
-      txt.appendChild(el('div', { class: 'onboard-card__row-body',  'data-i18n': row.bodyKey  }));
+      txt.appendChild(el('div', { class: 'onboard-card__row-body', 'data-i18n': row.bodyKey }));
       li.appendChild(txt);
       list.appendChild(li);
     });
@@ -2831,16 +3256,22 @@
       // Magnifier — matches the bottom-nav "搜尋" glyph.
       p.setAttribute('d', 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-3.5-3.5');
       const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-      c.setAttribute('cx', '11'); c.setAttribute('cy', '11'); c.setAttribute('r', '7');
-      c.setAttribute('fill', 'none'); c.setAttribute('stroke', 'currentColor');
+      c.setAttribute('cx', '11');
+      c.setAttribute('cy', '11');
+      c.setAttribute('r', '7');
+      c.setAttribute('fill', 'none');
+      c.setAttribute('stroke', 'currentColor');
       c.setAttribute('stroke-width', '1.8');
       svg.appendChild(c);
     } else {
       // Pin — matches the in-app "啟用定位" CTA glyph.
       p.setAttribute('d', 'M12 22s7-6.5 7-12a7 7 0 1 0-14 0c0 5.5 7 12 7 12z');
       const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-      c.setAttribute('cx', '12'); c.setAttribute('cy', '10'); c.setAttribute('r', '2.5');
-      c.setAttribute('fill', 'none'); c.setAttribute('stroke', 'currentColor');
+      c.setAttribute('cx', '12');
+      c.setAttribute('cy', '10');
+      c.setAttribute('r', '2.5');
+      c.setAttribute('fill', 'none');
+      c.setAttribute('stroke', 'currentColor');
       c.setAttribute('stroke-width', '1.8');
       svg.appendChild(c);
     }
@@ -2856,7 +3287,11 @@
   // any localStorage reset also wipes saved routes / recent, which is a
   // strong enough "fresh device" signal that re-prompting is appropriate.
   function dismissOnboardCard(card) {
-    try { storage.set(STORAGE_KEYS.ONBOARDED, 1); } catch { /* private mode */ }
+    try {
+      storage.set(STORAGE_KEYS.ONBOARDED, 1);
+    } catch {
+      /* private mode */
+    }
     if (card && card.parentNode) card.parentNode.removeChild(card);
   }
 
@@ -2864,8 +3299,11 @@
   // We only flip the flag on an explicit dismiss (× or button), so a
   // brand-new install always sees the card on the first home render.
   function hasOnboarded() {
-    try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.ONBOARDED)) === 1; }
-    catch { return false; }
+    try {
+      return JSON.parse(localStorage.getItem(STORAGE_KEYS.ONBOARDED)) === 1;
+    } catch {
+      return false;
+    }
   }
 
   // Empty-state block for the per-section home cards (未有收藏路線 /
@@ -2946,19 +3384,23 @@
     // top element rather than stacking duplicates. While the fetch is
     // still in flight on the very first render the banner simply isn't
     // there (typical round-trip is sub-100ms once the SW has the file).
-    fetchDisruptions().then((all) => {
-      const matched = disruptionsForUserRoutes(all);
-      if (matched.length === 0) return;
-      const banner = renderDisruptionBanner(matched);
-      if (!banner) return;
-      const view = document.getElementById('view-home');
-      if (!view || view.hidden) return;
-      const cur = view.querySelector('.container') || view;
-      // Drop any prior banner so re-renders don't pile up.
-      const existing = cur.querySelector('.disruption-banner');
-      if (existing) existing.remove();
-      cur.insertBefore(banner, cur.firstChild);
-    }).catch(() => { /* fetchDisruptions already swallows — defensive */ });
+    fetchDisruptions()
+      .then((all) => {
+        const matched = disruptionsForUserRoutes(all);
+        if (matched.length === 0) return;
+        const banner = renderDisruptionBanner(matched);
+        if (!banner) return;
+        const view = document.getElementById('view-home');
+        if (!view || view.hidden) return;
+        const cur = view.querySelector('.container') || view;
+        // Drop any prior banner so re-renders don't pile up.
+        const existing = cur.querySelector('.disruption-banner');
+        if (existing) existing.remove();
+        cur.insertBefore(banner, cur.firstChild);
+      })
+      .catch(() => {
+        /* fetchDisruptions already swallows — defensive */
+      });
 
     // First-run / empty-state hero: when the user has nothing saved or
     // recent, replace the operators strip + saved/recent sections with a
@@ -2967,31 +3409,37 @@
     // standard geo banner / nearest-stop pill in this branch — once the
     // user has any saved or recent activity the populated renderHome
     // path runs and these zones reappear.
-    if (state.savedRoutes.length === 0
-        && state.savedStops.length === 0
-        && state.recent.length === 0) {
+    if (
+      state.savedRoutes.length === 0 &&
+      state.savedStops.length === 0 &&
+      state.recent.length === 0
+    ) {
       // Strip the cloned template's saved/recent scaffolding so the
       // empty-state hero doesn't sit next to three "未有收藏…" placeholders.
-      ['.operators-strip',
-       '[data-bind="savedRoutes"]',
-       '[data-bind="savedStops"]',
-       '[data-bind="recent"]']
-        .forEach((sel) => {
-          $$(sel, container).forEach((n) => {
-            const h = n.previousElementSibling;
-            // Remove a sibling section-title <h2> immediately above, if
-            // it's a heading that belongs to this empty block (saved
-            // routes / stops / recent). Operators strip keeps its own
-            // <h2>, but the whole strip is removed wholesale below.
-            if (h && /^H\d$/.test(h.tagName)
-                && (h.dataset.i18n === 'savedRoutes'
-                    || h.dataset.i18n === 'savedStops'
-                    || h.dataset.i18n === 'recentSearches')) {
-              h.remove();
-            }
-            n.remove();
-          });
+      [
+        '.operators-strip',
+        '[data-bind="savedRoutes"]',
+        '[data-bind="savedStops"]',
+        '[data-bind="recent"]',
+      ].forEach((sel) => {
+        $$(sel, container).forEach((n) => {
+          const h = n.previousElementSibling;
+          // Remove a sibling section-title <h2> immediately above, if
+          // it's a heading that belongs to this empty block (saved
+          // routes / stops / recent). Operators strip keeps its own
+          // <h2>, but the whole strip is removed wholesale below.
+          if (
+            h &&
+            /^H\d$/.test(h.tagName) &&
+            (h.dataset.i18n === 'savedRoutes' ||
+              h.dataset.i18n === 'savedStops' ||
+              h.dataset.i18n === 'recentSearches')
+          ) {
+            h.remove();
+          }
+          n.remove();
         });
+      });
       container.insertBefore(buildHomeEmptyState(), container.firstChild);
       applyI18n(view);
       return;
@@ -3009,12 +3457,14 @@
 
     const savedRoutesEl = $('[data-bind="savedRoutes"]', view);
     if (state.savedRoutes.length === 0) {
-      savedRoutesEl.appendChild(buildEmptyStateBlock({
-        textKey: 'emptyRoutes',
-        tipKey: 'emptyFavRoutesTip',
-        ctaKey: 'emptyFavRoutesCta',
-        ctaHref: '#/search',
-      }));
+      savedRoutesEl.appendChild(
+        buildEmptyStateBlock({
+          textKey: 'emptyRoutes',
+          tipKey: 'emptyFavRoutesTip',
+          ctaKey: 'emptyFavRoutesCta',
+          ctaHref: '#/search',
+        })
+      );
     } else {
       const ul = el('div', { class: 'list' });
       state.savedRoutes.forEach((r) => ul.appendChild(routeRow(r)));
@@ -3023,12 +3473,14 @@
 
     const savedStopsEl = $('[data-bind="savedStops"]', view);
     if (state.savedStops.length === 0) {
-      savedStopsEl.appendChild(buildEmptyStateBlock({
-        textKey: 'emptyStops',
-        tipKey: 'emptyFavStopsTip',
-        ctaKey: 'emptyFavStopsCta',
-        ctaHref: '#/search',
-      }));
+      savedStopsEl.appendChild(
+        buildEmptyStateBlock({
+          textKey: 'emptyStops',
+          tipKey: 'emptyFavStopsTip',
+          ctaKey: 'emptyFavStopsCta',
+          ctaHref: '#/search',
+        })
+      );
     } else {
       const ul = el('div', { class: 'list' });
       state.savedStops.forEach((s) => ul.appendChild(stopRow(s)));
@@ -3037,12 +3489,14 @@
 
     const recentEl = $('[data-bind="recent"]', view);
     if (state.recent.length === 0) {
-      recentEl.appendChild(buildEmptyStateBlock({
-        textKey: 'emptyRecent',
-        tipKey: 'emptyRecentTip',
-        ctaKey: 'emptyRecentCta',
-        ctaHref: '#/search',
-      }));
+      recentEl.appendChild(
+        buildEmptyStateBlock({
+          textKey: 'emptyRecent',
+          tipKey: 'emptyRecentTip',
+          ctaKey: 'emptyRecentCta',
+          ctaHref: '#/search',
+        })
+      );
     } else {
       const ul = el('div', { class: 'list' });
       state.recent.slice(0, 8).forEach((r) => {
@@ -3055,47 +3509,69 @@
           //   4) raw operator id (last-resort fallback — better than a 16-char
           //      hash sub-line)
           const idxMeta = state.index && state.index.stops.get(r.stop);
-          const opMeta = (!idxMeta && state.index && state.index.kmbOperatorId)
-            ? state.index.kmbOperatorId.get(r.stop)
-            : null;
+          const opMeta =
+            !idxMeta && state.index && state.index.kmbOperatorId
+              ? state.index.kmbOperatorId.get(r.stop)
+              : null;
           // Self-heal poisoned entries from the previous (buggy) version:
           // if nameTc was cached as the raw operator ID before the reverse
           // map was wired up, replace it with the resolved name now.
           let cachedTc = r.nameTc || '';
           if (cachedTc === r.stop) cachedTc = '';
-          const hasName = cachedTc || (idxMeta && (idxMeta.nameTc || idxMeta.nameEn))
-            || (opMeta && (opMeta.nameTc || opMeta.nameEn));
+          const hasName =
+            cachedTc ||
+            (idxMeta && (idxMeta.nameTc || idxMeta.nameEn)) ||
+            (opMeta && (opMeta.nameTc || opMeta.nameEn));
           const row = hasName
-            ? { stop: r.stop, co: r.co || (idxMeta && idxMeta.co) || (opMeta ? 'KMB' : 'STOP'),
+            ? {
+                stop: r.stop,
+                co: r.co || (idxMeta && idxMeta.co) || (opMeta ? 'KMB' : 'STOP'),
                 nameTc: cachedTc || (opMeta && opMeta.nameTc) || (idxMeta && idxMeta.nameTc) || '',
                 nameSc: r.nameSc || (opMeta && opMeta.nameSc) || (idxMeta && idxMeta.nameSc) || '',
-                nameEn: r.nameEn || (opMeta && opMeta.nameEn) || (idxMeta && idxMeta.nameEn) || '' }
+                nameEn: r.nameEn || (opMeta && opMeta.nameEn) || (idxMeta && idxMeta.nameEn) || '',
+              }
             : { stop: r.stop, co: r.co || (idxMeta && idxMeta.co) || 'STOP' };
           ul.appendChild(stopRow(row));
         } else if (r.route) {
           // Hydrate the recent item with the current route meta (dest/orig
           // are not stored in localStorage — look them up from the index so
           // the row shows a useful destination instead of an empty string).
-          const meta = (state.index && (state.index.routes.get(makeRouteKey(r.co, r.route, r.dir, r.service))
-            || state.index.ctbRoutes.get(makeRouteKey(r.co, r.route, r.dir, r.service))))
-            || null;
-          ul.appendChild(routeRow({
-            co: r.co,
-            route: r.route,
-            dir: r.dir,
-            service: r.service,
-            destTc: meta ? meta.destTc : '',
-            destEn: meta ? meta.destEn : '',
-            origTc: meta ? meta.origTc : '',
-            origEn: meta ? meta.origEn : '',
-          }));
+          const meta =
+            (state.index &&
+              (state.index.routes.get(makeRouteKey(r.co, r.route, r.dir, r.service)) ||
+                state.index.ctbRoutes.get(makeRouteKey(r.co, r.route, r.dir, r.service)))) ||
+            null;
+          ul.appendChild(
+            routeRow({
+              co: r.co,
+              route: r.route,
+              dir: r.dir,
+              service: r.service,
+              destTc: meta ? meta.destTc : '',
+              destEn: meta ? meta.destEn : '',
+              origTc: meta ? meta.origTc : '',
+              origEn: meta ? meta.origEn : '',
+            })
+          );
         }
       });
       recentEl.appendChild(ul);
-      recentEl.appendChild(el('button', {
-        class: 'btn-secondary', style: 'margin-top: 12px; color: var(--ink); background: var(--bg-soft);',
-        onclick: () => { state.recent = []; persist(); renderHome(); toast(t_str('cleared')); },
-      }, t_str('clearRecent')));
+      recentEl.appendChild(
+        el(
+          'button',
+          {
+            class: 'btn-secondary',
+            style: 'margin-top: 12px; color: var(--ink); background: var(--bg-soft);',
+            onclick: () => {
+              state.recent = [];
+              persist();
+              renderHome();
+              toast(t_str('cleared'));
+            },
+          },
+          t_str('clearRecent')
+        )
+      );
     }
 
     // Final i18n sweep. The static template was translated inside
@@ -3112,16 +3588,17 @@
     // fill them in (same code path as the search view).
     if (state.userLoc) {
       const opsStrip = view.querySelector('.operators-strip');
-      const anchor = (opsStrip && opsStrip.parentNode === container)
-        ? opsStrip.nextSibling
-        : container.firstChild;
+      const anchor =
+        opsStrip && opsStrip.parentNode === container ? opsStrip.nextSibling : container.firstChild;
 
       const nearbyStopsBlock = el('div', { 'data-bind': 'nearbyStops' });
       nearbyStopsBlock.appendChild(el('h2', { class: 'section-title' }, t_str('nearbyStops')));
       const nearbyRoutesBlock = el('div', { 'data-bind': 'nearbyRoutes' });
       nearbyRoutesBlock.appendChild(el('h2', { class: 'section-title' }, t_str('nearbyRoutes')));
       const nearbyStationsBlock = el('div', { 'data-bind': 'nearbyStations' });
-      nearbyStationsBlock.appendChild(el('h2', { class: 'section-title' }, t_str('nearbyStations')));
+      nearbyStationsBlock.appendChild(
+        el('h2', { class: 'section-title' }, t_str('nearbyStations'))
+      );
 
       // Insert before the savedRoutes section (operators strip is at top,
       // savedRoutes heading is right after it).
@@ -3167,7 +3644,10 @@
     if (!state.lastSearchQ && state.userLoc && state.index) {
       const nearest = Array.from(state.index.stops.values())
         .filter((s) => Number.isFinite(s.lat) && Number.isFinite(s.lng))
-        .map((s) => ({ s, d: haversine(state.userLoc.lat, state.userLoc.lng, s.lat, s.lng) }))
+        .map((s) => ({
+          s,
+          d: busetaUtils.haversine(state.userLoc.lat, state.userLoc.lng, s.lat, s.lng),
+        }))
         .sort((a, b) => a.d - b.d)[0];
       if (nearest) {
         const name = nameFor(nearest.s);
@@ -3179,17 +3659,29 @@
     } else {
       input.value = state.lastSearchQ;
     }
-    input.addEventListener('input', debounce(() => {
-      state.lastSearchQ = input.value.trim();
-      renderResults();
-    }, 120));
+    input.addEventListener(
+      'input',
+      debounce(() => {
+        state.lastSearchQ = input.value.trim();
+        renderResults();
+      }, 120)
+    );
     input.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') { input.value = ''; state.lastSearchQ = ''; renderResults(); }
+      if (e.key === 'Escape') {
+        input.value = '';
+        state.lastSearchQ = '';
+        renderResults();
+      }
     });
 
     const clear = $('#searchClear', view);
     clear.hidden = !state.lastSearchQ;
-    clear.addEventListener('click', () => { input.value = ''; state.lastSearchQ = ''; renderResults(); input.focus(); });
+    clear.addEventListener('click', () => {
+      input.value = '';
+      state.lastSearchQ = '';
+      renderResults();
+      input.focus();
+    });
 
     $$('.filter-pill', view).forEach((pill) => {
       pill.addEventListener('click', () => {
@@ -3216,7 +3708,13 @@
     const q = state.lastSearchQ;
     if (!q) {
       out.appendChild(el('p', { class: 'empty', style: 'margin-top: 8px;' }, t_str('searchHint')));
-      out.appendChild(el('p', { class: 'empty', style: 'margin-top: 8px; border-style: solid;' }, t_str('noFavHint')));
+      out.appendChild(
+        el(
+          'p',
+          { class: 'empty', style: 'margin-top: 8px; border-style: solid;' },
+          t_str('noFavHint')
+        )
+      );
       return;
     }
     const matches = searchIndex(q);
@@ -3239,7 +3737,10 @@
     const seen = new Set();
 
     const push = (kind, data, score) => {
-      const key = kind + '|' + (kind === 'stop' ? data.stop : makeRouteKey(data.co, data.route, data.dir, data.service));
+      const key =
+        kind +
+        '|' +
+        (kind === 'stop' ? data.stop : makeRouteKey(data.co, data.route, data.dir, data.service));
       if (seen.has(key)) return;
       seen.add(key);
       matches.push({ kind, data, score });
@@ -3268,36 +3769,35 @@
       const prior = seenRoutes.get(routeKey);
       const reg = isRegularService(r);
       if (prior) {
-          // Always prefer a regular-service variant as the main row, even if
-          // it scored lower on text matching; otherwise prefer the higher
-          // score. This guarantees the user-facing row points at the regular
-          // service rather than a school special.
-          const upgrade = (reg && !prior.regular)
-            || (reg === prior.regular && score > prior.score);
-          if (upgrade) {
+        // Always prefer a regular-service variant as the main row, even if
+        // it scored lower on text matching; otherwise prefer the higher
+        // score. This guarantees the user-facing row points at the regular
+        // service rather than a school special.
+        const upgrade = (reg && !prior.regular) || (reg === prior.regular && score > prior.score);
+        if (upgrade) {
+          const idx = matches.findIndex((m) => m.kind === 'route' && m.data === prior.data);
+          if (idx >= 0) {
+            const newHasSchool = prior.hasSchool || !reg;
+            matches[idx] = { kind: 'route', data: { ...r, _hasSchool: newHasSchool }, score };
+          }
+          seenRoutes.set(routeKey, {
+            score,
+            count: prior.count + 1,
+            regular: reg,
+            hasSchool: prior.hasSchool || !reg,
+          });
+        } else {
+          prior.count += 1;
+          if (!reg) {
+            prior.hasSchool = true;
             const idx = matches.findIndex((m) => m.kind === 'route' && m.data === prior.data);
-            if (idx >= 0) {
-              const newHasSchool = prior.hasSchool || !reg;
-              matches[idx] = { kind: 'route', data: { ...r, _hasSchool: newHasSchool }, score };
-            }
-            seenRoutes.set(routeKey, {
-              score,
-              count: prior.count + 1,
-              regular: reg,
-              hasSchool: prior.hasSchool || !reg,
-            });
-          } else {
-            prior.count += 1;
-            if (!reg) {
-              prior.hasSchool = true;
-              const idx = matches.findIndex((m) => m.kind === 'route' && m.data === prior.data);
-              if (idx >= 0 && !matches[idx].data._hasSchool) {
-                matches[idx] = { ...matches[idx], data: { ...matches[idx].data, _hasSchool: true } };
-              }
+            if (idx >= 0 && !matches[idx].data._hasSchool) {
+              matches[idx] = { ...matches[idx], data: { ...matches[idx].data, _hasSchool: true } };
             }
           }
-          return;
         }
+        return;
+      }
       seenRoutes.set(routeKey, { score, count: 1, regular: reg, hasSchool: !reg });
       push('route', { ...r, _hasSchool: !reg }, score);
     };
@@ -3314,7 +3814,8 @@
           if (String(code).toLowerCase() === lower) score += 90;
           else if (String(code).toLowerCase().startsWith(lower)) score += 50;
           else if (lname.includes(lower)) score += 20;
-          if (score > 0) push('route', { ...r, route: code, service: '', dir: '', _lineView: true }, score);
+          if (score > 0)
+            push('route', { ...r, route: code, service: '', dir: '', _lineView: true }, score);
         } else {
           // Station
           const text = `${norm(r.nameTc)} ${norm(r.nameEn)}`;
@@ -3412,15 +3913,15 @@
   // Whether the home/search view should currently show the in-page
   // permission banner. The banner stays mounted across the whole
   // opt-in lifecycle so the user can see what state we're in:
-//   - idle         → "啟用位置" CTA
-//   - pending      → spinner + "定位中…" (gives instant visual confirmation
-//                    that the click was registered, even before the
-//                    browser's native prompt appears)
-//   - denied       → "再試一次" button
-//   - unavailable  → muted "位置不可用" label, no retry
-// Only hide the banner after the user has successfully granted location
-// (state.userLoc is set) — at which point the nearest-stop pill or
-// nearby sections replace it.
+  //   - idle         → "啟用位置" CTA
+  //   - pending      → spinner + "定位中…" (gives instant visual confirmation
+  //                    that the click was registered, even before the
+  //                    browser's native prompt appears)
+  //   - denied       → "再試一次" button
+  //   - unavailable  → muted "位置不可用" label, no retry
+  // Only hide the banner after the user has successfully granted location
+  // (state.userLoc is set) — at which point the nearest-stop pill or
+  // nearby sections replace it.
   function shouldShowGeoBanner() {
     return !state.userLoc;
   }
@@ -3453,8 +3954,10 @@
     svg.setAttribute('height', '22');
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     path.setAttribute('fill', 'currentColor');
-    path.setAttribute('d',
-      'M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z');
+    path.setAttribute(
+      'd',
+      'M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z'
+    );
     svg.appendChild(path);
     iconWrap.appendChild(svg);
     banner.appendChild(iconWrap);
@@ -3464,7 +3967,9 @@
       body.appendChild(el('div', { class: 'geo-banner-title' }, t_str('geoBannerDeniedTitle')));
       body.appendChild(el('div', { class: 'geo-banner-text' }, t_str('geoBannerDeniedBody')));
     } else if (isUnavailable) {
-      body.appendChild(el('div', { class: 'geo-banner-title' }, t_str('geoBannerUnavailableTitle')));
+      body.appendChild(
+        el('div', { class: 'geo-banner-title' }, t_str('geoBannerUnavailableTitle'))
+      );
       body.appendChild(el('div', { class: 'geo-banner-text' }, t_str('geoBannerUnavailableBody')));
     } else {
       body.appendChild(el('div', { class: 'geo-banner-title' }, t_str('geoBannerTitle')));
@@ -3473,28 +3978,51 @@
     banner.appendChild(body);
 
     if (isPending) {
-      const spinner = el('span', { class: 'geo-banner-cta btn-primary geo-banner-cta--pending', 'aria-live': 'polite' });
+      const spinner = el('span', {
+        class: 'geo-banner-cta btn-primary geo-banner-cta--pending',
+        'aria-live': 'polite',
+      });
       const ring = el('span', { class: 'geo-spinner', 'aria-hidden': 'true' });
       spinner.appendChild(ring);
       spinner.appendChild(document.createTextNode(t_str('locating')));
       spinner.disabled = true;
       banner.appendChild(spinner);
     } else if (isDenied) {
-      banner.appendChild(el('button', {
-        class: 'geo-banner-cta btn-primary',
-        type: 'button',
-        onclick: () => { retryLocation(); },
-      }, t_str('retryLocation')));
+      banner.appendChild(
+        el(
+          'button',
+          {
+            class: 'geo-banner-cta btn-primary',
+            type: 'button',
+            onclick: () => {
+              retryLocation();
+            },
+          },
+          t_str('retryLocation')
+        )
+      );
     } else if (isUnavailable) {
       // No retry — the browser simply doesn't expose geolocation.
-      const pill = el('span', { class: 'geo-banner-cta geo-banner-cta--muted', 'aria-hidden': 'true' }, t_str('locationUnavailableShort'));
+      const pill = el(
+        'span',
+        { class: 'geo-banner-cta geo-banner-cta--muted', 'aria-hidden': 'true' },
+        t_str('locationUnavailableShort')
+      );
       banner.appendChild(pill);
     } else {
-      banner.appendChild(el('button', {
-        class: 'geo-banner-cta btn-primary',
-        type: 'button',
-        onclick: () => { requestLocation(); },
-      }, t_str('geoBannerCta')));
+      banner.appendChild(
+        el(
+          'button',
+          {
+            class: 'geo-banner-cta btn-primary',
+            type: 'button',
+            onclick: () => {
+              requestLocation();
+            },
+          },
+          t_str('geoBannerCta')
+        )
+      );
     }
 
     return banner;
@@ -3507,7 +4035,10 @@
     if (!state.userLoc || !state.index) return null;
     const nearbyStops = Array.from(state.index.stops.values())
       .filter((s) => Number.isFinite(s.lat) && Number.isFinite(s.lng))
-      .map((s) => ({ s, d: haversine(state.userLoc.lat, state.userLoc.lng, s.lat, s.lng) }))
+      .map((s) => ({
+        s,
+        d: busetaUtils.haversine(state.userLoc.lat, state.userLoc.lng, s.lat, s.lng),
+      }))
       .sort((a, b) => a.d - b.d);
     const top = nearbyStops[0];
     if (!top) return null;
@@ -3528,8 +4059,10 @@
     path.setAttribute('stroke-width', '1.8');
     path.setAttribute('stroke-linecap', 'round');
     path.setAttribute('stroke-linejoin', 'round');
-    path.setAttribute('d',
-      'M12 21s-7-7.5-7-12a7 7 0 1 1 14 0c0 4.5-7 12-7 12zM12 11.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z');
+    path.setAttribute(
+      'd',
+      'M12 21s-7-7.5-7-12a7 7 0 1 1 14 0c0 4.5-7 12-7 12zM12 11.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z'
+    );
     svg.appendChild(path);
     left.appendChild(svg);
     row.appendChild(left);
@@ -3539,7 +4072,9 @@
     main.appendChild(el('span', { class: 'nearest-stop-name' }, name));
     row.appendChild(main);
 
-    row.appendChild(el('span', { class: 'nearest-stop-dist nearby-dist' }, formatDistance(top.d)));
+    row.appendChild(
+      el('span', { class: 'nearest-stop-dist nearby-dist' }, busetaUtils.formatDistance(top.d))
+    );
     row.appendChild(makeChev());
     return row;
   }
@@ -3578,12 +4113,14 @@
     path.setAttribute('stroke-width', '2');
     path.setAttribute('stroke-linecap', 'round');
     path.setAttribute('stroke-linejoin', 'round');
-    path.setAttribute('d',
+    path.setAttribute(
+      'd',
       'M2 8.5a16 16 0 0 1 20 0 ' +
-      'M5 12.5a11 11 0 0 1 14 0 ' +
-      'M8.5 16.5a6 6 0 0 1 7 0 ' +
-      'M12 20h.01 ' +
-      'M3 3l18 18');
+        'M5 12.5a11 11 0 0 1 14 0 ' +
+        'M8.5 16.5a6 6 0 0 1 7 0 ' +
+        'M12 20h.01 ' +
+        'M3 3l18 18'
+    );
     svg.appendChild(path);
     iconWrap.appendChild(svg);
     wrap.appendChild(iconWrap);
@@ -3628,125 +4165,15 @@
   // as DD.MM.YYYY, HTML bodies). It has CORS * and a daily Last-Modified,
   // so we cache it in the SW with a 24h TTL + If-Modified-Since and only
   // touch the network when the cached entry is stale.
-  const TD_DISRUPTIONS_URL = 'https://www.td.gov.hk/datagovhk_tis/traffic-notices/Notices_on_Public_Transports.xml';
+  const TD_DISRUPTIONS_URL =
+    'https://www.td.gov.hk/datagovhk_tis/traffic-notices/Notices_on_Public_Transports.xml';
 
-  // Parse a TD `DD.MM.YYYY` date string into the canonical `YYYY-MM-DD`
-  // form used everywhere else (compareable via plain string compare).
-  // Returns '' on any malformed input so the caller can drop the notice
-  // rather than surface a half-parsed row.
-  function parseTdDate(s) {
-    if (typeof s !== 'string') return '';
-    const m = /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/.exec(s.trim());
-    if (!m) return '';
-    const d = parseInt(m[1], 10);
-    const mo = parseInt(m[2], 10);
-    const y = m[3];
-    if (mo < 1 || mo > 12 || d < 1 || d > 31) return '';
-    return `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-  }
-
-  // Today's date in the HK time zone as `YYYY-MM-DD` (the same shape
-  // the until filter compares against). Falls back to UTC on the
-  // vanishingly rare browser that lacks full Intl+timeZone support.
-  function hktToday() {
-    try {
-      return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Hong_Kong' });
-    } catch (_) {
-      return new Date().toISOString().slice(0, 10);
-    }
-  }
-
-  // Map an operator prefix found in the TC/EN title to the canonical
-  // operator code used by disruptionsForUserRoutes (KMB / LWB / CTB /
-  // NWFB / GMB / MTR / LRT). Returns null for cross-harbour-only and
-  // area-wide notices — those should match any operator carrying the
-  // route number (or, in the area-wide case, be dropped at the route-
-  // extraction stage below).
-  function classifyOperator(titleTc, titleEn) {
-    const body = `${titleTc || ''} ${titleEn || ''}`;
-    // Order matters: more-specific operators (LWB → CTB → NWFB) must
-    // match before GMB so a title like "Long Win" doesn't fall through
-    // to the catch-all minibus rule.
-    if (/九巴|KMB/.test(body)) return 'KMB';
-    if (/龍運|Long Win|LWB/.test(body)) return 'LWB';
-    if (/城巴|CTB|Citybus/.test(body)) return 'CTB';
-    if (/新巴|NWFB/.test(body)) return 'NWFB';
-    if (/港島專線小巴|新界專線小巴|九龍專線小巴|專線小巴|GMB|Green Minibus/.test(body)) return 'GMB';
-    if (/港鐵巴士|港鐵接駁巴士|MTR Feeder Bus|MTR/.test(body)) return 'MTR';
-    if (/輕鐵|Light Rail|LRT/.test(body)) return 'LRT';
-    return null;
-  }
-
-  // Pull a route-number list out of the TC and EN title text. Returns
-  // the merged, de-duplicated result so the caller can attach one item
-  // per route per notice. Returns [] when no parseable route number
-  // exists — area-wide notices like "Bus Stop Relocation on Wah Fu
-  // Road" deliberately fail both extractors so they're dropped here
-  // rather than surfacing as banner items with an empty `route`.
-  function extractRouteNumbers(titleTc, titleEn) {
-    const tc = titleTc || '';
-    const en = titleEn || '';
-    const out = new Set();
-    const routeLike = /^[A-Z0-9][0-9A-Z]*$/;
-
-    // CN pattern: text between 第 and 號 (or 號線). Capture as wide a
-    // span as the title offers, then split on the CN/EN separator
-    // characters that the TD titles use between route numbers in a
-    // list. Token filter requires at least one alphanumeric with a
-    // leading letter-or-digit — pure punctuation / parens fall through.
-    const cnRegex = /第([^第]{0,40}?)號(?:線)?/g;
-    let cm;
-    while ((cm = cnRegex.exec(tc)) !== null) {
-      for (const part of cm[1].split(/[、，,及和 \t()（）]/)) {
-        const t = part.trim();
-        if (routeLike.test(t)) out.add(t);
-      }
-    }
-
-    // EN pattern: "Route No." / "Route Nos." followed by a comma- and
-    // "and"-separated list of route tokens. Capture up to the next
-    // sentence boundary (".", "Route ", or end-of-string) so a trailing
-    // prose fragment like "Siu Sai Wan (Island Resort)" doesn't sneak
-    // in. Splits into chunks, then takes the leading route-like token
-    // from each chunk (chunks occasionally start with a stray word like
-    // "Siu Sai Wan"; we only want the first route-like token anyway).
-    const enRegex = /Route\s+Nos?\.?\s*(.+?)(?:\.|\s+Route\s+|$)/g;
-    let em;
-    while ((em = enRegex.exec(en)) !== null) {
-      for (const part of em[1].split(/,\s*|\s+and\s+/)) {
-        const m2 = /^\s*([A-Z0-9][0-9A-Z]*)/.exec(part);
-        if (m2) out.add(m2[1]);
-      }
-    }
-
-    return Array.from(out);
-  }
-
-  // Heuristic severity classifier — scans the TC + EN title text (and
-  // the TC + EN content bodies — the bodies often restate the impact
-  // in plainer language than the title). Severe keywords win over warn,
-  // warn over info, info over the default. We deliberately skip the SC
-  // body to keep the haystack small (the SC body is usually a near-
-  // duplicate of the TC one).
-  const SEVERITY_SEVERE = [
-    /暫停/, /停駛/, /取消服務/, /全線停駛/, /封閉/, /封路/,
-    /suspend/i, /suspended/i, /cancellation/i, /cancelled/i, /closed/i, /closure/i,
-  ];
-  const SEVERITY_WARN = [
-    /改道/, /繞道/, /繞經/, /臨時遷移/, /調整服務/, /服務調整/, /縮短/,
-    /detour/i, /relocation/i, /relocated/i, /diversion/i, /service adjustment/i, /temporary relocation/i,
-  ];
-  const SEVERITY_INFO = [
-    /車費/, /加強/, /更換營辦商/, /新增/,
-    /fare/i, /enhancement/i, /operator replacement/i, /new stop/i,
-  ];
-  function classifySeverity(titleTc, titleEn, contentTc, contentEn) {
-    const body = `${titleTc || ''} ${titleEn || ''} ${contentTc || ''} ${contentEn || ''}`;
-    for (const re of SEVERITY_SEVERE) if (re.test(body)) return 'severe';
-    for (const re of SEVERITY_WARN) if (re.test(body)) return 'warn';
-    for (const re of SEVERITY_INFO) if (re.test(body)) return 'info';
-    return 'info';
-  }
+  // Helpers used by the TD disruption pipeline (parseTdDate, hktToday,
+  // addDays, stripTags, classifyOperator, extractRouteNumbers,
+  // classifySeverity) all live in src/utils/date.js,
+  // src/utils/disruption-classify.js, and src/utils/text.js. Loaded as
+  // classic scripts in index.html BEFORE app.js so they're available on
+  // globalThis.busetaUtils.* when this file evaluates.
 
   let disruptionsCache = null;
 
@@ -3775,7 +4202,7 @@
     const p = (async () => {
       let xmlText;
       try {
-        xmlText = await fetchText(TD_DISRUPTIONS_URL);
+        xmlText = await busetaUtils.fetchText(TD_DISRUPTIONS_URL);
       } catch (_) {
         return [];
       }
@@ -3792,7 +4219,7 @@
       const notices = doc.getElementsByTagName('Notice');
       if (!notices || notices.length === 0) return [];
 
-      const today = hktToday();
+      const today = busetaUtils.hktToday();
       // Compare strings as YYYY-MM-DD: lexicographic == chronological.
       // Today-30d in HK time so we don't accidentally include notices
       // that started yesterday in UTC but 1+ day ago in HK.
@@ -3813,29 +4240,29 @@
         const titleTc = textOf(n, 'Title_TC');
         const titleEn = textOf(n, 'Title_EN');
         const titleSc = textOf(n, 'Title_SC') || titleTc || titleEn;
-        const start = parseTdDate(textOf(n, 'StartEffectiveDate'));
+        const start = busetaUtils.parseTdDate(textOf(n, 'StartEffectiveDate'));
         // TD feed doesn't carry an EndEffectiveDate in practice (audit:
         // 0 of 536 records) — keep the field name for the day the feed
         // grows one, and so the until-shape stays honest.
-        const end = parseTdDate(textOf(n, 'EndEffectiveDate'));
+        const end = busetaUtils.parseTdDate(textOf(n, 'EndEffectiveDate'));
         if (!start || start < cutoff) continue;
         if (end && end < today) continue;
 
         // Strip HTML from the content bodies for severity sniffing —
         // the feeds stuff `<div>`, `<strong>` etc. around the same
         // keywords the title uses, and we want the prose text only.
-        const contentTc = stripTags(textOf(n, 'Content_TC'));
-        const contentEn = stripTags(textOf(n, 'Content_EN'));
+        const contentTc = busetaUtils.stripTags(textOf(n, 'Content_TC'));
+        const contentEn = busetaUtils.stripTags(textOf(n, 'Content_EN'));
 
-        const routes = extractRouteNumbers(titleTc, titleEn);
+        const routes = busetaUtils.extractRouteNumbers(titleTc, titleEn);
         if (!routes.length) continue;
 
-        const co = classifyOperator(titleTc, titleEn);
-        const severity = classifySeverity(titleTc, titleEn, contentTc, contentEn);
+        const co = busetaUtils.classifyOperator(titleTc, titleEn);
+        const severity = busetaUtils.classifySeverity(titleTc, titleEn, contentTc, contentEn);
         // until = explicit end date when present, otherwise start + 30d
         // so the existing isDisruptionExpired filter keeps the notice
         // visible for the same 30-day window we use for the start cutoff.
-        const until = end || addDays(start, 30);
+        const until = end || busetaUtils.addDays(start, 30);
 
         // Trilingual title fallback — keep all three fields populated so
         // disruptionTitleFor() in any of the three langs has something
@@ -3865,26 +4292,6 @@
     return el && el.textContent ? el.textContent : '';
   }
 
-  // Helper: strip every HTML tag from a string. Used for the severity
-  // sniff — TD ships the content bodies as `<div>...<strong>...` and
-  // we don't want markup noise in the keyword match.
-  function stripTags(s) {
-    if (!s) return '';
-    return s.replace(/<[^>]*>/g, ' ');
-  }
-
-  // Helper: add `n` days to a `YYYY-MM-DD` string and return the same
-  // shape. Used to synthesise a 30-day `until` for notices that only
-  // carry a StartEffectiveDate. Returns the input string on parse
-  // failure so the caller never produces `undefined`.
-  function addDays(ymd, n) {
-    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(ymd || '');
-    if (!m) return ymd || '';
-    const d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]));
-    d.setUTCDate(d.getUTCDate() + n);
-    return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
-  }
-
   // Pick the localised title for a disruption item in the current UI
   // language, with a sensible fallback chain (lang → tc → en).
   function disruptionTitleFor(it) {
@@ -3903,11 +4310,11 @@
 
     // Sort highest severity first so the banner's tint always reflects
     // the worst active alert for the user's routes.
-    const sevRank = (s) => s === 'severe' ? 2 : s === 'warn' ? 1 : 0;
+    const sevRank = (s) => (s === 'severe' ? 2 : s === 'warn' ? 1 : 0);
     const sorted = items.slice().sort((a, b) => sevRank(b.severity) - sevRank(a.severity));
     const top = sorted[0];
-    const sevClass = top.severity === 'severe' ? 'is-severe'
-      : top.severity === 'warn' ? 'is-warn' : 'is-info';
+    const sevClass =
+      top.severity === 'severe' ? 'is-severe' : top.severity === 'warn' ? 'is-warn' : 'is-info';
 
     const wrap = el('div', {
       class: `disruption-banner ${sevClass}`,
@@ -3924,8 +4331,10 @@
     svg.setAttribute('height', '20');
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     path.setAttribute('fill', 'currentColor');
-    path.setAttribute('d',
-      'M12 2 L22 20 H2 Z M12 9 a1.2 1.2 0 0 1 1.2 1.2 v4.6 a1.2 1.2 0 0 1 -2.4 0 v-4.6 A1.2 1.2 0 0 1 12 9 Z M12 16.4 a1.4 1.4 0 1 0 0 2.8 a1.4 1.4 0 0 0 0 -2.8 Z');
+    path.setAttribute(
+      'd',
+      'M12 2 L22 20 H2 Z M12 9 a1.2 1.2 0 0 1 1.2 1.2 v4.6 a1.2 1.2 0 0 1 -2.4 0 v-4.6 A1.2 1.2 0 0 1 12 9 Z M12 16.4 a1.4 1.4 0 1 0 0 2.8 a1.4 1.4 0 0 0 0 -2.8 Z'
+    );
     svg.appendChild(path);
     iconWrap.appendChild(svg);
     wrap.appendChild(iconWrap);
@@ -3936,7 +4345,9 @@
     const head = el('div', { class: 'disruption-banner-head' });
     head.appendChild(el('span', { class: 'disruption-banner-label' }, t_str('disruptionBanner')));
     head.appendChild(document.createTextNode(' · '));
-    head.appendChild(el('span', { class: 'disruption-banner-pill' }, t_str('disruptionForRoute', top.route)));
+    head.appendChild(
+      el('span', { class: 'disruption-banner-pill' }, t_str('disruptionForRoute', top.route))
+    );
     if (sorted.length > 1) {
       head.appendChild(document.createTextNode(' '));
       head.appendChild(el('span', { class: 'disruption-banner-more' }, `+${sorted.length - 1}`));
@@ -3945,10 +4356,17 @@
 
     // Severity hint line — gives the user a one-line summary of how bad
     // the worst alert is, without forcing them to expand.
-    body.appendChild(el('div', { class: 'disruption-banner-hint' },
-      top.severity === 'severe' ? t_str('disruptionSeveritySevere')
-        : top.severity === 'warn' ? t_str('disruptionSeverityWarn')
-        : t_str('disruptionSeverityInfo')));
+    body.appendChild(
+      el(
+        'div',
+        { class: 'disruption-banner-hint' },
+        top.severity === 'severe'
+          ? t_str('disruptionSeveritySevere')
+          : top.severity === 'warn'
+            ? t_str('disruptionSeverityWarn')
+            : t_str('disruptionSeverityInfo')
+      )
+    );
     wrap.appendChild(body);
 
     // Chevron toggle on the right — click toggles the expanded panel.
@@ -3980,11 +4398,15 @@
     const list = el('ul', { class: 'disruption-banner-list' });
     sorted.forEach((it) => {
       const li = el('li', { class: 'disruption-banner-item' });
-      li.appendChild(el('span', { class: 'disruption-banner-pill' }, t_str('disruptionForRoute', it.route)));
+      li.appendChild(
+        el('span', { class: 'disruption-banner-pill' }, t_str('disruptionForRoute', it.route))
+      );
       const txt = el('span', { class: 'disruption-banner-text' }, disruptionTitleFor(it));
       li.appendChild(txt);
       if (it.until) {
-        li.appendChild(el('span', { class: 'disruption-banner-until' }, t_str('disruptionUntil', it.until)));
+        li.appendChild(
+          el('span', { class: 'disruption-banner-until' }, t_str('disruptionUntil', it.until))
+        );
       }
       list.appendChild(li);
     });
@@ -3997,7 +4419,10 @@
     const setExpanded = (next) => {
       panel.hidden = !next;
       toggle.setAttribute('aria-expanded', String(next));
-      toggle.setAttribute('aria-label', next ? t_str('disruptionCollapse') : t_str('disruptionExpand'));
+      toggle.setAttribute(
+        'aria-label',
+        next ? t_str('disruptionCollapse') : t_str('disruptionExpand')
+      );
       wrap.classList.toggle('is-open', next);
     };
     toggle.addEventListener('click', () => {
@@ -4016,19 +4441,7 @@
   // treated as indefinite ("until further notice") and never expire via
   // this check. Unparseable `until` values also fall through to false so
   // a typo doesn't hide a real alert.
-  function isDisruptionExpired(it) {
-    if (!it || !it.until) return false;
-    // toLocaleDateString with 'en-CA' produces YYYY-MM-DD, the same
-    // shape our JSON uses, so a plain string compare is chronological.
-    let todayHkt;
-    try {
-      todayHkt = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Hong_Kong' });
-    } catch (_) {
-      // Older browsers without full Intl support — fall back to UTC.
-      todayHkt = new Date().toISOString().slice(0, 10);
-    }
-    return typeof it.until === 'string' && it.until < todayHkt;
-  }
+  // isDisruptionExpired moved to src/utils/disruptions.js — Phase 3 modularization
 
   // Filter the curated disruption list down to entries that apply to at
   // least one route in `state.savedRoutes` or the route-shaped entries of
@@ -4046,11 +4459,13 @@
       wanted.set(`\t${route}`, true);
     };
     (state.savedRoutes || []).forEach((r) => pushKey(r.co, r.route));
-    (state.recent || []).forEach((r) => { if (r.route) pushKey(r.co, r.route); });
+    (state.recent || []).forEach((r) => {
+      if (r.route) pushKey(r.co, r.route);
+    });
 
     return items.filter((it) => {
       if (!it || !it.route) return false;
-      if (isDisruptionExpired(it)) return false;
+      if (busetaUtils.isDisruptionExpired(it)) return false;
       if (it.co) return wanted.has(`${it.co}\t${it.route}`);
       return wanted.has(`\t${it.route}`);
     });
@@ -4100,7 +4515,7 @@
     // --- Nearby bus stops (only KMB/CTB/etc — stops we have lat/lng for) ---
     const nearbyStops = Array.from(state.index.stops.values())
       .filter((s) => Number.isFinite(s.lat) && Number.isFinite(s.lng))
-      .map((s) => ({ s, d: haversine(loc.lat, loc.lng, s.lat, s.lng) }))
+      .map((s) => ({ s, d: busetaUtils.haversine(loc.lat, loc.lng, s.lat, s.lng) }))
       .filter((x) => x.d < 1.2)
       .sort((a, b) => a.d - b.d)
       .slice(0, 12);
@@ -4112,7 +4527,8 @@
       } else {
         // Home view: bind blocks have only the section title we added.
         if (stopsBlock) stopsBlock.appendChild(el('p', { class: 'muted' }, t_str('noNearbyStops')));
-        if (routesBlock) routesBlock.appendChild(el('p', { class: 'muted' }, t_str('noNearbyRoutes')));
+        if (routesBlock)
+          routesBlock.appendChild(el('p', { class: 'muted' }, t_str('noNearbyRoutes')));
       }
     } else {
       Promise.allSettled(nearbyStops.map((x) => fetchKmbStopEta(x.s.stop))).then((results) => {
@@ -4121,19 +4537,26 @@
         results.forEach((rr, i) => {
           const stop = nearbyStops[i].s;
           const dist = nearbyStops[i].d;
-          const etas = (rr.status === 'fulfilled' && rr.value && Array.isArray(rr.value.data))
-            ? rr.value.data.filter((e) => e.eta).slice(0, 3)
-            : [];
+          const etas =
+            rr.status === 'fulfilled' && rr.value && Array.isArray(rr.value.data)
+              ? rr.value.data.filter((e) => e.eta).slice(0, 3)
+              : [];
           stopItems.push({ stop, dist, etas });
           etas.forEach((e) => {
-            const co = classifyKmbOp(e.route, '', e.dest_tc || '');
+            const co = busetaUtils.classifyKmbOp(e.route, '', e.dest_tc || '');
             const key = makeRouteKey(co, e.route, e.dir, e.service_type);
             if (!routeMap.has(key)) {
               routeMap.set(key, {
-                co, route: e.route, dir: e.dir, service: e.service_type,
-                origTc: '', origEn: '',
-                destTc: e.dest_tc, destEn: e.dest_en,
-                firstEta: e.eta, etaCount: 1,
+                co,
+                route: e.route,
+                dir: e.dir,
+                service: e.service_type,
+                origTc: '',
+                origEn: '',
+                destTc: e.dest_tc,
+                destEn: e.dest_en,
+                firstEta: e.eta,
+                etaCount: 1,
               });
             } else {
               routeMap.get(key).etaCount += 1;
@@ -4147,7 +4570,8 @@
         const liveStops = $('[data-bind="nearbyStops"]', liveView || view);
         const liveRoutes = $('[data-bind="nearbyRoutes"]', liveView || view);
         if (liveStops) liveStops.replaceChildren(buildNearbyStops(stopItems));
-        if (liveRoutes) liveRoutes.replaceChildren(buildNearbyRoutes(Array.from(routeMap.values())));
+        if (liveRoutes)
+          liveRoutes.replaceChildren(buildNearbyRoutes(Array.from(routeMap.values())));
       });
     }
 
@@ -4155,7 +4579,7 @@
     const nearbyMtr = Array.from(state.index.mtr.values())
       .filter((st) => st && !st._isLine)
       .filter((st) => Number.isFinite(st.lat) && Number.isFinite(st.lng))
-      .map((st) => ({ st, d: haversine(loc.lat, loc.lng, st.lat, st.lng) }))
+      .map((st) => ({ st, d: busetaUtils.haversine(loc.lat, loc.lng, st.lat, st.lng) }))
       .filter((x) => x.d < 1.5)
       .sort((a, b) => a.d - b.d)
       .slice(0, 6);
@@ -4171,10 +4595,12 @@
         stationsBlock.appendChild(el('p', { class: 'muted' }, t_str('noNearbyStations')));
       }
     } else {
-      Promise.allSettled(nearbyMtr.map((x) => {
-        const line = (x.st.lines && x.st.lines[0]) || null;
-        return line ? fetchMtrSchedule(line, x.st.stop).catch(() => null) : Promise.resolve(null);
-      })).then((results) => {
+      Promise.allSettled(
+        nearbyMtr.map((x) => {
+          const line = (x.st.lines && x.st.lines[0]) || null;
+          return line ? fetchMtrSchedule(line, x.st.stop).catch(() => null) : Promise.resolve(null);
+        })
+      ).then((results) => {
         const liveView = $('#' + view.id);
         const liveBlock = $('[data-bind="nearbyStations"]', liveView || view);
         if (liveBlock) liveBlock.replaceChildren(buildNearbyStations(nearbyMtr, results));
@@ -4200,11 +4626,15 @@
     const list = el('div', { class: 'list' });
     items.forEach(({ stop, dist, etas }) => {
       const name = nameFor(stop);
-      const row = el('a', { class: 'row', href: `#/stop/${encodeURIComponent(stop.stop)}`, tabindex: '0' });
+      const row = el('a', {
+        class: 'row',
+        href: `#/stop/${encodeURIComponent(stop.stop)}`,
+        tabindex: '0',
+      });
       row.appendChild(makeBadge(stop.co || 'STOP'));
       const main = el('div', { class: 'row-main' });
       main.appendChild(el('div', { class: 'row-title' }, name));
-      main.appendChild(el('div', { class: 'row-sub' }, formatDistance(dist)));
+      main.appendChild(el('div', { class: 'row-sub' }, busetaUtils.formatDistance(dist)));
       row.appendChild(main);
       const meta = el('div', { class: 'row-meta' });
       if (etas.length > 0) meta.appendChild(etaSpan(etas[0].eta));
@@ -4230,7 +4660,13 @@
       row.appendChild(makeBadge('MTR'));
       const main = el('div', { class: 'row-main' });
       main.appendChild(el('div', { class: 'row-title' }, name));
-      main.appendChild(el('div', { class: 'row-sub' }, `${line ? line + ' · ' : ''}${formatDistance(item.d)}`));
+      main.appendChild(
+        el(
+          'div',
+          { class: 'row-sub' },
+          `${line ? line + ' · ' : ''}${busetaUtils.formatDistance(item.d)}`
+        )
+      );
       row.appendChild(main);
       const meta = el('div', { class: 'row-meta' });
       const rr = results[i];
@@ -4241,7 +4677,14 @@
         const m = train ? parseInt(train.ttnt, 10) : null;
         if (Number.isFinite(m)) {
           if (m <= 0) meta.appendChild(el('span', { class: 'row-eta is-now' }, t_str('arriving')));
-          else meta.appendChild(el('span', { class: 'row-eta' + (m <= 2 ? ' is-soon' : '') }, `${m} ${t_str('minShort')}`));
+          else
+            meta.appendChild(
+              el(
+                'span',
+                { class: 'row-eta' + (m <= 2 ? ' is-soon' : '') },
+                `${m} ${t_str('minShort')}`
+              )
+            );
         } else {
           meta.appendChild(el('div', { class: 'row-dim' }, t_str('noEta')));
         }
@@ -4266,38 +4709,35 @@
     const list = el('div', { class: 'list' });
     items.slice(0, 12).forEach((r) => {
       const data = {
-        co: r.co, route: r.route, dir: r.dir, service: r.service,
-        origTc: r.origTc, origEn: r.origEn,
-        destTc: r.destTc, destEn: r.destEn,
+        co: r.co,
+        route: r.route,
+        dir: r.dir,
+        service: r.service,
+        origTc: r.origTc,
+        origEn: r.origEn,
+        destTc: r.destTc,
+        destEn: r.destEn,
       };
       const row = routeRow(data);
       const meta = $('.row-meta', row);
       meta.appendChild(etaSpan(r.firstEta));
-      if (r.etaCount > 1) meta.appendChild(el('div', { class: 'row-dim' }, t_str('etaCount', r.etaCount - 1)));
+      if (r.etaCount > 1)
+        meta.appendChild(el('div', { class: 'row-dim' }, t_str('etaCount', r.etaCount - 1)));
       list.appendChild(row);
     });
     root.appendChild(list);
     return root;
   }
 
-  function haversine(lat1, lng1, lat2, lng2) {
-    const R = 6371;
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLng = (lng2 - lng1) * Math.PI / 180;
-    const a = Math.sin(dLat/2)**2 + Math.cos(lat1 * Math.PI/180) * Math.cos(lat2 * Math.PI/180) * Math.sin(dLng/2)**2;
-    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-  }
-  function formatDistance(km) {
-    if (km < 1) return `${Math.round(km * 1000)} m`;
-    return `${km.toFixed(1)} km`;
-  }
+  // haversine + formatDistance moved to src/utils/geo.js — Phase 3 modularization
 
   // ------------------------------------------------------------------
   // Row builders
   // ------------------------------------------------------------------
   function makeBadge(co) {
     if (co === 'MTR') return el('span', { class: 'row-badge co-MTR', 'aria-label': 'MTR' }, 'M');
-    if (co === 'LRT') return el('span', { class: 'row-badge co-LRT', 'aria-label': 'Light Rail' }, 'L');
+    if (co === 'LRT')
+      return el('span', { class: 'row-badge co-LRT', 'aria-label': 'Light Rail' }, 'L');
     // Fallback for unknown operators (e.g. a legacy saved stop whose index
     // entry we can't classify). Render a generic bus-stop pin icon rather
     // than a stray "·" character so the row still looks intentional.
@@ -4310,8 +4750,10 @@
       svg.setAttribute('aria-hidden', 'true');
       const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
       p.setAttribute('fill', 'currentColor');
-      p.setAttribute('d',
-        'M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z');
+      p.setAttribute(
+        'd',
+        'M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z'
+      );
       svg.appendChild(p);
       badge.appendChild(svg);
       return badge;
@@ -4320,7 +4762,9 @@
   }
 
   function makeChev() {
-    return el('span', { class: 'chev' },
+    return el(
+      'span',
+      { class: 'chev' },
       (() => {
         const x = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         x.setAttribute('viewBox', '0 0 24 24');
@@ -4372,20 +4816,31 @@
     const illo = el('div', { class: 'stop-empty-illustration', 'aria-hidden': 'true' });
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     svg.setAttribute('viewBox', '0 0 48 48');
-    svg.setAttribute('width', '40'); svg.setAttribute('height', '40');
+    svg.setAttribute('width', '40');
+    svg.setAttribute('height', '40');
     const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-    circle.setAttribute('cx', '24'); circle.setAttribute('cy', '24'); circle.setAttribute('r', '16');
-    circle.setAttribute('fill', 'none'); circle.setAttribute('stroke', 'currentColor');
-    circle.setAttribute('stroke-width', '2'); circle.setAttribute('stroke-dasharray', '4 4');
+    circle.setAttribute('cx', '24');
+    circle.setAttribute('cy', '24');
+    circle.setAttribute('r', '16');
+    circle.setAttribute('fill', 'none');
+    circle.setAttribute('stroke', 'currentColor');
+    circle.setAttribute('stroke-width', '2');
+    circle.setAttribute('stroke-dasharray', '4 4');
     const hand1 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     hand1.setAttribute('d', 'M24 24V14');
-    hand1.setAttribute('stroke', 'currentColor'); hand1.setAttribute('stroke-width', '2.4');
-    hand1.setAttribute('stroke-linecap', 'round'); hand1.setAttribute('fill', 'none');
+    hand1.setAttribute('stroke', 'currentColor');
+    hand1.setAttribute('stroke-width', '2.4');
+    hand1.setAttribute('stroke-linecap', 'round');
+    hand1.setAttribute('fill', 'none');
     const hand2 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     hand2.setAttribute('d', 'M24 24L30 30');
-    hand2.setAttribute('stroke', 'currentColor'); hand2.setAttribute('stroke-width', '2.4');
-    hand2.setAttribute('stroke-linecap', 'round'); hand2.setAttribute('fill', 'none');
-    svg.appendChild(circle); svg.appendChild(hand1); svg.appendChild(hand2);
+    hand2.setAttribute('stroke', 'currentColor');
+    hand2.setAttribute('stroke-width', '2.4');
+    hand2.setAttribute('stroke-linecap', 'round');
+    hand2.setAttribute('fill', 'none');
+    svg.appendChild(circle);
+    svg.appendChild(hand1);
+    svg.appendChild(hand2);
     illo.appendChild(svg);
     wrap.appendChild(illo);
 
@@ -4394,18 +4849,30 @@
 
     const ctas = el('div', { class: 'stop-empty-ctas' });
     if (typeof onSchedule === 'function') {
-      ctas.appendChild(el('button', {
-        type: 'button',
-        class: 'stop-empty-cta stop-empty-cta--primary',
-        onclick: onSchedule,
-      }, t_str('settingsEmptyStopCtaSchedule')));
+      ctas.appendChild(
+        el(
+          'button',
+          {
+            type: 'button',
+            class: 'stop-empty-cta stop-empty-cta--primary',
+            onclick: onSchedule,
+          },
+          t_str('settingsEmptyStopCtaSchedule')
+        )
+      );
     }
     if (typeof onRetry === 'function') {
-      ctas.appendChild(el('button', {
-        type: 'button',
-        class: 'stop-empty-cta',
-        onclick: onRetry,
-      }, t_str('settingsEmptyStopCtaRetry')));
+      ctas.appendChild(
+        el(
+          'button',
+          {
+            type: 'button',
+            class: 'stop-empty-cta',
+            onclick: onRetry,
+          },
+          t_str('settingsEmptyStopCtaRetry')
+        )
+      );
     }
     wrap.appendChild(ctas);
     return wrap;
@@ -4455,22 +4922,36 @@
       });
       a.appendChild(makeBadge('MTR'));
       const main = el('div', { class: 'row-main' });
-      main.appendChild(el('div', { class: 'row-title' }, r.route,
-        el('span', { style: 'color: var(--muted); margin: 0 6px; font-weight: 500;' }, '·'),
-        dest));
+      main.appendChild(
+        el(
+          'div',
+          { class: 'row-title' },
+          r.route,
+          el('span', { style: 'color: var(--muted); margin: 0 6px; font-weight: 500;' }, '·'),
+          dest
+        )
+      );
       main.appendChild(el('div', { class: 'row-sub' }, dest));
       a.appendChild(main);
-      a.appendChild(el('div', { class: 'row-meta' }, el('div', { class: 'row-dim' }, t_str('line'))));
+      a.appendChild(
+        el('div', { class: 'row-meta' }, el('div', { class: 'row-dim' }, t_str('line')))
+      );
       a.appendChild(makeChev());
       return a;
     }
 
-    const dirLabel = r.co === 'MTR' || r.co === 'LRT'
-      ? (r.dir === 'UP' || r.dir === '1' || r.dir === 'O' ? t_str('dirUp') : t_str('dirDown'))
-      : (r.dir === 'I' ? t_str('inbound') : t_str('outbound'));
+    const dirLabel =
+      r.co === 'MTR' || r.co === 'LRT'
+        ? r.dir === 'UP' || r.dir === '1' || r.dir === 'O'
+          ? t_str('dirUp')
+          : t_str('dirDown')
+        : r.dir === 'I'
+          ? t_str('inbound')
+          : t_str('outbound');
     const dest = pickFirst(r.destTc, r.destEn);
     const orig = pickFirst(r.origTc, r.origEn);
-    const displayRoute = r.co === 'GMB' && r._region && r._code ? `${r._code} (${r._region})` : r.route;
+    const displayRoute =
+      r.co === 'GMB' && r._region && r._code ? `${r._code} (${r._region})` : r.route;
     const a = el('a', {
       class: 'row',
       href: `#/route/${encodeURIComponent(r.co)}/${encodeURIComponent(r.route)}/${encodeURIComponent(r.dir)}/${encodeURIComponent(r.service)}`,
@@ -4479,17 +4960,31 @@
     const main = el('div', { class: 'row-main' });
     const titleEl = el('div', { class: 'row-title' });
     titleEl.appendChild(document.createTextNode(displayRoute));
-    titleEl.appendChild(el('span', { style: 'color: var(--muted); margin: 0 6px; font-weight: 500;' }, '·'));
+    titleEl.appendChild(
+      el('span', { style: 'color: var(--muted); margin: 0 6px; font-weight: 500;' }, '·')
+    );
     titleEl.appendChild(document.createTextNode(dest));
     if (r._hasSchool) {
-      const schoolPill = el('span', { class: 'row-tag row-tag-school', title: t_str('schoolTagTitle') }, t_str('schoolTag'));
+      const schoolPill = el(
+        'span',
+        { class: 'row-tag row-tag-school', title: t_str('schoolTagTitle') },
+        t_str('schoolTag')
+      );
       titleEl.appendChild(document.createTextNode(' '));
       titleEl.appendChild(schoolPill);
     }
     main.appendChild(titleEl);
-    main.appendChild(el('div', { class: 'row-sub' }, r.co === 'GMB' ? orig : `${dirLabel} · ${orig}`));
+    main.appendChild(
+      el('div', { class: 'row-sub' }, r.co === 'GMB' ? orig : `${dirLabel} · ${orig}`)
+    );
     a.appendChild(main);
-    a.appendChild(el('div', { class: 'row-meta' }, el('div', { class: 'row-dim' }, t_str(opCoKey(r.co)))));
+    a.appendChild(
+      el(
+        'div',
+        { class: 'row-meta' },
+        el('div', { class: 'row-dim' }, t_str(busetaUtils.opCoKey(r.co)))
+      )
+    );
     a.appendChild(makeChev());
     return a;
   }
@@ -4499,7 +4994,9 @@
     a.appendChild(makeBadge(s.co || 'STOP'));
     const main = el('div', { class: 'row-main' });
     main.appendChild(el('div', { class: 'row-title' }, nameFor(s) || s.stop));
-    const subInfo = s.lines ? s.lines.join(' · ') : (s.nameEn || (s.stop ? String(s.stop).slice(0, 12) : ''));
+    const subInfo = s.lines
+      ? s.lines.join(' · ')
+      : s.nameEn || (s.stop ? String(s.stop).slice(0, 12) : '');
     main.appendChild(el('div', { class: 'row-sub' }, subInfo));
     a.appendChild(main);
     const metaLabel = s.co === 'MTR' ? t_str('station') : t_str('stop');
@@ -4512,9 +5009,16 @@
     const span = el('span', { class: 'row-eta' });
     const minutes = minutesUntil(etaIso);
     if (minutes == null) span.textContent = '–';
-    else if (minutes <= 0) { span.textContent = t_str('arriving'); span.classList.add('is-now'); }
-    else if (minutes === 1) { span.textContent = `1 ${t_str('minShort')}`; span.classList.add('is-soon'); }
-    else { span.textContent = `${minutes} ${t_str('minShort')}`; if (minutes <= 2) span.classList.add('is-soon'); }
+    else if (minutes <= 0) {
+      span.textContent = t_str('arriving');
+      span.classList.add('is-now');
+    } else if (minutes === 1) {
+      span.textContent = `1 ${t_str('minShort')}`;
+      span.classList.add('is-soon');
+    } else {
+      span.textContent = `${minutes} ${t_str('minShort')}`;
+      if (minutes <= 2) span.classList.add('is-soon');
+    }
     return span;
   }
 
@@ -4640,22 +5144,33 @@
       role: alert.severity === 'critical' ? 'alert' : 'status',
       'aria-live': alert.severity === 'critical' ? 'assertive' : 'polite',
     });
-    banner.appendChild(el('span', {
-      class: 'route-alert-icon',
-      'aria-hidden': 'true',
-    }, alertIconSVG(alert.severity)));
-    banner.appendChild(el('span', { class: 'route-alert-text' },
-      t_str(alert.key, ...(alert.args || []))));
+    banner.appendChild(
+      el(
+        'span',
+        {
+          class: 'route-alert-icon',
+          'aria-hidden': 'true',
+        },
+        alertIconSVG(alert.severity)
+      )
+    );
+    banner.appendChild(
+      el('span', { class: 'route-alert-text' }, t_str(alert.key, ...(alert.args || [])))
+    );
     const dismissKey = `${routeKey}|${alert.key}`;
-    const dismissBtn = el('button', {
-      type: 'button',
-      class: 'route-alert-dismiss',
-      'aria-label': t_str('dismissAlert'),
-      onclick: () => {
-        state.dismissedAlerts.add(dismissKey);
-        banner.remove();
+    const dismissBtn = el(
+      'button',
+      {
+        type: 'button',
+        class: 'route-alert-dismiss',
+        'aria-label': t_str('dismissAlert'),
+        onclick: () => {
+          state.dismissedAlerts.add(dismissKey);
+          banner.remove();
+        },
       },
-    }, '\u00d7'); // ×
+      '\u00d7'
+    ); // ×
     banner.appendChild(dismissBtn);
     return banner;
   }
@@ -4669,38 +5184,54 @@
     if (severity === 'critical') {
       // Filled circle with bang — "service disrupted, take this seriously".
       const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-      c.setAttribute('cx', '12'); c.setAttribute('cy', '12'); c.setAttribute('r', '10');
-      c.setAttribute('fill', 'currentColor'); c.setAttribute('fill-opacity', '0.15');
+      c.setAttribute('cx', '12');
+      c.setAttribute('cy', '12');
+      c.setAttribute('r', '10');
+      c.setAttribute('fill', 'currentColor');
+      c.setAttribute('fill-opacity', '0.15');
       svg.appendChild(c);
       const ring = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-      ring.setAttribute('cx', '12'); ring.setAttribute('cy', '12'); ring.setAttribute('r', '10');
-      ring.setAttribute('fill', 'none'); ring.setAttribute('stroke', 'currentColor');
+      ring.setAttribute('cx', '12');
+      ring.setAttribute('cy', '12');
+      ring.setAttribute('r', '10');
+      ring.setAttribute('fill', 'none');
+      ring.setAttribute('stroke', 'currentColor');
       ring.setAttribute('stroke-width', '1.6');
       svg.appendChild(ring);
       const bar = document.createElementNS('http://www.w3.org/2000/svg', 'path');
       bar.setAttribute('d', 'M12 7v6');
-      bar.setAttribute('stroke', 'currentColor'); bar.setAttribute('stroke-width', '2');
-      bar.setAttribute('stroke-linecap', 'round'); bar.setAttribute('fill', 'none');
+      bar.setAttribute('stroke', 'currentColor');
+      bar.setAttribute('stroke-width', '2');
+      bar.setAttribute('stroke-linecap', 'round');
+      bar.setAttribute('fill', 'none');
       svg.appendChild(bar);
       const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-      dot.setAttribute('cx', '12'); dot.setAttribute('cy', '16.5'); dot.setAttribute('r', '1.1');
+      dot.setAttribute('cx', '12');
+      dot.setAttribute('cy', '16.5');
+      dot.setAttribute('r', '1.1');
       dot.setAttribute('fill', 'currentColor');
       svg.appendChild(dot);
     } else {
       // Triangle with bang — heads-up but not service-stopped.
       const tri = document.createElementNS('http://www.w3.org/2000/svg', 'path');
       tri.setAttribute('d', 'M12 3.2 L22 20.5 L2 20.5 Z');
-      tri.setAttribute('fill', 'currentColor'); tri.setAttribute('fill-opacity', '0.15');
-      tri.setAttribute('stroke', 'currentColor'); tri.setAttribute('stroke-width', '1.6');
+      tri.setAttribute('fill', 'currentColor');
+      tri.setAttribute('fill-opacity', '0.15');
+      tri.setAttribute('stroke', 'currentColor');
+      tri.setAttribute('stroke-width', '1.6');
       tri.setAttribute('stroke-linejoin', 'round');
       svg.appendChild(tri);
       const bar = document.createElementNS('http://www.w3.org/2000/svg', 'path');
       bar.setAttribute('d', 'M12 9v5.5');
-      bar.setAttribute('stroke', 'currentColor'); bar.setAttribute('stroke-width', '2');
-      bar.setAttribute('stroke-linecap', 'round'); bar.setAttribute('fill', 'none');
+      bar.setAttribute('stroke', 'currentColor');
+      bar.setAttribute('stroke-width', '2');
+      bar.setAttribute('stroke-linecap', 'round');
+      bar.setAttribute('fill', 'none');
       svg.appendChild(bar);
       const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-      dot.setAttribute('cx', '12'); dot.setAttribute('cy', '17'); dot.setAttribute('r', '1.1');
+      dot.setAttribute('cx', '12');
+      dot.setAttribute('cy', '17');
+      dot.setAttribute('r', '1.1');
       dot.setAttribute('fill', 'currentColor');
       svg.appendChild(dot);
     }
@@ -4729,20 +5260,33 @@
     // in-place O ↔ I flip without going back to search.
     const dirPills = buildDirectionPills(r.co, r.route, r.dir, r.service);
     const { boundPills, servicePills, swapTarget } = dirPills;
-    header.appendChild(buildRouteHeader({
-      co: r.co, route: r.route, dir: r.dir, service: r.service,
-      dest, orig, origEn, dirLabel, fare: meta && meta.fares && meta.fares[0],
-      boundPills, servicePills, swapTarget, currentDirKey: key,
-      // fareMin/fareMax are filled in once the fare fetch resolves —
-      // `null`/`null` (i.e. absent) preserves the legacy "head fare"
-      // behaviour when the upstream returns no fare data.
-      fareMin: null, fareMax: null,
-    }));
+    header.appendChild(
+      buildRouteHeader({
+        co: r.co,
+        route: r.route,
+        dir: r.dir,
+        service: r.service,
+        dest,
+        orig,
+        origEn,
+        dirLabel,
+        fare: meta && meta.fares && meta.fares[0],
+        boundPills,
+        servicePills,
+        swapTarget,
+        currentDirKey: key,
+        // fareMin/fareMax are filled in once the fare fetch resolves —
+        // `null`/`null` (i.e. absent) preserves the legacy "head fare"
+        // behaviour when the upstream returns no fare data.
+        fareMin: null,
+        fareMax: null,
+      })
+    );
     // QW-2: skeleton placeholders replace the bare loading text on
     // bus-route detail while we wait for the ETA response.
     body.appendChild(buildSkeletonList(6));
     // /route-stop; CTB / NWFB use the Citybus endpoint.
-    const isCitybus = (r.co === 'CTB' || r.co === 'NWFB');
+    const isCitybus = r.co === 'CTB' || r.co === 'NWFB';
     const fetchRouteStop = isCitybus
       ? () => fetchCitybusRouteStop(r.route, r.dir)
       : () => fetchKmbRouteStop(r.route, r.dir, r.service);
@@ -4757,298 +5301,343 @@
       // KMB / LWB share the etabus endpoint.
       return fetchKmbRouteFare(r.route, r.dir, r.service);
     })();
-    fetchRouteStop().then(async (resp) => {
-      const items = (resp && Array.isArray(resp.data)) ? resp.data : [];
-      if (items.length === 0) {
-        body.replaceChildren(el('p', { class: 'empty' }, t_str('routeNotFound')));
-        return;
-      }
-      const stops = items
-        .sort((a, b) => parseInt(a.seq, 10) - parseInt(b.seq, 10))
-        .map((it) => {
-          // For CTB / NWFB the stop id is the operator's 6-digit code; our
-          // hk-stops.json has different codes (e.g. MA973). Build a richer
-          // entry that uses the operator stop id directly plus any name we
-          // know about from the index.
-          const known = state.index.stops.get(it.stop);
-          return {
-            stop: it.stop,
-            nameTc: known ? known.nameTc : it.stop,
-            nameEn: known ? known.nameEn : '',
-            lat: known && Number.isFinite(known.lat) ? known.lat : null,
-            lng: known && Number.isFinite(known.lng) ? known.lng : null,
-            _seq: parseInt(it.seq, 10),
-          };
+    fetchRouteStop()
+      .then(async (resp) => {
+        const items = resp && Array.isArray(resp.data) ? resp.data : [];
+        if (items.length === 0) {
+          body.replaceChildren(el('p', { class: 'empty' }, t_str('routeNotFound')));
+          return;
+        }
+        const stops = items
+          .sort((a, b) => parseInt(a.seq, 10) - parseInt(b.seq, 10))
+          .map((it) => {
+            // For CTB / NWFB the stop id is the operator's 6-digit code; our
+            // hk-stops.json has different codes (e.g. MA973). Build a richer
+            // entry that uses the operator stop id directly plus any name we
+            // know about from the index.
+            const known = state.index.stops.get(it.stop);
+            return {
+              stop: it.stop,
+              nameTc: known ? known.nameTc : it.stop,
+              nameEn: known ? known.nameEn : '',
+              lat: known && Number.isFinite(known.lat) ? known.lat : null,
+              lng: known && Number.isFinite(known.lng) ? known.lng : null,
+              _seq: parseInt(it.seq, 10),
+            };
+          });
+
+        // Wait for the fare promise (already in flight above) and expand it
+        // into a Map<seq, fare> suitable for the row loop. Errors are swallowed
+        // and result in `null` (UI shows `—` chip per stop rather than an
+        // empty placeholder, so the user sees "no fare data" vs "broken").
+        let fareBySeq = null;
+        let fareAttempted = false;
+        try {
+          const rawFare = await fareP;
+          fareAttempted = true;
+          fareBySeq = expandFareForStops(rawFare, stops);
+        } catch (e) {
+          fareAttempted = true;
+          fareBySeq = null;
+        }
+        const fareRangeInfo = fareRange(fareBySeq);
+
+        // Live arrivals for every stop on the route. CTB/NWFB stops use the
+        // Citybus ETA endpoint; KMB-format stops use the KMB endpoint. We
+        // run requests with a small concurrency cap so routes with 30+ stops
+        // don't fire dozens of simultaneous calls to the upstream APIs.
+        const etaResults = await fetchStopsWithCap(stops, 8, (s) => {
+          if (isCitybus) return fetchCitybusStopEta(s.stop, r.route);
+          return fetchKmbStopEta(s.stop);
+        });
+        const etaByStop = new Map();
+        stops.forEach((s, i) => {
+          const rr = etaResults[i];
+          if (rr && rr.status === 'fulfilled' && rr.value && Array.isArray(rr.value.data)) {
+            etaByStop.set(
+              s.stop,
+              rr.value.data
+                .filter(
+                  (e) =>
+                    e.route === r.route &&
+                    (isCitybus || (e.dir === r.dir && String(e.service_type) === String(r.service)))
+                )
+                .filter((e) => !!e.eta)
+                .sort((a, b) => new Date(a.eta).getTime() - new Date(b.eta).getTime())
+            );
+          }
         });
 
-      // Wait for the fare promise (already in flight above) and expand it
-      // into a Map<seq, fare> suitable for the row loop. Errors are swallowed
-      // and result in `null` (UI shows `—` chip per stop rather than an
-      // empty placeholder, so the user sees "no fare data" vs "broken").
-      let fareBySeq = null;
-      let fareAttempted = false;
-      try {
-        const rawFare = await fareP;
-        fareAttempted = true;
-        fareBySeq = expandFareForStops(rawFare, stops);
-      } catch (e) { fareAttempted = true; fareBySeq = null; }
-      const fareRangeInfo = fareRange(fareBySeq);
-
-      // Live arrivals for every stop on the route. CTB/NWFB stops use the
-      // Citybus ETA endpoint; KMB-format stops use the KMB endpoint. We
-      // run requests with a small concurrency cap so routes with 30+ stops
-      // don't fire dozens of simultaneous calls to the upstream APIs.
-      const etaResults = await fetchStopsWithCap(stops, 8, (s) => {
-        if (isCitybus) return fetchCitybusStopEta(s.stop, r.route);
-        return fetchKmbStopEta(s.stop);
-      });
-      const etaByStop = new Map();
-      stops.forEach((s, i) => {
-        const rr = etaResults[i];
-        if (rr && rr.status === 'fulfilled' && rr.value && Array.isArray(rr.value.data)) {
-          etaByStop.set(s.stop, rr.value.data
-            .filter((e) => e.route === r.route
-              && (isCitybus || (e.dir === r.dir && String(e.service_type) === String(r.service))))
-            .filter((e) => !!e.eta)
-            .sort((a, b) => new Date(a.eta).getTime() - new Date(b.eta).getTime()));
-        }
-      });
-
-      // Operator stop names ("書局街, 英皇道", "Shu Kuk Street, King's Road")
-      // — the hk-stops.json index uses different ID formats, so the
-      // operator endpoint is the source of truth for human-readable names.
-      // Run in parallel with the ETA loop, capped concurrency, and fold the
-      // result back into each stop row before rendering.
-      const nameResults = await fetchStopsWithCap(stops, 8, (s) => {
-        if (isCitybus) return fetchCitybusStop(s.stop);
-        return fetchKmbStop(s.stop);
-      });
-      const nameByStop = new Map();
-      stops.forEach((s, i) => {
-        const rr = nameResults[i];
-        if (rr && rr.status === 'fulfilled' && rr.value && rr.value.data) {
-          let st = rr.value.data;
-          if (Array.isArray(st)) st = st[0];
-          if (st && (st.name_tc || st.name_sc || st.name_en)) {
-            nameByStop.set(s.stop, {
-              nameTc: st.name_tc || '',
-              nameSc: st.name_sc || '',
-              nameEn: st.name_en || '',
-            });
-          }
-        }
-      });
-
-      // ---- Route-level polyline map ----
-      // Build a Map<stopId, {lat,lng}> from any coords we already know
-      // (index.hk-stops.json, or extracted from the nameResults above). For
-      // stops still missing coords — typically CTB/NWFB stops whose 6-digit
-      // IDs aren't in hk-stops.json — fall back to the operator's /stop
-      // endpoint via ensureStopCoords(), which caches results across routes.
-      const coordByStop = new Map();
-      stops.forEach((s) => {
-        if (Number.isFinite(s.lat) && Number.isFinite(s.lng)) {
-          coordByStop.set(s.stop, { lat: s.lat, lng: s.lng });
-        }
-      });
-      // Also harvest coords from the operator /stop fetches we already
-      // fired in the nameResults loop above — saves a duplicate request
-      // for every CTB stop, which is most of them.
-      nameResults.forEach((rr, i) => {
-        const s = stops[i];
-        if (!s || coordByStop.has(s.stop)) return;
-        if (!rr || rr.status !== 'fulfilled' || !rr.value || !rr.value.data) return;
-        let st = rr.value.data;
-        if (Array.isArray(st)) st = st[0];
-        if (!st) return;
-        const lat = Number(st.lat);
-        const lng = Number(st.long || st.lng);
-        if (Number.isFinite(lat) && Number.isFinite(lng)) {
-          coordByStop.set(s.stop, { lat, lng });
-        }
-      });
-      const missingStops = stops.filter((s) => !coordByStop.has(s.stop));
-      if (missingStops.length > 0) {
-        await Promise.all(missingStops.map(async (s) => {
-          const c = await ensureStopCoords(s.stop, isCitybus);
-          if (c) coordByStop.set(s.stop, c);
-        }));
-      }
-      // (The route-map iframe is built below from `coordByStop`. We build
-      // the inner SVG schematic first so we can nest it inside the same
-      // card — see renderRouteMap(stops, coordByStop, innerSchematic).)
-
-      const list = el('div', { class: 'eta-list' });
-      // Pick the row that should be highlighted (the user's current stop)
-      // and remember its DOM node so we can scroll it into view below.
-      let targetRow = null;
-      const targetSeq = (r.stopSeq && /^\d+$/.test(r.stopSeq)) ? parseInt(r.stopSeq, 10) : null;
-      // Service-alert detection — see detectRouteAlerts() below for the
-      // priority order (no-service > last-bus > cancelled/delayed). We also
-      // accumulate the count of stops whose leading arrival is marked as
-      // Cancelled/Suspended/Delayed/Disrupted so the warning banner can
-      // surface a count of affected stops without naming each one.
-      let affectedStops = 0;
-      const CRITICAL_RMK = new Set(['Cancelled', 'Suspended', 'Delayed', 'Disrupted']);
-      stops.forEach((s, idx) => {
-        const seq = idx + 1;
-        const isOrigin = idx === 0;
-        const isTarget = targetSeq && seq === targetSeq;
-        const classes = ['stop-row'];
-        if (isOrigin) classes.push('is-origin');
-        if (isTarget) classes.push('is-target');
-        const row = el('a', { class: classes.join(' '), href: `#/stop/${encodeURIComponent(s.stop)}`, tabindex: '0' });
-        row.appendChild(el('span', { class: 'stop-idx' }, String(seq)));
-        if (isTarget) {
-          row.dataset.targetSeq = String(seq);
-          targetRow = row;
-        }
-        const info = el('div', { class: 'stop-info' });
-        // Prefer the operator's stop name (loaded from nameByStop above);
-        // fall back to the hk-stops.json entry, then to the raw operator id.
-        const fetchedName = nameByStop.get(s.stop);
-        const nameDisplay = fetchedName ? nameFor(fetchedName) : nameFor(s);
-        const enDisplay = fetchedName ? fetchedName.nameEn : (s.nameEn || '');
-        info.appendChild(el('div', { class: 'stop-name-row' }, nameDisplay || s.stop));
-        if (enDisplay) info.appendChild(el('div', { class: 'stop-name-en' }, enDisplay));
-        // Operator stop code (e.g. "ST905", "PA100") — justarrived-style
-        // small gray text under the English stop name. We only render it
-        // when it looks like an operator code (short alphanumeric, 2-6
-        // chars) rather than a hash ID — hk-stops.json hashes are 16 hex
-        // chars and would be ugly noise here. KMB upstream already returns
-        // names that include the operator code in parens (e.g. "大學站 (ST905)"),
-        // so the displayed name and the code share context; we skip the
-        // separate code line when it's redundant.
-        if (s.stop && /^[A-Z0-9]{2,6}$/i.test(s.stop) && s.stop !== nameDisplay) {
-          info.appendChild(el('div', { class: 'stop-code' }, s.stop));
-        }
-        // Fare row: pill (or `—` chip) + optional "起點" marker on origin.
-        //   - fare known  → `$X.X` (KMB per-stop, or flat-fare CTB/GMB/LRT)
-        //   - fare attempted but null → `—` chip in muted style
-        //   - fare not yet attempted → nothing (still loading)
-        // 起點 marker is shown on the origin stop regardless of fare status,
-        // so users can always tell where the route starts (justarrived-style).
-        const fareRow = el('div', { class: 'stop-fare-row' });
-        const stopFare = fareBySeq && fareBySeq.get(seq);
-        if (stopFare != null && Number.isFinite(Number(stopFare))) {
-          fareRow.appendChild(el('span', { class: 'stop-fare' }, `$${fmtFare(Number(stopFare))}`));
-        } else if (fareAttempted) {
-          const chip = el('span', { class: 'stop-fare is-na' }, '—');
-          chip.title = t_str('fareUnavailable');
-          fareRow.appendChild(chip);
-        }
-        if (isOrigin) fareRow.appendChild(el('span', { class: 'stop-origin-marker' }, t_str('fareOrigin')));
-        if (fareRow.children.length > 0) info.appendChild(fareRow);
-        row.appendChild(info);
-        // ETA column (justarrived-style): big relative + absolute time,
-        // then up to two more upcoming arrivals as "X 分鐘 · HH:MM".
-        const etaBox = el('div', { class: 'stop-eta' });
-        const etas = etaByStop.get(s.stop) || [];
-        if (etas.length > 0) {
-          const bigLine = el('div', { class: 'big-line' });
-          const big = el('span', { class: 'big' });
-          const m = minutesUntil(etas[0].eta);
-          if (m == null) big.textContent = '–';
-          else if (m <= 0) { big.textContent = t_str('arriving'); big.classList.add('is-now'); }
-          else { big.textContent = `${m} ${t_str('minShort')}`; if (m <= 2) big.classList.add('is-soon'); }
-          bigLine.appendChild(big);
-          const abs0 = formatHMTimestamp(etas[0].eta);
-          if (abs0) bigLine.appendChild(el('span', { class: 'abs-time' }, abs0));
-          etaBox.appendChild(bigLine);
-          // Up to 2 more upcoming arrivals (skip etas[0] which we just shown).
-          const nextList = el('div', { class: 'eta-next-list' });
-          for (let i = 1; i < Math.min(etas.length, 3); i++) {
-            const nm = minutesUntil(etas[i].eta);
-            const nextAbs = formatHMTimestamp(etas[i].eta);
-            if (nm != null && nextAbs) {
-              nextList.appendChild(el('div', { class: 'eta-next' },
-                `${nm} ${t_str('minShort')} · ${nextAbs}`));
+        // Operator stop names ("書局街, 英皇道", "Shu Kuk Street, King's Road")
+        // — the hk-stops.json index uses different ID formats, so the
+        // operator endpoint is the source of truth for human-readable names.
+        // Run in parallel with the ETA loop, capped concurrency, and fold the
+        // result back into each stop row before rendering.
+        const nameResults = await fetchStopsWithCap(stops, 8, (s) => {
+          if (isCitybus) return fetchCitybusStop(s.stop);
+          return fetchKmbStop(s.stop);
+        });
+        const nameByStop = new Map();
+        stops.forEach((s, i) => {
+          const rr = nameResults[i];
+          if (rr && rr.status === 'fulfilled' && rr.value && rr.value.data) {
+            let st = rr.value.data;
+            if (Array.isArray(st)) st = st[0];
+            if (st && (st.name_tc || st.name_sc || st.name_en)) {
+              nameByStop.set(s.stop, {
+                nameTc: st.name_tc || '',
+                nameSc: st.name_sc || '',
+                nameEn: st.name_en || '',
+              });
             }
           }
-          if (nextList.children.length > 0) etaBox.appendChild(nextList);
-          // If there are even more arrivals (4+), show a small "仲有 N 班"
-          // hint so users on busy lines know more buses are coming.
-          if (etas.length > 3) {
-            etaBox.appendChild(el('div', { class: 'small more' }, t_str('etaCount', etas.length - 3)));
-          } else if (etas[0].rmk_en === 'Scheduled Bus' && etas.length === 1) {
-            etaBox.appendChild(el('div', { class: 'small more' }, t_str('scheduled')));
-          }
-          // Leading-arrival remark drives the route-level cancelled/delayed
-          // banner. We only check etas[0] per the spec — earlier arrivals
-          // have already passed, so flagging them would mislead the user.
-          if (CRITICAL_RMK.has(etas[0].rmk_en)) affectedStops++;
-        } else if (idx === 0) {
-          etaBox.appendChild(el('span', { class: 'small' }, t_str('loading')));
-        } else {
-          etaBox.appendChild(el('span', { class: 'small', style: 'color: var(--muted-2);' }, t_str('noEta')));
-        }
-        row.appendChild(etaBox);
-        list.appendChild(row);
-      });
-
-      // Build a route-level alert banner (if any). Detection runs over the
-      // full etaByStop map, not just the visible row, so a Last Bus marker
-      // anywhere on the route can trigger the "last bus has departed" alert
-      // even if the user is parked at a stop with its own upcoming service.
-      const alerts = detectRouteAlerts(etaByStop, affectedStops);
-      const routeKey = `${r.co}/${r.route}/${r.dir}/${r.service}`;
-      const alertEl = (!state.dismissedAlerts.has(`${routeKey}|${alerts[0] && alerts[0].key}`) && alerts.length)
-        ? renderRouteAlert(alerts[0], routeKey)
-        : null;
-
-      const heading = el('h2', { class: 'section-title' }, t_str('showingStop', stops.length));
-      // ---- Route-level map (Google Maps iframe) ----
-      // v30 hybrid dropped the SVG schematic because users found the
-      // combined iframe + schematic card was unwieldy — the iframe
-      // sometimes lazy-loaded at a smaller size and the SVG stretched
-      // to fill the leftover space, breaking the layout. v31 keeps just
-      // the Google Maps iframe as the single map; the live-bus schematic
-      // is dropped from this view. The vehicle-positions helper
-      // (`assets/vehicle-positions.js`) and `renderVehicleMap()` are
-      // kept on disk for future use, but no longer rendered here.
-      const routeMapEl = renderRouteMap(stops, coordByStop);
-      // Order: optional alert → route map card (Google Maps iframe +
-      // open-in-maps link) → stop list heading → rows.
-      const children = [];
-      if (alertEl) children.push(alertEl);
-      if (routeMapEl) children.push(routeMapEl);
-      children.push(heading, list);
-      body.replaceChildren(...children);
-      // (Removed in v31: live-GPS probe + 30s polling — the SVG schematic
-      // is no longer rendered on the route detail page, so there's no DOM
-      // node to swap the live positions into. The vehicle-positions helper
-      // and the probe / refresh helpers stay defined in case we wire them
-      // back in later.)
-      // Refresh the header so the fare-range (or single flat fare) shows
-      // up under the destination line. Built from the same opts object the
-      // initial header was rendered with, but with the new fareMin/fareMax.
-      if (fareRangeInfo) {
-        try {
-          header.replaceChildren(...buildRouteHeader({
-            co: r.co, route: r.route, dir: r.dir, service: r.service,
-            dest, orig, origEn, dirLabel,
-            fare: (fareRangeInfo.min === fareRangeInfo.max) ? fareRangeInfo.max : null,
-            boundPills, servicePills, swapTarget, currentDirKey: key,
-            fareMin: fareRangeInfo.min, fareMax: fareRangeInfo.max,
-          }).childNodes);
-        } catch (e) { /* leave the initial header */ }
-      }
-      // Anchor the view at the user's current stop, justarrived-style.
-      if (targetRow) {
-        requestAnimationFrame(() => {
-          try {
-            targetRow.scrollIntoView({ behavior: 'auto', block: 'center' });
-          } catch {}
         });
-      }
-    }).catch((err) => {
-      // Log the underlying error so debugging isn't a guessing game.
-      // Previously this catch silently swallowed everything — which
-      // masked real bugs (e.g. vehicle-map crashes that wiped a
-      // perfectly-good stop list and replaced it with "搵唔到呢條路線").
-      console.error('renderBusRoute failed:', err);
-      body.replaceChildren(el('p', { class: 'empty' }, t_str('routeNotFound')));
-    });
+
+        // ---- Route-level polyline map ----
+        // Build a Map<stopId, {lat,lng}> from any coords we already know
+        // (index.hk-stops.json, or extracted from the nameResults above). For
+        // stops still missing coords — typically CTB/NWFB stops whose 6-digit
+        // IDs aren't in hk-stops.json — fall back to the operator's /stop
+        // endpoint via ensureStopCoords(), which caches results across routes.
+        const coordByStop = new Map();
+        stops.forEach((s) => {
+          if (Number.isFinite(s.lat) && Number.isFinite(s.lng)) {
+            coordByStop.set(s.stop, { lat: s.lat, lng: s.lng });
+          }
+        });
+        // Also harvest coords from the operator /stop fetches we already
+        // fired in the nameResults loop above — saves a duplicate request
+        // for every CTB stop, which is most of them.
+        nameResults.forEach((rr, i) => {
+          const s = stops[i];
+          if (!s || coordByStop.has(s.stop)) return;
+          if (!rr || rr.status !== 'fulfilled' || !rr.value || !rr.value.data) return;
+          let st = rr.value.data;
+          if (Array.isArray(st)) st = st[0];
+          if (!st) return;
+          const lat = Number(st.lat);
+          const lng = Number(st.long || st.lng);
+          if (Number.isFinite(lat) && Number.isFinite(lng)) {
+            coordByStop.set(s.stop, { lat, lng });
+          }
+        });
+        const missingStops = stops.filter((s) => !coordByStop.has(s.stop));
+        if (missingStops.length > 0) {
+          await Promise.all(
+            missingStops.map(async (s) => {
+              const c = await ensureStopCoords(s.stop, isCitybus);
+              if (c) coordByStop.set(s.stop, c);
+            })
+          );
+        }
+        // (The route-map iframe is built below from `coordByStop`. We build
+        // the inner SVG schematic first so we can nest it inside the same
+        // card — see renderRouteMap(stops, coordByStop, innerSchematic).)
+
+        const list = el('div', { class: 'eta-list' });
+        // Pick the row that should be highlighted (the user's current stop)
+        // and remember its DOM node so we can scroll it into view below.
+        let targetRow = null;
+        const targetSeq = r.stopSeq && /^\d+$/.test(r.stopSeq) ? parseInt(r.stopSeq, 10) : null;
+        // Service-alert detection — see detectRouteAlerts() below for the
+        // priority order (no-service > last-bus > cancelled/delayed). We also
+        // accumulate the count of stops whose leading arrival is marked as
+        // Cancelled/Suspended/Delayed/Disrupted so the warning banner can
+        // surface a count of affected stops without naming each one.
+        let affectedStops = 0;
+        const CRITICAL_RMK = new Set(['Cancelled', 'Suspended', 'Delayed', 'Disrupted']);
+        stops.forEach((s, idx) => {
+          const seq = idx + 1;
+          const isOrigin = idx === 0;
+          const isTarget = targetSeq && seq === targetSeq;
+          const classes = ['stop-row'];
+          if (isOrigin) classes.push('is-origin');
+          if (isTarget) classes.push('is-target');
+          const row = el('a', {
+            class: classes.join(' '),
+            href: `#/stop/${encodeURIComponent(s.stop)}`,
+            tabindex: '0',
+          });
+          row.appendChild(el('span', { class: 'stop-idx' }, String(seq)));
+          if (isTarget) {
+            row.dataset.targetSeq = String(seq);
+            targetRow = row;
+          }
+          const info = el('div', { class: 'stop-info' });
+          // Prefer the operator's stop name (loaded from nameByStop above);
+          // fall back to the hk-stops.json entry, then to the raw operator id.
+          const fetchedName = nameByStop.get(s.stop);
+          const nameDisplay = fetchedName ? nameFor(fetchedName) : nameFor(s);
+          const enDisplay = fetchedName ? fetchedName.nameEn : s.nameEn || '';
+          info.appendChild(el('div', { class: 'stop-name-row' }, nameDisplay || s.stop));
+          if (enDisplay) info.appendChild(el('div', { class: 'stop-name-en' }, enDisplay));
+          // Operator stop code (e.g. "ST905", "PA100") — justarrived-style
+          // small gray text under the English stop name. We only render it
+          // when it looks like an operator code (short alphanumeric, 2-6
+          // chars) rather than a hash ID — hk-stops.json hashes are 16 hex
+          // chars and would be ugly noise here. KMB upstream already returns
+          // names that include the operator code in parens (e.g. "大學站 (ST905)"),
+          // so the displayed name and the code share context; we skip the
+          // separate code line when it's redundant.
+          if (s.stop && /^[A-Z0-9]{2,6}$/i.test(s.stop) && s.stop !== nameDisplay) {
+            info.appendChild(el('div', { class: 'stop-code' }, s.stop));
+          }
+          // Fare row: pill (or `—` chip) + optional "起點" marker on origin.
+          //   - fare known  → `$X.X` (KMB per-stop, or flat-fare CTB/GMB/LRT)
+          //   - fare attempted but null → `—` chip in muted style
+          //   - fare not yet attempted → nothing (still loading)
+          // 起點 marker is shown on the origin stop regardless of fare status,
+          // so users can always tell where the route starts (justarrived-style).
+          const fareRow = el('div', { class: 'stop-fare-row' });
+          const stopFare = fareBySeq && fareBySeq.get(seq);
+          if (stopFare != null && Number.isFinite(Number(stopFare))) {
+            fareRow.appendChild(
+              el('span', { class: 'stop-fare' }, `$${fmtFare(Number(stopFare))}`)
+            );
+          } else if (fareAttempted) {
+            const chip = el('span', { class: 'stop-fare is-na' }, '—');
+            chip.title = t_str('fareUnavailable');
+            fareRow.appendChild(chip);
+          }
+          if (isOrigin)
+            fareRow.appendChild(el('span', { class: 'stop-origin-marker' }, t_str('fareOrigin')));
+          if (fareRow.children.length > 0) info.appendChild(fareRow);
+          row.appendChild(info);
+          // ETA column (justarrived-style): big relative + absolute time,
+          // then up to two more upcoming arrivals as "X 分鐘 · HH:MM".
+          const etaBox = el('div', { class: 'stop-eta' });
+          const etas = etaByStop.get(s.stop) || [];
+          if (etas.length > 0) {
+            const bigLine = el('div', { class: 'big-line' });
+            const big = el('span', { class: 'big' });
+            const m = minutesUntil(etas[0].eta);
+            if (m == null) big.textContent = '–';
+            else if (m <= 0) {
+              big.textContent = t_str('arriving');
+              big.classList.add('is-now');
+            } else {
+              big.textContent = `${m} ${t_str('minShort')}`;
+              if (m <= 2) big.classList.add('is-soon');
+            }
+            bigLine.appendChild(big);
+            const abs0 = formatHMTimestamp(etas[0].eta);
+            if (abs0) bigLine.appendChild(el('span', { class: 'abs-time' }, abs0));
+            etaBox.appendChild(bigLine);
+            // Up to 2 more upcoming arrivals (skip etas[0] which we just shown).
+            const nextList = el('div', { class: 'eta-next-list' });
+            for (let i = 1; i < Math.min(etas.length, 3); i++) {
+              const nm = minutesUntil(etas[i].eta);
+              const nextAbs = formatHMTimestamp(etas[i].eta);
+              if (nm != null && nextAbs) {
+                nextList.appendChild(
+                  el('div', { class: 'eta-next' }, `${nm} ${t_str('minShort')} · ${nextAbs}`)
+                );
+              }
+            }
+            if (nextList.children.length > 0) etaBox.appendChild(nextList);
+            // If there are even more arrivals (4+), show a small "仲有 N 班"
+            // hint so users on busy lines know more buses are coming.
+            if (etas.length > 3) {
+              etaBox.appendChild(
+                el('div', { class: 'small more' }, t_str('etaCount', etas.length - 3))
+              );
+            } else if (etas[0].rmk_en === 'Scheduled Bus' && etas.length === 1) {
+              etaBox.appendChild(el('div', { class: 'small more' }, t_str('scheduled')));
+            }
+            // Leading-arrival remark drives the route-level cancelled/delayed
+            // banner. We only check etas[0] per the spec — earlier arrivals
+            // have already passed, so flagging them would mislead the user.
+            if (CRITICAL_RMK.has(etas[0].rmk_en)) affectedStops++;
+          } else if (idx === 0) {
+            etaBox.appendChild(el('span', { class: 'small' }, t_str('loading')));
+          } else {
+            etaBox.appendChild(
+              el('span', { class: 'small', style: 'color: var(--muted-2);' }, t_str('noEta'))
+            );
+          }
+          row.appendChild(etaBox);
+          list.appendChild(row);
+        });
+
+        // Build a route-level alert banner (if any). Detection runs over the
+        // full etaByStop map, not just the visible row, so a Last Bus marker
+        // anywhere on the route can trigger the "last bus has departed" alert
+        // even if the user is parked at a stop with its own upcoming service.
+        const alerts = detectRouteAlerts(etaByStop, affectedStops);
+        const routeKey = `${r.co}/${r.route}/${r.dir}/${r.service}`;
+        const alertEl =
+          !state.dismissedAlerts.has(`${routeKey}|${alerts[0] && alerts[0].key}`) && alerts.length
+            ? renderRouteAlert(alerts[0], routeKey)
+            : null;
+
+        const heading = el('h2', { class: 'section-title' }, t_str('showingStop', stops.length));
+        // ---- Route-level map (Google Maps iframe) ----
+        // v30 hybrid dropped the SVG schematic because users found the
+        // combined iframe + schematic card was unwieldy — the iframe
+        // sometimes lazy-loaded at a smaller size and the SVG stretched
+        // to fill the leftover space, breaking the layout. v31 keeps just
+        // the Google Maps iframe as the single map; the live-bus schematic
+        // is dropped from this view. The vehicle-positions helper
+        // (`assets/vehicle-positions.js`) and `renderVehicleMap()` are
+        // kept on disk for future use, but no longer rendered here.
+        const routeMapEl = renderRouteMap(stops, coordByStop);
+        // Order: optional alert → route map card (Google Maps iframe +
+        // open-in-maps link) → stop list heading → rows.
+        const children = [];
+        if (alertEl) children.push(alertEl);
+        if (routeMapEl) children.push(routeMapEl);
+        children.push(heading, list);
+        body.replaceChildren(...children);
+        // (Removed in v31: live-GPS probe + 30s polling — the SVG schematic
+        // is no longer rendered on the route detail page, so there's no DOM
+        // node to swap the live positions into. The vehicle-positions helper
+        // and the probe / refresh helpers stay defined in case we wire them
+        // back in later.)
+        // Refresh the header so the fare-range (or single flat fare) shows
+        // up under the destination line. Built from the same opts object the
+        // initial header was rendered with, but with the new fareMin/fareMax.
+        if (fareRangeInfo) {
+          try {
+            header.replaceChildren(
+              ...buildRouteHeader({
+                co: r.co,
+                route: r.route,
+                dir: r.dir,
+                service: r.service,
+                dest,
+                orig,
+                origEn,
+                dirLabel,
+                fare: fareRangeInfo.min === fareRangeInfo.max ? fareRangeInfo.max : null,
+                boundPills,
+                servicePills,
+                swapTarget,
+                currentDirKey: key,
+                fareMin: fareRangeInfo.min,
+                fareMax: fareRangeInfo.max,
+              }).childNodes
+            );
+          } catch (e) {
+            /* leave the initial header */
+          }
+        }
+        // Anchor the view at the user's current stop, justarrived-style.
+        if (targetRow) {
+          requestAnimationFrame(() => {
+            try {
+              targetRow.scrollIntoView({ behavior: 'auto', block: 'center' });
+            } catch {}
+          });
+        }
+      })
+      .catch((err) => {
+        // Log the underlying error so debugging isn't a guessing game.
+        // Previously this catch silently swallowed everything — which
+        // masked real bugs (e.g. vehicle-map crashes that wiped a
+        // perfectly-good stop list and replaced it with "搵唔到呢條路線").
+        console.error('renderBusRoute failed:', err);
+        body.replaceChildren(el('p', { class: 'empty' }, t_str('routeNotFound')));
+      });
 
     startEtaRefresh(renderRouteDetail);
   }
@@ -5066,12 +5655,21 @@
     const lineMeta = state.index.mtr.get(`MTR|${lineCode}`);
     const lineLabel = lineMeta ? pickFirst(lineMeta.origTc, lineMeta.origEn) : lineCode;
 
-    header.appendChild(buildRouteHeader({
-      co: 'MTR', route: lineCode, dir: 'LINE', service: '',
-      dest: lineLabel, orig: t_str('allLines'), origEn: lineMeta ? lineMeta.origEn : '',
-      dirLabel: '', fare: null, directions: [],
-      currentDirKey: `MTR|${lineCode}|LINE|`,
-    }));
+    header.appendChild(
+      buildRouteHeader({
+        co: 'MTR',
+        route: lineCode,
+        dir: 'LINE',
+        service: '',
+        dest: lineLabel,
+        orig: t_str('allLines'),
+        origEn: lineMeta ? lineMeta.origEn : '',
+        dirLabel: '',
+        fare: null,
+        directions: [],
+        currentDirKey: `MTR|${lineCode}|LINE|`,
+      })
+    );
     body.appendChild(buildSkeletonList(8));
     // Pull from state.index.mtr lines: each MTR station entry has lines:[...].
     const stations = [];
@@ -5080,7 +5678,7 @@
       if (st._isLine) return;
       if (st.lines && st.lines.includes(lineCode)) {
         // Use dir+code to find sequence.
-        const seq = st._dirs && st._dirs.length ? (st._seq || 0) : 0;
+        const seq = st._dirs && st._dirs.length ? st._seq || 0 : 0;
         if (!seen.has(code)) {
           seen.add(code);
           stations.push({ code, ...st });
@@ -5089,44 +5687,58 @@
     });
 
     // For each station, fetch ETA concurrently.
-    Promise.allSettled(stations.map((s) => fetchMtrSchedule(lineCode, s.code))).then((results) => {
-      const list = el('div', { class: 'eta-list' });
-      stations.forEach((s, idx) => {
-        const rr = results[idx];
-        let upNext = null, downNext = null;
-        if (rr.status === 'fulfilled' && rr.value && rr.value.data) {
-          const key = `${lineCode}-${s.code}`;
-          const d = rr.value.data[key] || {};
-          upNext = (d.UP && d.UP[0]) || null;
-          downNext = (d.DOWN && d.DOWN[0]) || null;
-          // Or other direction keys (e.g. LMC-DT, DT) — but display first one available.
-        }
-        const isOrigin = idx === 0;
-        const row = el('a', {
-          class: `stop-row${isOrigin ? ' is-origin' : ''}`,
-          href: `#/route/MTR/${encodeURIComponent(s.code)}/${encodeURIComponent('STATION')}/${encodeURIComponent('')}`,
+    Promise.allSettled(stations.map((s) => fetchMtrSchedule(lineCode, s.code)))
+      .then((results) => {
+        const list = el('div', { class: 'eta-list' });
+        stations.forEach((s, idx) => {
+          const rr = results[idx];
+          let upNext = null,
+            downNext = null;
+          if (rr.status === 'fulfilled' && rr.value && rr.value.data) {
+            const key = `${lineCode}-${s.code}`;
+            const d = rr.value.data[key] || {};
+            upNext = (d.UP && d.UP[0]) || null;
+            downNext = (d.DOWN && d.DOWN[0]) || null;
+            // Or other direction keys (e.g. LMC-DT, DT) — but display first one available.
+          }
+          const isOrigin = idx === 0;
+          const row = el('a', {
+            class: `stop-row${isOrigin ? ' is-origin' : ''}`,
+            href: `#/route/MTR/${encodeURIComponent(s.code)}/${encodeURIComponent('STATION')}/${encodeURIComponent('')}`,
+          });
+          row.appendChild(el('span', { class: 'stop-idx' }, String(idx + 1)));
+          const info = el('div', { class: 'stop-info' });
+          info.appendChild(el('div', { class: 'stop-name-row' }, nameFor(s) || s.code));
+          if (s.nameEn) info.appendChild(el('div', { class: 'stop-name-en' }, s.nameEn));
+          row.appendChild(info);
+          const etaBox = el('div', { class: 'stop-eta' });
+          const minutes = upNext && upNext.ttnt != null ? parseInt(upNext.ttnt, 10) : null;
+          if (minutes == null || Number.isNaN(minutes)) {
+            etaBox.appendChild(
+              el('span', { class: 'small', style: 'color: var(--muted-2);' }, t_str('noEta'))
+            );
+          } else if (minutes <= 0) {
+            etaBox.appendChild(el('span', { class: 'big is-now' }, t_str('arriving')));
+          } else {
+            etaBox.appendChild(
+              el(
+                'span',
+                { class: 'big' + (minutes <= 2 ? ' is-soon' : '') },
+                `${minutes} ${t_str('minShort')}`
+              )
+            );
+          }
+          row.appendChild(etaBox);
+          list.appendChild(row);
         });
-        row.appendChild(el('span', { class: 'stop-idx' }, String(idx + 1)));
-        const info = el('div', { class: 'stop-info' });
-        info.appendChild(el('div', { class: 'stop-name-row' }, nameFor(s) || s.code));
-        if (s.nameEn) info.appendChild(el('div', { class: 'stop-name-en' }, s.nameEn));
-        row.appendChild(info);
-        const etaBox = el('div', { class: 'stop-eta' });
-        const minutes = (upNext && upNext.ttnt != null) ? parseInt(upNext.ttnt, 10) : null;
-        if (minutes == null || Number.isNaN(minutes)) {
-          etaBox.appendChild(el('span', { class: 'small', style: 'color: var(--muted-2);' }, t_str('noEta')));
-        } else if (minutes <= 0) {
-          etaBox.appendChild(el('span', { class: 'big is-now' }, t_str('arriving')));
-        } else {
-          etaBox.appendChild(el('span', { class: 'big' + (minutes <= 2 ? ' is-soon' : '') }, `${minutes} ${t_str('minShort')}`));
-        }
-        row.appendChild(etaBox);
-        list.appendChild(row);
+        body.replaceChildren(
+          el('h2', { class: 'section-title' }, t_str('showingStop', stations.length)),
+          list
+        );
+      })
+      .catch(() => {
+        body.replaceChildren(el('p', { class: 'empty' }, t_str('routeNotFound')));
       });
-      body.replaceChildren(el('h2', { class: 'section-title' }, t_str('showingStop', stations.length)), list);
-    }).catch(() => {
-      body.replaceChildren(el('p', { class: 'empty' }, t_str('routeNotFound')));
-    });
 
     startEtaRefresh(renderRouteDetail);
   }
@@ -5146,51 +5758,72 @@
     const stationLines = (station && station.lines) || [];
     const dirLabel = ''; // station view shows both directions.
 
-    header.appendChild(buildRouteHeader({
-      co: 'MTR', route: stationCode, dir: 'STATION', service: '',
-      dest: stationName, orig: stationLines.join(' · '), origEn: station ? station.nameEn : '',
-      dirLabel: '', fare: null, directions: [],
-      currentDirKey: `MTR|${stationCode}|STATION|`,
-    }));
+    header.appendChild(
+      buildRouteHeader({
+        co: 'MTR',
+        route: stationCode,
+        dir: 'STATION',
+        service: '',
+        dest: stationName,
+        orig: stationLines.join(' · '),
+        origEn: station ? station.nameEn : '',
+        dirLabel: '',
+        fare: null,
+        directions: [],
+        currentDirKey: `MTR|${stationCode}|STATION|`,
+      })
+    );
     body.innerHTML = '';
     body.appendChild(buildSkeletonList(4));
-    Promise.allSettled(stationLines.map((line) => fetchMtrSchedule(line, stationCode))).then((results) => {
-      const sections = [];
-      stationLines.forEach((line, idx) => {
-        const rr = results[idx];
-        if (rr.status !== 'fulfilled' || !rr.value || !rr.value.data) return;
-        const key = `${line}-${stationCode}`;
-        const d = rr.value.data[key];
-        if (!d) return;
-        const lineMeta = state.index.mtr.get(`MTR|${line}`);
-        const lineName = lineMeta ? pickFirst(lineMeta.origTc, lineMeta.origEn) : line;
-        sections.push(renderMtrLineSection(line, lineName, d));
-      });
-      // Drop the loading placeholder.
-      body.innerHTML = '';
-      if (sections.length === 0) {
+    Promise.allSettled(stationLines.map((line) => fetchMtrSchedule(line, stationCode)))
+      .then((results) => {
+        const sections = [];
+        stationLines.forEach((line, idx) => {
+          const rr = results[idx];
+          if (rr.status !== 'fulfilled' || !rr.value || !rr.value.data) return;
+          const key = `${line}-${stationCode}`;
+          const d = rr.value.data[key];
+          if (!d) return;
+          const lineMeta = state.index.mtr.get(`MTR|${line}`);
+          const lineName = lineMeta ? pickFirst(lineMeta.origTc, lineMeta.origEn) : line;
+          sections.push(renderMtrLineSection(line, lineName, d));
+        });
+        // Drop the loading placeholder.
+        body.innerHTML = '';
+        if (sections.length === 0) {
+          body.appendChild(el('p', { class: 'empty' }, t_str('noEta')));
+        } else {
+          for (const sec of sections) body.appendChild(sec);
+        }
+        // Map at the bottom, just like justarrived.grok.me.
+        if (station && Number.isFinite(station.lat) && Number.isFinite(station.lng)) {
+          const mapEl = renderStopMap(station.lat, station.lng, stationName);
+          if (mapEl.firstChild) body.appendChild(mapEl);
+        }
+      })
+      .catch(() => {
+        body.innerHTML = '';
         body.appendChild(el('p', { class: 'empty' }, t_str('noEta')));
-      } else {
-        for (const sec of sections) body.appendChild(sec);
-      }
-      // Map at the bottom, just like justarrived.grok.me.
-      if (station && Number.isFinite(station.lat) && Number.isFinite(station.lng)) {
-        const mapEl = renderStopMap(station.lat, station.lng, stationName);
-        if (mapEl.firstChild) body.appendChild(mapEl);
-      }
-    }).catch(() => {
-      body.innerHTML = '';
-      body.appendChild(el('p', { class: 'empty' }, t_str('noEta')));
-    });
+      });
 
     startEtaRefresh(renderRouteDetail);
   }
 
   function renderMtrLineSection(lineCode, lineName, d) {
     const wrap = el('div', { class: 'eta-section' });
-    const title = el('h2', { class: 'section-title' },
-      el('span', { class: 'route-badge', style: 'display: inline-block; vertical-align: middle; margin-right: 8px;' }, lineCode),
-      lineName);
+    const title = el(
+      'h2',
+      { class: 'section-title' },
+      el(
+        'span',
+        {
+          class: 'route-badge',
+          style: 'display: inline-block; vertical-align: middle; margin-right: 8px;',
+        },
+        lineCode
+      ),
+      lineName
+    );
     wrap.appendChild(title);
 
     const groups = [];
@@ -5209,7 +5842,8 @@
       return wrap;
     }
     groups.forEach((g) => {
-      const dirLabel = (g.dir === 'UP' || g.dir === 'UT' || g.dir === 'LMC-UT') ? t_str('dirUp') : t_str('dirDown');
+      const dirLabel =
+        g.dir === 'UP' || g.dir === 'UT' || g.dir === 'LMC-UT' ? t_str('dirUp') : t_str('dirDown');
       const heading = el('div', { class: 'eta-dir' }, `${dirLabel} · ${t_str('trains')}`);
       wrap.appendChild(heading);
       const list = el('div', { class: 'eta-list' });
@@ -5218,8 +5852,13 @@
         const time = el('div', { class: 'eta-time' });
         const m = parseInt(tr.ttnt, 10);
         if (!Number.isNaN(m)) {
-          if (m <= 0) { time.textContent = t_str('arriving'); time.classList.add('is-now'); }
-          else { time.textContent = `${m} ${t_str('minShort')}`; if (m <= 2) time.classList.add('is-soon'); }
+          if (m <= 0) {
+            time.textContent = t_str('arriving');
+            time.classList.add('is-now');
+          } else {
+            time.textContent = `${m} ${t_str('minShort')}`;
+            if (m <= 2) time.classList.add('is-soon');
+          }
         } else {
           time.textContent = tr.time || '–';
         }
@@ -5254,131 +5893,184 @@
     const dirLabel = meta.dir === '1' ? t_str('dirUp') : t_str('dirDown');
 
     const lrtDirPills = buildDirectionPills('LRT', r.route, meta.dir || '1', '');
-    header.appendChild(buildRouteHeader({
-      co: 'LRT', route: r.route, dir: meta.dir || '1', service: '',
-      dest: pickFirst(meta.destTc, meta.destEn), orig: pickFirst(meta.origTc, meta.origEn),
-      origEn: meta.destEn || '', dirLabel, fare: null,
-      ...lrtDirPills,
-      currentDirKey: `LRT|${r.route}|${meta.dir || '1'}|`,
-      fareMin: null, fareMax: null,
-    }));
+    header.appendChild(
+      buildRouteHeader({
+        co: 'LRT',
+        route: r.route,
+        dir: meta.dir || '1',
+        service: '',
+        dest: pickFirst(meta.destTc, meta.destEn),
+        orig: pickFirst(meta.origTc, meta.origEn),
+        origEn: meta.destEn || '',
+        dirLabel,
+        fare: null,
+        ...lrtDirPills,
+        currentDirKey: `LRT|${r.route}|${meta.dir || '1'}|`,
+        fareMin: null,
+        fareMax: null,
+      })
+    );
     body.appendChild(el('p', { class: 'muted' }, t_str('loading')));
 
     // LRT flat fare: assets/lrt-fares.json keyed by route number.
     const lrtFareP = fetchLrtRouteFare(r.route);
 
     // Fetch LRT schedules for every stop on this route (capped concurrency).
-    fetchStopsWithCap(stopsForDir, 8, (s) => fetchLrtSchedule(s.id || s.stop)).then((results) => {
-      const etaByStop = new Map();
-      stopsForDir.forEach((s, i) => {
-        const rr = results[i];
-        if (rr && rr.status === 'fulfilled' && rr.value && Array.isArray(rr.value.platform_list)) {
-          const trains = [];
-          for (const p of rr.value.platform_list) {
-            for (const tr of (p.route_list || [])) {
-              if (String(tr.route_no) === String(r.route) && tr.time_ch) {
-                trains.push({ route_no: tr.route_no, dest_ch: tr.dest_ch, time_ch: tr.time_ch, time_en: tr.time_en, special: tr.special });
+    fetchStopsWithCap(stopsForDir, 8, (s) => fetchLrtSchedule(s.id || s.stop))
+      .then((results) => {
+        const etaByStop = new Map();
+        stopsForDir.forEach((s, i) => {
+          const rr = results[i];
+          if (
+            rr &&
+            rr.status === 'fulfilled' &&
+            rr.value &&
+            Array.isArray(rr.value.platform_list)
+          ) {
+            const trains = [];
+            for (const p of rr.value.platform_list) {
+              for (const tr of p.route_list || []) {
+                if (String(tr.route_no) === String(r.route) && tr.time_ch) {
+                  trains.push({
+                    route_no: tr.route_no,
+                    dest_ch: tr.dest_ch,
+                    time_ch: tr.time_ch,
+                    time_en: tr.time_en,
+                    special: tr.special,
+                  });
+                }
               }
             }
+            etaByStop.set(s.stop, trains);
           }
-          etaByStop.set(s.stop, trains);
-        }
-      });
+        });
 
-      // Resolve flat fare + expand onto each stop row. The LRT stops
-      // already carry a `seq` from the route JSON, so we copy it onto
-      // `_seq` for the expand helper.
-      const stopsWithSeq = stopsForDir.map((s, idx) => Object.assign({}, s, { _seq: idx + 1 }));
-      return lrtFareP.then((flat) => {
-        const lrtFareBySeq = expandFareForStops(flat, stopsWithSeq);
-        const lrtFareRange = fareRange(lrtFareBySeq);
-        if (lrtFareRange) {
-          try {
-            header.replaceChildren(...buildRouteHeader({
-              co: 'LRT', route: r.route, dir: meta.dir || '1', service: '',
-              dest: pickFirst(meta.destTc, meta.destEn), orig: pickFirst(meta.origTc, meta.origEn),
-              origEn: meta.destEn || '', dirLabel,
-              fare: (lrtFareRange.min === lrtFareRange.max) ? lrtFareRange.max : null,
-              ...lrtDirPills,
-              currentDirKey: `LRT|${r.route}|${meta.dir || '1'}|`,
-              fareMin: lrtFareRange.min, fareMax: lrtFareRange.max,
-            }).childNodes);
-          } catch (e) { /* leave the initial header */ }
-        }
-        return lrtFareBySeq;
-      }).catch(() => null).then((lrtFareBySeq) => {
-      const list = el('div', { class: 'eta-list' });
-      stopsForDir.forEach((s, idx) => {
-        const isOrigin = idx === 0;
-        const row = el('a', { class: `stop-row${isOrigin ? ' is-origin' : ''}`, href: `#/stop/${encodeURIComponent(s.stop)}` });
-        row.appendChild(el('span', { class: 'stop-idx' }, String(idx + 1)));
-        const stopMeta = state.index.lrt.stops.get(s.stop);
-        const info = el('div', { class: 'stop-info' });
-        const nameText = stopMeta ? nameFor(stopMeta) : s.stop;
-        info.appendChild(el('div', { class: 'stop-name-row' }, nameText));
-        if (stopMeta && stopMeta.nameEn) info.appendChild(el('div', { class: 'stop-name-en' }, stopMeta.nameEn));
-        // LRT stop code (e.g. "TR01") — small gray text under English name.
-        // Skip if it's a hash ID (16 hex chars) — those are noise.
-        if (s.stop && /^[A-Z0-9]{2,6}$/i.test(s.stop) && s.stop !== nameText) {
-          info.appendChild(el('div', { class: 'stop-code' }, s.stop));
-        }
-        // Per-stop fare pill (LRT: same flat fare on every row, or `—`
-        // when the LRT route isn't in our hardcoded fares table). 起點
-        // marker is always shown on the origin stop, even without fare data.
-        const fareRow = el('div', { class: 'stop-fare-row' });
-        const stopFare = lrtFareBySeq && lrtFareBySeq.get(idx + 1);
-        if (stopFare != null && Number.isFinite(Number(stopFare))) {
-          fareRow.appendChild(el('span', { class: 'stop-fare' }, `$${fmtFare(Number(stopFare))}`));
-        } else {
-          const chip = el('span', { class: 'stop-fare is-na' }, '—');
-          chip.title = t_str('fareUnavailable');
-          fareRow.appendChild(chip);
-        }
-        if (isOrigin) fareRow.appendChild(el('span', { class: 'stop-origin-marker' }, t_str('fareOrigin')));
-        info.appendChild(fareRow);
-        row.appendChild(info);
-        const etaBox = el('div', { class: 'stop-eta' });
-        const trains = etaByStop.get(s.stop) || [];
-        if (trains.length > 0) {
-          const bigLine = el('div', { class: 'big-line' });
-          const big = el('span', { class: 'big' });
-          const minutes = parseInt(trains[0].time_en, 10);
-          if (Number.isFinite(minutes)) {
-            big.textContent = `${minutes} ${t_str('minShort')}`;
-            if (minutes <= 2) big.classList.add('is-soon');
-          } else {
-            big.textContent = trains[0].time_ch || trains[0].time_en || '–';
-          }
-          bigLine.appendChild(big);
-          etaBox.appendChild(bigLine);
-          // Up to 2 more upcoming LRT trains (LRT upstream gives only
-          // minutes, no absolute timestamps, so we omit the · HH:MM).
-          const nextList = el('div', { class: 'eta-next-list' });
-          for (let i = 1; i < Math.min(trains.length, 3); i++) {
-            const nm = parseInt(trains[i].time_en, 10);
-            if (Number.isFinite(nm)) {
-              nextList.appendChild(el('div', { class: 'eta-next' }, `${nm} ${t_str('minShort')}`));
+        // Resolve flat fare + expand onto each stop row. The LRT stops
+        // already carry a `seq` from the route JSON, so we copy it onto
+        // `_seq` for the expand helper.
+        const stopsWithSeq = stopsForDir.map((s, idx) => Object.assign({}, s, { _seq: idx + 1 }));
+        return lrtFareP
+          .then((flat) => {
+            const lrtFareBySeq = expandFareForStops(flat, stopsWithSeq);
+            const lrtFareRange = fareRange(lrtFareBySeq);
+            if (lrtFareRange) {
+              try {
+                header.replaceChildren(
+                  ...buildRouteHeader({
+                    co: 'LRT',
+                    route: r.route,
+                    dir: meta.dir || '1',
+                    service: '',
+                    dest: pickFirst(meta.destTc, meta.destEn),
+                    orig: pickFirst(meta.origTc, meta.origEn),
+                    origEn: meta.destEn || '',
+                    dirLabel,
+                    fare: lrtFareRange.min === lrtFareRange.max ? lrtFareRange.max : null,
+                    ...lrtDirPills,
+                    currentDirKey: `LRT|${r.route}|${meta.dir || '1'}|`,
+                    fareMin: lrtFareRange.min,
+                    fareMax: lrtFareRange.max,
+                  }).childNodes
+                );
+              } catch (e) {
+                /* leave the initial header */
+              }
             }
-          }
-          if (nextList.children.length > 0) etaBox.appendChild(nextList);
-          if (trains.length > 3) {
-            etaBox.appendChild(el('div', { class: 'small more' }, t_str('etaCount', trains.length - 3)));
-          } else if (trains[0].special && trains.length === 1) {
-            etaBox.appendChild(el('div', { class: 'small more' }, t_str('scheduled')));
-          }
-        } else if (idx === 0) {
-          etaBox.appendChild(el('span', { class: 'small' }, t_str('loading')));
-        } else {
-          etaBox.appendChild(el('span', { class: 'small', style: 'color: var(--muted-2);' }, t_str('noEta')));
-        }
-        row.appendChild(etaBox);
-        list.appendChild(row);
+            return lrtFareBySeq;
+          })
+          .catch(() => null)
+          .then((lrtFareBySeq) => {
+            const list = el('div', { class: 'eta-list' });
+            stopsForDir.forEach((s, idx) => {
+              const isOrigin = idx === 0;
+              const row = el('a', {
+                class: `stop-row${isOrigin ? ' is-origin' : ''}`,
+                href: `#/stop/${encodeURIComponent(s.stop)}`,
+              });
+              row.appendChild(el('span', { class: 'stop-idx' }, String(idx + 1)));
+              const stopMeta = state.index.lrt.stops.get(s.stop);
+              const info = el('div', { class: 'stop-info' });
+              const nameText = stopMeta ? nameFor(stopMeta) : s.stop;
+              info.appendChild(el('div', { class: 'stop-name-row' }, nameText));
+              if (stopMeta && stopMeta.nameEn)
+                info.appendChild(el('div', { class: 'stop-name-en' }, stopMeta.nameEn));
+              // LRT stop code (e.g. "TR01") — small gray text under English name.
+              // Skip if it's a hash ID (16 hex chars) — those are noise.
+              if (s.stop && /^[A-Z0-9]{2,6}$/i.test(s.stop) && s.stop !== nameText) {
+                info.appendChild(el('div', { class: 'stop-code' }, s.stop));
+              }
+              // Per-stop fare pill (LRT: same flat fare on every row, or `—`
+              // when the LRT route isn't in our hardcoded fares table). 起點
+              // marker is always shown on the origin stop, even without fare data.
+              const fareRow = el('div', { class: 'stop-fare-row' });
+              const stopFare = lrtFareBySeq && lrtFareBySeq.get(idx + 1);
+              if (stopFare != null && Number.isFinite(Number(stopFare))) {
+                fareRow.appendChild(
+                  el('span', { class: 'stop-fare' }, `$${fmtFare(Number(stopFare))}`)
+                );
+              } else {
+                const chip = el('span', { class: 'stop-fare is-na' }, '—');
+                chip.title = t_str('fareUnavailable');
+                fareRow.appendChild(chip);
+              }
+              if (isOrigin)
+                fareRow.appendChild(
+                  el('span', { class: 'stop-origin-marker' }, t_str('fareOrigin'))
+                );
+              info.appendChild(fareRow);
+              row.appendChild(info);
+              const etaBox = el('div', { class: 'stop-eta' });
+              const trains = etaByStop.get(s.stop) || [];
+              if (trains.length > 0) {
+                const bigLine = el('div', { class: 'big-line' });
+                const big = el('span', { class: 'big' });
+                const minutes = parseInt(trains[0].time_en, 10);
+                if (Number.isFinite(minutes)) {
+                  big.textContent = `${minutes} ${t_str('minShort')}`;
+                  if (minutes <= 2) big.classList.add('is-soon');
+                } else {
+                  big.textContent = trains[0].time_ch || trains[0].time_en || '–';
+                }
+                bigLine.appendChild(big);
+                etaBox.appendChild(bigLine);
+                // Up to 2 more upcoming LRT trains (LRT upstream gives only
+                // minutes, no absolute timestamps, so we omit the · HH:MM).
+                const nextList = el('div', { class: 'eta-next-list' });
+                for (let i = 1; i < Math.min(trains.length, 3); i++) {
+                  const nm = parseInt(trains[i].time_en, 10);
+                  if (Number.isFinite(nm)) {
+                    nextList.appendChild(
+                      el('div', { class: 'eta-next' }, `${nm} ${t_str('minShort')}`)
+                    );
+                  }
+                }
+                if (nextList.children.length > 0) etaBox.appendChild(nextList);
+                if (trains.length > 3) {
+                  etaBox.appendChild(
+                    el('div', { class: 'small more' }, t_str('etaCount', trains.length - 3))
+                  );
+                } else if (trains[0].special && trains.length === 1) {
+                  etaBox.appendChild(el('div', { class: 'small more' }, t_str('scheduled')));
+                }
+              } else if (idx === 0) {
+                etaBox.appendChild(el('span', { class: 'small' }, t_str('loading')));
+              } else {
+                etaBox.appendChild(
+                  el('span', { class: 'small', style: 'color: var(--muted-2);' }, t_str('noEta'))
+                );
+              }
+              row.appendChild(etaBox);
+              list.appendChild(row);
+            });
+            body.replaceChildren(
+              el('h2', { class: 'section-title' }, t_str('showingStop', stopsForDir.length)),
+              list
+            );
+          });
+      })
+      .catch(() => {
+        body.replaceChildren(el('p', { class: 'empty' }, t_str('routeNotFound')));
       });
-      body.replaceChildren(el('h2', { class: 'section-title' }, t_str('showingStop', stopsForDir.length)), list);
-      });
-    }).catch(() => {
-      body.replaceChildren(el('p', { class: 'empty' }, t_str('routeNotFound')));
-    });
 
     startEtaRefresh(renderRouteDetail);
   }
@@ -5393,33 +6085,53 @@
     body.innerHTML = '';
 
     const meta = state.index.routes.get(makeRouteKey('GMB', r.route, r.dir, r.service));
-    const displayRoute = (meta && meta._region && meta._code) ? `${meta._code} (${meta._region})` : r.route;
+    const displayRoute =
+      meta && meta._region && meta._code ? `${meta._code} (${meta._region})` : r.route;
     const gmbDirPills = buildDirectionPills('GMB', r.route, r.dir || '1', r.service);
     if (!meta || !meta._routeId) {
       body.replaceChildren(el('p', { class: 'muted' }, t_str('loadingRoutes')));
-      header.appendChild(buildRouteHeader({
-        co: 'GMB', route: displayRoute, dir: r.dir || '1', service: r.service,
-        dest: r.route, orig: '', origEn: '', dirLabel: '',
-        ...gmbDirPills,
-        currentDirKey: makeRouteKey('GMB', r.route, r.dir || '1', r.service),
-      }));
+      header.appendChild(
+        buildRouteHeader({
+          co: 'GMB',
+          route: displayRoute,
+          dir: r.dir || '1',
+          service: r.service,
+          dest: r.route,
+          orig: '',
+          origEn: '',
+          dirLabel: '',
+          ...gmbDirPills,
+          currentDirKey: makeRouteKey('GMB', r.route, r.dir || '1', r.service),
+        })
+      );
       if (r._region && r._code) {
-        fetchGmbRoute(r._region, r._code).then((resp) => {
-          const arr = (resp && Array.isArray(resp.data)) ? resp.data : [];
-          const found = arr.find((x) => String(x.route_id) === String(r.service));
-          if (found) renderGmbRouteAfterMeta(view, header, body, r, found);
-        }).catch(() => body.replaceChildren(el('p', { class: 'empty' }, t_str('routeNotFound'))));
+        fetchGmbRoute(r._region, r._code)
+          .then((resp) => {
+            const arr = resp && Array.isArray(resp.data) ? resp.data : [];
+            const found = arr.find((x) => String(x.route_id) === String(r.service));
+            if (found) renderGmbRouteAfterMeta(view, header, body, r, found);
+          })
+          .catch(() => body.replaceChildren(el('p', { class: 'empty' }, t_str('routeNotFound'))));
       }
       return;
     }
-    header.appendChild(buildRouteHeader({
-      co: 'GMB', route: displayRoute, dir: r.dir, service: r.service,
-      dest: pickFirst(meta.destTc, meta.destEn), orig: pickFirst(meta.origTc, meta.origEn),
-      origEn: meta.origEn || '', dirLabel: '', fare: null,
-      ...gmbDirPills,
-      currentDirKey: makeRouteKey('GMB', r.route, r.dir, r.service),
-      fareMin: null, fareMax: null,
-    }));
+    header.appendChild(
+      buildRouteHeader({
+        co: 'GMB',
+        route: displayRoute,
+        dir: r.dir,
+        service: r.service,
+        dest: pickFirst(meta.destTc, meta.destEn),
+        orig: pickFirst(meta.origTc, meta.origEn),
+        origEn: meta.origEn || '',
+        dirLabel: '',
+        fare: null,
+        ...gmbDirPills,
+        currentDirKey: makeRouteKey('GMB', r.route, r.dir, r.service),
+        fareMin: null,
+        fareMax: null,
+      })
+    );
     body.appendChild(el('p', { class: 'muted' }, t_str('loading')));
 
     // Kick off the GMB flat fare fetch in parallel with route-stop.
@@ -5439,9 +6151,13 @@
             return known || { stop: String(it.stop_id), nameTc: it.name_tc, nameEn: it.name_en };
           });
         // Normalise `seq` onto each stop so expandFareForStops works.
-        stops.forEach((s, idx) => { s._seq = idx + 1; });
+        stops.forEach((s, idx) => {
+          s._seq = idx + 1;
+        });
         // ETA for every stop on the route, capped concurrency.
-        const etaResults = await fetchStopsWithCap(stops, 8, (s) => fetchGmbStopEta(meta._routeId, parseInt(r.dir, 10) || 1, parseInt(s.stop, 10) || 0));
+        const etaResults = await fetchStopsWithCap(stops, 8, (s) =>
+          fetchGmbStopEta(meta._routeId, parseInt(r.dir, 10) || 1, parseInt(s.stop, 10) || 0)
+        );
         const etaByStop = new Map();
         stops.forEach((s, i) => {
           const rr = etaResults[i];
@@ -5454,26 +6170,38 @@
         try {
           const flat = await gmbFareP;
           gmbFareBySeq = expandFareForStops(flat, stops);
-        } catch (e) { gmbFareBySeq = null; }
+        } catch (e) {
+          gmbFareBySeq = null;
+        }
         const gmbFareRange = fareRange(gmbFareBySeq);
         // Refresh header to show the flat fare range under the destination.
         if (gmbFareRange) {
           try {
-            header.replaceChildren(...buildRouteHeader({
-              co: 'GMB', route: displayRoute, dir: r.dir, service: r.service,
-              dest: pickFirst(meta.destTc, meta.destEn), orig: pickFirst(meta.origTc, meta.origEn),
-              origEn: meta.origEn || '', dirLabel: '',
-              fare: (gmbFareRange.min === gmbFareRange.max) ? gmbFareRange.max : null,
-              ...gmbDirPills,
-              currentDirKey: makeRouteKey('GMB', r.route, r.dir, r.service),
-              fareMin: gmbFareRange.min, fareMax: gmbFareRange.max,
-            }).childNodes);
-          } catch (e) { /* leave the initial header */ }
+            header.replaceChildren(
+              ...buildRouteHeader({
+                co: 'GMB',
+                route: displayRoute,
+                dir: r.dir,
+                service: r.service,
+                dest: pickFirst(meta.destTc, meta.destEn),
+                orig: pickFirst(meta.origTc, meta.origEn),
+                origEn: meta.origEn || '',
+                dirLabel: '',
+                fare: gmbFareRange.min === gmbFareRange.max ? gmbFareRange.max : null,
+                ...gmbDirPills,
+                currentDirKey: makeRouteKey('GMB', r.route, r.dir, r.service),
+                fareMin: gmbFareRange.min,
+                fareMax: gmbFareRange.max,
+              }).childNodes
+            );
+          } catch (e) {
+            /* leave the initial header */
+          }
         }
         const list = el('div', { class: 'eta-list' });
         // Anchor at the user's current stop_seq if supplied.
         let targetRow = null;
-        const targetSeq = (r.stopSeq && /^\d+$/.test(r.stopSeq)) ? parseInt(r.stopSeq, 10) : null;
+        const targetSeq = r.stopSeq && /^\d+$/.test(r.stopSeq) ? parseInt(r.stopSeq, 10) : null;
         stops.forEach((s, idx) => {
           const seq = idx + 1;
           const isOrigin = idx === 0;
@@ -5481,7 +6209,10 @@
           const classes = ['stop-row'];
           if (isOrigin) classes.push('is-origin');
           if (isTarget) classes.push('is-target');
-          const row = el('a', { class: classes.join(' '), href: `#/stop/${encodeURIComponent(s.stop)}` });
+          const row = el('a', {
+            class: classes.join(' '),
+            href: `#/stop/${encodeURIComponent(s.stop)}`,
+          });
           row.appendChild(el('span', { class: 'stop-idx' }, String(seq)));
           if (isTarget) {
             row.dataset.targetSeq = String(seq);
@@ -5502,13 +6233,16 @@
           const fareRow = el('div', { class: 'stop-fare-row' });
           const stopFare = gmbFareBySeq && gmbFareBySeq.get(seq);
           if (stopFare != null && Number.isFinite(Number(stopFare))) {
-            fareRow.appendChild(el('span', { class: 'stop-fare' }, `$${fmtFare(Number(stopFare))}`));
+            fareRow.appendChild(
+              el('span', { class: 'stop-fare' }, `$${fmtFare(Number(stopFare))}`)
+            );
           } else {
             const chip = el('span', { class: 'stop-fare is-na' }, '—');
             chip.title = t_str('fareUnavailable');
             fareRow.appendChild(chip);
           }
-          if (isOrigin) fareRow.appendChild(el('span', { class: 'stop-origin-marker' }, t_str('fareOrigin')));
+          if (isOrigin)
+            fareRow.appendChild(el('span', { class: 'stop-origin-marker' }, t_str('fareOrigin')));
           info.appendChild(fareRow);
           row.appendChild(info);
           const etaBox = el('div', { class: 'stop-eta' });
@@ -5531,27 +6265,38 @@
             for (let i = 1; i < Math.min(etas.length, 3); i++) {
               const nm = parseInt(etas[i].diff, 10);
               if (Number.isFinite(nm)) {
-                nextList.appendChild(el('div', { class: 'eta-next' }, `${nm} ${t_str('minShort')}`));
+                nextList.appendChild(
+                  el('div', { class: 'eta-next' }, `${nm} ${t_str('minShort')}`)
+                );
               }
             }
             if (nextList.children.length > 0) etaBox.appendChild(nextList);
             if (etas.length > 3) {
-              etaBox.appendChild(el('div', { class: 'small more' }, t_str('etaCount', etas.length - 3)));
+              etaBox.appendChild(
+                el('div', { class: 'small more' }, t_str('etaCount', etas.length - 3))
+              );
             } else if (etas[0].remarks_en === 'Scheduled' && etas.length === 1) {
               etaBox.appendChild(el('div', { class: 'small more' }, t_str('scheduled')));
             }
           } else if (idx === 0) {
             etaBox.appendChild(el('span', { class: 'small' }, t_str('loading')));
           } else {
-            etaBox.appendChild(el('span', { class: 'small', style: 'color: var(--muted-2);' }, t_str('noEta')));
+            etaBox.appendChild(
+              el('span', { class: 'small', style: 'color: var(--muted-2);' }, t_str('noEta'))
+            );
           }
           row.appendChild(etaBox);
           list.appendChild(row);
         });
-        body.replaceChildren(el('h2', { class: 'section-title' }, t_str('showingStop', stops.length)), list);
+        body.replaceChildren(
+          el('h2', { class: 'section-title' }, t_str('showingStop', stops.length)),
+          list
+        );
         if (targetRow) {
           requestAnimationFrame(() => {
-            try { targetRow.scrollIntoView({ behavior: 'auto', block: 'center' }); } catch {}
+            try {
+              targetRow.scrollIntoView({ behavior: 'auto', block: 'center' });
+            } catch {}
           });
         }
       })
@@ -5589,36 +6334,63 @@
   //      when min/max are absent.
   //   3) Nothing — the header omits the fare line entirely.
   function buildRouteHeader(opts) {
-    const { co, route, dir, service, dest, orig, origEn, dirLabel, fare,
-            boundPills = [], servicePills = [], swapTarget = null, currentKey, currentDirKey, isMapRoute = false,
-            fareMin, fareMax } = opts;
+    const {
+      co,
+      route,
+      dir,
+      service,
+      dest,
+      orig,
+      origEn,
+      dirLabel,
+      fare,
+      boundPills = [],
+      servicePills = [],
+      swapTarget = null,
+      currentKey,
+      currentDirKey,
+      isMapRoute = false,
+      fareMin,
+      fareMax,
+    } = opts;
     const head = el('div', { class: 'route-header' });
 
     // ---- top action bar ----
     const topbar = el('div', { class: 'route-topbar' });
-    topbar.appendChild(el('a', {
-      class: 'route-back',
-        'aria-label': t_str('back'),
-        href: '#/',
-      }, (0, function () {
-        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        svg.setAttribute('viewBox', '0 0 24 24');
-        svg.setAttribute('width', '22'); svg.setAttribute('height', '22');
-        svg.setAttribute('aria-hidden', 'true');
-        const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        p.setAttribute('fill', 'none'); p.setAttribute('stroke', 'currentColor');
-        p.setAttribute('stroke-width', '2'); p.setAttribute('stroke-linecap', 'round');
-        p.setAttribute('stroke-linejoin', 'round'); p.setAttribute('d', 'M15 6l-6 6 6 6');
-        svg.appendChild(p);
-        return svg;
-      })()
-    ));
+    topbar.appendChild(
+      el(
+        'a',
+        {
+          class: 'route-back',
+          'aria-label': t_str('back'),
+          href: '#/',
+        },
+        (0,
+        function () {
+          const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+          svg.setAttribute('viewBox', '0 0 24 24');
+          svg.setAttribute('width', '22');
+          svg.setAttribute('height', '22');
+          svg.setAttribute('aria-hidden', 'true');
+          const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          p.setAttribute('fill', 'none');
+          p.setAttribute('stroke', 'currentColor');
+          p.setAttribute('stroke-width', '2');
+          p.setAttribute('stroke-linecap', 'round');
+          p.setAttribute('stroke-linejoin', 'round');
+          p.setAttribute('d', 'M15 6l-6 6 6 6');
+          svg.appendChild(p);
+          return svg;
+        })()
+      )
+    );
 
     const topRight = el('div', { class: 'route-topbar-right' });
-    const langPill = el('span', { class: 'route-lang-pill' },
-      state.lang === 'zh-Hant' ? '繁體中文'
-        : state.lang === 'zh-Hans' ? '简体中文'
-        : 'English');
+    const langPill = el(
+      'span',
+      { class: 'route-lang-pill' },
+      state.lang === 'zh-Hant' ? '繁體中文' : state.lang === 'zh-Hans' ? '简体中文' : 'English'
+    );
     topRight.appendChild(langPill);
 
     const favKey = { co, route, dir, service };
@@ -5645,7 +6417,7 @@
     summary.appendChild(numWrap);
 
     if (co && co !== 'STOP') {
-      summary.appendChild(el('span', { class: 'route-op-pill' }, t_str(opCoKey(co))));
+      summary.appendChild(el('span', { class: 'route-op-pill' }, t_str(busetaUtils.opCoKey(co))));
     }
     head.appendChild(summary);
 
@@ -5655,7 +6427,7 @@
     // Origin · operator sub-line
     if (orig) {
       const sub = el('p', { class: 'route-sub' });
-      const opName = t_str(opCoKey(co));
+      const opName = t_str(busetaUtils.opCoKey(co));
       sub.appendChild(document.createTextNode(`${orig}${opName ? ' · ' + opName : ''}`));
       head.appendChild(sub);
     }
@@ -5664,9 +6436,10 @@
     // both are finite numbers, fall back to the legacy single `fare` from
     // the route index, otherwise omit the line entirely.
     if (Number.isFinite(fareMin) && Number.isFinite(fareMax)) {
-      const fareText = (fareMin === fareMax)
-        ? `${t_str('fare')} $${fmtFare(fareMin)}`
-        : t_str('fareFullRange', fmtFare(fareMin), fmtFare(fareMax));
+      const fareText =
+        fareMin === fareMax
+          ? `${t_str('fare')} $${fmtFare(fareMin)}`
+          : t_str('fareFullRange', fmtFare(fareMin), fmtFare(fareMax));
       head.appendChild(el('p', { class: 'route-fare' }, fareText));
     } else if (fare != null && fare !== '') {
       head.appendChild(el('p', { class: 'route-fare' }, `${t_str('fare')} ${fare}`));
@@ -5681,12 +6454,16 @@
       const pills = el('div', { class: 'route-dir-pills', role: 'tablist' });
       for (const d of boundPills) {
         const isCurrent = d.dir === String(dir);
-        const pill = el('a', {
-          class: `route-dir-pill ${isCurrent ? 'is-current' : ''}`,
-          href: `#/route/${encodeURIComponent(d.co)}/${encodeURIComponent(d.route)}/${encodeURIComponent(d.dir)}/${encodeURIComponent(d.service)}`,
-          role: 'tab',
-          'aria-selected': String(isCurrent),
-        }, d.label);
+        const pill = el(
+          'a',
+          {
+            class: `route-dir-pill ${isCurrent ? 'is-current' : ''}`,
+            href: `#/route/${encodeURIComponent(d.co)}/${encodeURIComponent(d.route)}/${encodeURIComponent(d.dir)}/${encodeURIComponent(d.service)}`,
+            role: 'tab',
+            'aria-selected': String(isCurrent),
+          },
+          d.label
+        );
         pills.appendChild(pill);
       }
       head.appendChild(pills);
@@ -5730,12 +6507,16 @@
       const tabs = el('div', { class: 'route-service-tabs', role: 'tablist' });
       for (const s of servicePills) {
         const isCurrent = String(s.service) === String(service);
-        const tab = el('a', {
-          class: `route-service-tab ${isCurrent ? 'is-on' : ''}`,
-          href: `#/route/${encodeURIComponent(s.co)}/${encodeURIComponent(s.route)}/${encodeURIComponent(s.dir)}/${encodeURIComponent(s.service)}`,
-          role: 'tab',
-          'aria-selected': String(isCurrent),
-        }, s.label);
+        const tab = el(
+          'a',
+          {
+            class: `route-service-tab ${isCurrent ? 'is-on' : ''}`,
+            href: `#/route/${encodeURIComponent(s.co)}/${encodeURIComponent(s.route)}/${encodeURIComponent(s.dir)}/${encodeURIComponent(s.service)}`,
+            role: 'tab',
+            'aria-selected': String(isCurrent),
+          },
+          s.label
+        );
         tabs.appendChild(tab);
       }
       head.appendChild(tabs);
@@ -5744,29 +6525,51 @@
     // ---- update indicator + manual refresh ----
     const updated = el('div', { class: 'route-updated' });
     const updateLeft = el('div', { class: 'route-updated-left' });
-    updateLeft.appendChild(el('p', { class: 'route-updated-when', 'data-bind': 'route-updated-when' }, t_str('updatedJust')));
+    updateLeft.appendChild(
+      el(
+        'p',
+        { class: 'route-updated-when', 'data-bind': 'route-updated-when' },
+        t_str('updatedJust')
+      )
+    );
     updateLeft.appendChild(el('p', { class: 'route-updated-meta' }, t_str('updatedMeta')));
     // QW-8: countdown chip — counts down to the next auto-refresh.
-    updateLeft.appendChild(buildRefreshProgress((state._nextRefreshAt || (Date.now() + REFRESH_INTERVAL_MS))));
+    updateLeft.appendChild(
+      buildRefreshProgress(state._nextRefreshAt || Date.now() + REFRESH_INTERVAL_MS)
+    );
     updated.appendChild(updateLeft);
 
-    const refreshBtn = el('button', {
-      type: 'button',
-      class: 'route-refresh',
-      'aria-label': t_str('refresh'),
-      onclick: () => { if (typeof state._refreshRoute === 'function') state._refreshRoute(); else location.reload(); },
-    }, refreshIconSVG());
-    const shareBtn = el('button', {
-      type: 'button',
-      class: 'share-btn route-share',
-      'aria-label': t_str('shareLinkAria'),
-      title: t_str('shareLink'),
-      onclick: (ev) => {
-        ev.stopPropagation();
-        const url = location.origin + location.pathname + `#/route/${encodeURIComponent(co)}/${encodeURIComponent(route)}/${encodeURIComponent(dir)}/${encodeURIComponent(service)}`;
-        copyShareLink(url, t_str('shareLinkAria'));
+    const refreshBtn = el(
+      'button',
+      {
+        type: 'button',
+        class: 'route-refresh',
+        'aria-label': t_str('refresh'),
+        onclick: () => {
+          if (typeof state._refreshRoute === 'function') state._refreshRoute();
+          else location.reload();
+        },
       },
-    }, shareIconSVG());
+      refreshIconSVG()
+    );
+    const shareBtn = el(
+      'button',
+      {
+        type: 'button',
+        class: 'share-btn route-share',
+        'aria-label': t_str('shareLinkAria'),
+        title: t_str('shareLink'),
+        onclick: (ev) => {
+          ev.stopPropagation();
+          const url =
+            location.origin +
+            location.pathname +
+            `#/route/${encodeURIComponent(co)}/${encodeURIComponent(route)}/${encodeURIComponent(dir)}/${encodeURIComponent(service)}`;
+          copyShareLink(url, t_str('shareLinkAria'));
+        },
+      },
+      shareIconSVG()
+    );
     updated.appendChild(refreshBtn);
     updated.appendChild(shareBtn);
     head.appendChild(updated);
@@ -5778,10 +6581,14 @@
   function starIconSVG(filled) {
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     svg.setAttribute('viewBox', '0 0 24 24');
-    svg.setAttribute('width', '22'); svg.setAttribute('height', '22');
+    svg.setAttribute('width', '22');
+    svg.setAttribute('height', '22');
     svg.setAttribute('aria-hidden', 'true');
     const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    p.setAttribute('d', 'M12 2.5l2.95 5.98 6.6.96-4.78 4.66 1.13 6.57L12 17.96l-5.9 3.1 1.13-6.57L2.45 9.44l6.6-.96L12 2.5z');
+    p.setAttribute(
+      'd',
+      'M12 2.5l2.95 5.98 6.6.96-4.78 4.66 1.13 6.57L12 17.96l-5.9 3.1 1.13-6.57L2.45 9.44l6.6-.96L12 2.5z'
+    );
     if (filled) {
       p.setAttribute('fill', 'currentColor');
       p.setAttribute('stroke', 'currentColor');
@@ -5798,17 +6605,23 @@
   function refreshIconSVG() {
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     svg.setAttribute('viewBox', '0 0 24 24');
-    svg.setAttribute('width', '18'); svg.setAttribute('height', '18');
+    svg.setAttribute('width', '18');
+    svg.setAttribute('height', '18');
     svg.setAttribute('aria-hidden', 'true');
     const a = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     a.setAttribute('d', 'M21 12a9 9 0 1 1-3.4-7.05');
-    a.setAttribute('fill', 'none'); a.setAttribute('stroke', 'currentColor');
-    a.setAttribute('stroke-width', '2'); a.setAttribute('stroke-linecap', 'round');
+    a.setAttribute('fill', 'none');
+    a.setAttribute('stroke', 'currentColor');
+    a.setAttribute('stroke-width', '2');
+    a.setAttribute('stroke-linecap', 'round');
     svg.appendChild(a);
     const b = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     b.setAttribute('d', 'M21 4v5h-5');
-    b.setAttribute('fill', 'none'); b.setAttribute('stroke', 'currentColor');
-    b.setAttribute('stroke-width', '2'); b.setAttribute('stroke-linecap', 'round'); b.setAttribute('stroke-linejoin', 'round');
+    b.setAttribute('fill', 'none');
+    b.setAttribute('stroke', 'currentColor');
+    b.setAttribute('stroke-width', '2');
+    b.setAttribute('stroke-linecap', 'round');
+    b.setAttribute('stroke-linejoin', 'round');
     svg.appendChild(b);
     return svg;
   }
@@ -5875,7 +6688,12 @@
     // 最近查過. pushRecent dedupes on (co, route, dir, service), so the
     // opposite-bound entry will sit at the top of the list while the
     // previous-bound entry drops down — same behaviour as a normal visit.
-    pushRecent({ co: newRoute.co, route: newRoute.route, dir: newRoute.dir, service: newRoute.service });
+    pushRecent({
+      co: newRoute.co,
+      route: newRoute.route,
+      dir: newRoute.dir,
+      service: newRoute.service,
+    });
     // Keep the URL bar in sync without triggering the hashchange handler
     // (which would otherwise cause a second renderRoute call).
     try {
@@ -5905,8 +6723,8 @@
     let tracking = false;
     let startX = 0;
     let startY = 0;
-    const SWIPE_HORIZ_THRESHOLD = 70;   // px — how far the user has to drag
-    const SWIPE_VERT_LIMIT = 50;        // px — max vertical drift allowed
+    const SWIPE_HORIZ_THRESHOLD = 70; // px — how far the user has to drag
+    const SWIPE_VERT_LIMIT = 50; // px — max vertical drift allowed
 
     const shouldIgnore = (target) => {
       if (!target) return true;
@@ -5921,45 +6739,68 @@
       return false;
     };
 
-    document.addEventListener('touchstart', (e) => {
-      const view = document.getElementById('view-route');
-      if (!view || view.hidden) { tracking = false; return; }
-      if (shouldIgnore(e.target)) { tracking = false; return; }
-      if (!e.touches || e.touches.length !== 1) { tracking = false; return; }
-      const t = e.touches[0];
-      startX = t.clientX;
-      startY = t.clientY;
-      tracking = true;
-    }, { passive: true });
+    document.addEventListener(
+      'touchstart',
+      (e) => {
+        const view = document.getElementById('view-route');
+        if (!view || view.hidden) {
+          tracking = false;
+          return;
+        }
+        if (shouldIgnore(e.target)) {
+          tracking = false;
+          return;
+        }
+        if (!e.touches || e.touches.length !== 1) {
+          tracking = false;
+          return;
+        }
+        const t = e.touches[0];
+        startX = t.clientX;
+        startY = t.clientY;
+        tracking = true;
+      },
+      { passive: true }
+    );
 
-    document.addEventListener('touchcancel', () => { tracking = false; }, { passive: true });
+    document.addEventListener(
+      'touchcancel',
+      () => {
+        tracking = false;
+      },
+      { passive: true }
+    );
 
-    document.addEventListener('touchend', (e) => {
-      if (!tracking) return;
-      tracking = false;
-      const view = document.getElementById('view-route');
-      if (!view || view.hidden) return;
-      const touches = e.changedTouches;
-      if (!touches || touches.length === 0) return;
-      const t = touches[0];
-      const dx = t.clientX - startX;
-      const dy = t.clientY - startY;
-      if (Math.abs(dy) > SWIPE_VERT_LIMIT) return;       // vertical scroll — ignore
-      if (Math.abs(dx) < SWIPE_HORIZ_THRESHOLD) return;  // too short
-      const cur = state.detailRoute;
-      if (!cur) return;
-      // Direction-keyed gating: left = forward, right = backward.
-      // Skip the gesture when the user swiped the wrong way for their
-      // current bound (e.g. already on I, swiping left).
-      const OPPOSITE = { O: 'I', I: 'O', '1': '2', '2': '1', UP: 'DOWN', DOWN: 'UP' };
-      const curDir = String(cur.dir);
-      if (!OPPOSITE[curDir]) return; // one-way or pseudo view
-      const goingLeft = dx < 0;
-      const isForwardDir = (curDir === 'O' || curDir === '1' || curDir === 'UP');
-      if (goingLeft && !isForwardDir) return;
-      if (!goingLeft && isForwardDir) return;
-      swapRouteBound();
-    }, { passive: true });
+    document.addEventListener(
+      'touchend',
+      (e) => {
+        if (!tracking) return;
+        tracking = false;
+        const view = document.getElementById('view-route');
+        if (!view || view.hidden) return;
+        const touches = e.changedTouches;
+        if (!touches || touches.length === 0) return;
+        const t = touches[0];
+        const dx = t.clientX - startX;
+        const dy = t.clientY - startY;
+        if (Math.abs(dy) > SWIPE_VERT_LIMIT) return; // vertical scroll — ignore
+        if (Math.abs(dx) < SWIPE_HORIZ_THRESHOLD) return; // too short
+        const cur = state.detailRoute;
+        if (!cur) return;
+        // Direction-keyed gating: left = forward, right = backward.
+        // Skip the gesture when the user swiped the wrong way for their
+        // current bound (e.g. already on I, swiping left).
+        const OPPOSITE = { O: 'I', I: 'O', 1: '2', 2: '1', UP: 'DOWN', DOWN: 'UP' };
+        const curDir = String(cur.dir);
+        if (!OPPOSITE[curDir]) return; // one-way or pseudo view
+        const goingLeft = dx < 0;
+        const isForwardDir = curDir === 'O' || curDir === '1' || curDir === 'UP';
+        if (goingLeft && !isForwardDir) return;
+        if (!goingLeft && isForwardDir) return;
+        swapRouteBound();
+      },
+      { passive: true }
+    );
   }
 
   // Build the list of direction pills for a route header. Scans the index
@@ -5992,8 +6833,14 @@
       const key = `${entry.co}|${entry.route}|${dKey}|${sKey}`;
       const label = pickFirst(entry.destTc, entry.destEn) || entry.origTc || '';
       all.push({
-        co: entry.co, route: entry.route, dir: dKey, service: sKey, label, key,
-        destTc: entry.destTc || '', destEn: entry.destEn || '',
+        co: entry.co,
+        route: entry.route,
+        dir: dKey,
+        service: sKey,
+        label,
+        key,
+        destTc: entry.destTc || '',
+        destEn: entry.destEn || '',
       });
     };
 
@@ -6047,7 +6894,7 @@
     //   UP ↔ DOWN → kept for completeness, though no current caller uses it
     // For non-binary dir codes (MTR 'LINE', 'STATION', etc.) the swap is
     // meaningless and we return null so the button stays hidden.
-    const OPPOSITE = { O: 'I', I: 'O', '1': '2', '2': '1', UP: 'DOWN', DOWN: 'UP' };
+    const OPPOSITE = { O: 'I', I: 'O', 1: '2', 2: '1', UP: 'DOWN', DOWN: 'UP' };
     const cur = String(currentDir);
     const opp = OPPOSITE[cur];
     let swapTarget = null;
@@ -6057,9 +6904,10 @@
       // canonical service=1 (主線) if the opposite bound doesn't have that
       // service_type — matches the bound-pill click behaviour.
       const curSvc = String(currentService);
-      const candidate = all.find((e) => e.dir === opp && e.service === curSvc)
-        || all.find((e) => e.dir === opp && e.service === '1')
-        || all.find((e) => e.dir === opp);
+      const candidate =
+        all.find((e) => e.dir === opp && e.service === curSvc) ||
+        all.find((e) => e.dir === opp && e.service === '1') ||
+        all.find((e) => e.dir === opp);
       if (candidate) {
         swapTarget = {
           co: candidate.co,
@@ -6070,8 +6918,9 @@
           // rather than the bare direction word. Falls back to the bound
           // direction's i18n label (Inbound / Outbound) when we don't have
           // a destination — the user still sees what they're swapping to.
-          label: pickFirst(candidate.destTc, candidate.destEn)
-            || (candidate.dir === 'I' ? t_str('inbound') : t_str('outbound')),
+          label:
+            pickFirst(candidate.destTc, candidate.destEn) ||
+            (candidate.dir === 'I' ? t_str('inbound') : t_str('outbound')),
           key: candidate.key,
         };
       }
@@ -6082,8 +6931,13 @@
 
   function toggleSaveRoute(r) {
     const i = state.savedRoutes.findIndex((x) => sameRoute(x, r));
-    if (i >= 0) { state.savedRoutes.splice(i, 1); toast(t_str('unsave')); }
-    else { state.savedRoutes.push(r); toast(t_str('saved')); }
+    if (i >= 0) {
+      state.savedRoutes.splice(i, 1);
+      toast(t_str('unsave'));
+    } else {
+      state.savedRoutes.push(r);
+      toast(t_str('saved'));
+    }
     persist();
     pushRecent({ ...r });
   }
@@ -6124,13 +6978,11 @@
     const cacheKey = `${isCtb ? 'CTB' : 'KMB'}|${stopId}`;
     if (scheduleCache.has(cacheKey)) return scheduleCache.get(cacheKey);
 
-    const fetcher = isCtb
-      ? () => fetchCitybusBatchStopEta(stopId)
-      : () => fetchKmbStopEta(stopId);
+    const fetcher = isCtb ? () => fetchCitybusBatchStopEta(stopId) : () => fetchKmbStopEta(stopId);
 
     const promise = fetcher()
       .then((resp) => {
-        const data = (resp && Array.isArray(resp.data)) ? resp.data : [];
+        const data = resp && Array.isArray(resp.data) ? resp.data : [];
         // Normalize rows from both operators into a single shape:
         // { co, route, dir, service, destTc, destEn, time (Date), seq }
         const rows = [];
@@ -6138,7 +6990,7 @@
           if (!e || !e.eta) continue; // skip null ETAs (route not running today)
           const t = new Date(e.eta);
           if (Number.isNaN(t.getTime())) continue;
-          const co = isCtb ? 'CTB' : classifyKmbOp(e.route, '', e.dest_tc || '');
+          const co = isCtb ? 'CTB' : busetaUtils.classifyKmbOp(e.route, '', e.dest_tc || '');
           rows.push({
             co,
             route: e.route,
@@ -6167,7 +7019,7 @@
   // Build the schedule tab DOM (tablist + panels). Returns
   // { refresh, panel, switchTo } so renderBusStopView can wire it up.
   function buildStopTabs(stopId, isCtb, fetchStopId) {
-    const isLive = (state._stopViewMode !== 'schedule');
+    const isLive = state._stopViewMode !== 'schedule';
     const tablist = el('div', { class: 'stop-tabs', role: 'tablist', 'aria-label': 'View mode' });
 
     const liveTab = el('button', {
@@ -6260,7 +7112,13 @@
     }
 
     panel.innerHTML = '';
-    panel.appendChild(el('p', { class: 'muted', style: 'text-align:center; padding: 24px 8px;' }, t_str('loadingSchedule')));
+    panel.appendChild(
+      el(
+        'p',
+        { class: 'muted', style: 'text-align:center; padding: 24px 8px;' },
+        t_str('loadingSchedule')
+      )
+    );
 
     fetchStopSchedule(stopId, isCtb).then((rows) => {
       panel.innerHTML = '';
@@ -6269,10 +7127,14 @@
   }
 
   function paintScheduleRows(panel, rows) {
-    panel.appendChild(el('p', { class: 'muted', style: 'margin-top: 4px; font-size: 12px;' }, t_str('scheduleNote')));
+    panel.appendChild(
+      el('p', { class: 'muted', style: 'margin-top: 4px; font-size: 12px;' }, t_str('scheduleNote'))
+    );
 
     if (!rows.length) {
-      panel.appendChild(el('p', { class: 'empty', style: 'margin-top: 12px;' }, t_str('scheduleEmpty')));
+      panel.appendChild(
+        el('p', { class: 'empty', style: 'margin-top: 12px;' }, t_str('scheduleEmpty'))
+      );
       return;
     }
 
@@ -6287,16 +7149,21 @@
 
     const list = el('div', { class: 'stop-schedule' });
     for (const h of hours) {
-      const bucket = el('section', { class: 'stop-schedule-bucket', 'aria-label': t_str('scheduleHour', h) });
+      const bucket = el('section', {
+        class: 'stop-schedule-bucket',
+        'aria-label': t_str('scheduleHour', h),
+      });
       bucket.appendChild(el('h3', { class: 'stop-schedule-hour' }, t_str('scheduleHour', h)));
       const ul = el('ul', { class: 'stop-schedule-rows' });
       byHour.get(h).forEach((r) => {
         const destStr = pickFirst(r.destTc, r.destEn);
         const li = el('li', { class: 'stop-schedule-row' });
         li.appendChild(el('span', { class: 'stop-schedule-route' }, r.route));
-        li.appendChild(el('span', { class: 'stop-schedule-time' }, formatHMTimestamp(r.time.toISOString())));
+        li.appendChild(
+          el('span', { class: 'stop-schedule-time' }, formatHMTimestamp(r.time.toISOString()))
+        );
         if (destStr) li.appendChild(el('span', { class: 'stop-schedule-dest' }, destStr));
-        li.appendChild(el('span', { class: 'stop-schedule-op' }, t_str(opCoKey(r.co))));
+        li.appendChild(el('span', { class: 'stop-schedule-op' }, t_str(busetaUtils.opCoKey(r.co))));
         ul.appendChild(li);
       });
       bucket.appendChild(ul);
@@ -6365,7 +7232,9 @@
       seedUnknown = true;
     }
     if (seedUnknown) seedNameTc = t_str('stopUnknownName');
-    header.appendChild(buildStopHeader(stopId, seedNameTc, seedNameEn, opGuess, seedNameSc, seedUnknown));
+    header.appendChild(
+      buildStopHeader(stopId, seedNameTc, seedNameEn, opGuess, seedNameSc, seedUnknown)
+    );
 
     // Stop view mode lives on the bus-stop view only. Default to 'live'
     // every time the user opens a new stop so they get the familiar arrival
@@ -6381,7 +7250,13 @@
     const livePanel = tabs.livePanel;
     // QW-2: skeleton placeholders replace the bare "載入緊資料…" text.
     livePanel.appendChild(buildSkeletonList(4));
-    tabs.schedulePanel.appendChild(el('p', { class: 'muted', style: 'text-align:center; padding: 24px 8px;' }, t_str('loadingSchedule')));
+    tabs.schedulePanel.appendChild(
+      el(
+        'p',
+        { class: 'muted', style: 'text-align:center; padding: 24px 8px;' },
+        t_str('loadingSchedule')
+      )
+    );
 
     body.appendChild(tabs.tablist);
     body.appendChild(livePanel);
@@ -6391,7 +7266,15 @@
       ? fetchCitybusStop(stopId).catch(() => null)
       : fetchKmbStop(stopId).catch(() => null);
 
-    const stateRef = { panel: livePanel, header, stopId, internalStopId: seedInternalStopId, view, schedulePanel: tabs.schedulePanel, switchTo: tabs.switchTo };
+    const stateRef = {
+      panel: livePanel,
+      header,
+      stopId,
+      internalStopId: seedInternalStopId,
+      view,
+      schedulePanel: tabs.schedulePanel,
+      switchTo: tabs.switchTo,
+    };
     state._refreshStop = (opts) => {
       const mode = (opts && opts.mode) || 'live';
       if (mode === 'schedule' && stateRef.schedulePanel) {
@@ -6408,7 +7291,9 @@
     };
 
     stopPromise.then((stopResp) => {
-      let nameTc = stopId, nameSc = '', nameEn = '';
+      let nameTc = stopId,
+        nameSc = '',
+        nameEn = '';
       let stop = null;
       let upstreamResolved = false;
       if (stopResp && stopResp.data) {
@@ -6457,7 +7342,9 @@
       } else {
         state._currentStopUnknown = false;
       }
-      header.replaceChildren(...buildStopHeader(stopId, nameTc, nameEn, opGuess, nameSc, stopUnknown).childNodes);
+      header.replaceChildren(
+        ...buildStopHeader(stopId, nameTc, nameEn, opGuess, nameSc, stopUnknown).childNodes
+      );
       state._lastStopName = nameFor({ nameTc, nameSc, nameEn });
       state._lastStopNameEn = nameEn;
       // Cache the resolved name on the recent entry so 最近查過 shows the
@@ -6493,7 +7380,7 @@
   // (routes that pass through without terminating) also show up in the
   // live panel. The current scan only catches terminus routes.
   function findTerminusRoutesForStop(stopNameTc) {
-    const want = stripKmbOpSuffix(stopNameTc);
+    const want = busetaUtils.stripKmbOpSuffix(stopNameTc);
     if (!want) return [];
     const matches = [];
     state.index.routes.forEach((r) => {
@@ -6502,8 +7389,8 @@
       // whose orig/dest happens to match the stop name never leaks into
       // the live panel of a KMB bus stop.
       if (r.co !== 'KMB' && r.co !== 'LWB' && r.co !== 'CTB' && r.co !== 'NWFB') return;
-      const o = stripKmbOpSuffix(r.origTc || '');
-      const d = stripKmbOpSuffix(r.destTc || '');
+      const o = busetaUtils.stripKmbOpSuffix(r.origTc || '');
+      const d = busetaUtils.stripKmbOpSuffix(r.destTc || '');
       if (o !== want && d !== want) return;
       matches.push({
         co: r.co,
@@ -6613,12 +7500,16 @@
       // a dimmed `.route-card--no-eta` placeholder further down.
       const routeMap = new Map();
       for (const e of data) {
-        const co = isCtb ? 'CTB' : classifyKmbOp(e.route, '', e.dest_tc || '');
+        const co = isCtb ? 'CTB' : busetaUtils.classifyKmbOp(e.route, '', e.dest_tc || '');
         const key = `${co}|${e.route}|${e.dir}|${e.service_type}|${e.dest_tc || ''}`;
         if (!routeMap.has(key)) {
           routeMap.set(key, {
-            co, route: e.route, dir: e.dir, service: e.service_type,
-            destTc: e.dest_tc, destEn: e.dest_en,
+            co,
+            route: e.route,
+            dir: e.dir,
+            service: e.service_type,
+            destTc: e.dest_tc,
+            destEn: e.dest_en,
             seq: e.seq,
             arrivals: [],
           });
@@ -6655,17 +7546,30 @@
       const resolvedStopTc = (() => {
         const fromState = state._lastStopName && String(state._lastStopName).trim();
         if (fromState) return fromState;
-        const meta = state.index.stops.get(fetchStopId)
-          || state.index.stops.get(stopId);
+        const meta = state.index.stops.get(fetchStopId) || state.index.stops.get(stopId);
         return meta ? String(meta.nameTc || '').trim() : '';
       })();
       if (resolvedStopTc) {
-        for (const t of findTerminusRoutesForStop(resolvedStopTc)) {
+        // Merge via-stops (state.routesByStop, populated from upstream
+        // /route-stop data) with the legacy terminus scan. The via-stops
+        // map is empty until the prefetcher has had a chance to run, so
+        // the terminus scan still serves as a graceful fallback for the
+        // first visit (or any operator whose /route-stop fetch failed).
+        // v53: helper lives in src/utils/routes-by-stop.js (Phase 11).
+        const matches = busetaUtils.findRoutesServingStop(resolvedStopTc, {
+          routesByStop: state.routesByStop,
+          terminusMatches: findTerminusRoutesForStop(resolvedStopTc),
+        });
+        for (const t of matches) {
           const key = `${t.co}|${t.route}|${t.dir}|${t.service}|${t.destTc || ''}`;
           if (routeMap.has(key)) continue;
           routeMap.set(key, {
-            co: t.co, route: t.route, dir: t.dir, service: t.service,
-            destTc: t.destTc, destEn: t.destEn,
+            co: t.co,
+            route: t.route,
+            dir: t.dir,
+            service: t.service,
+            destTc: t.destTc,
+            destEn: t.destEn,
             // Terminus scan has no upstream seq; leave null so the
             // route-detail anchor falls back to the route's first stop.
             seq: null,
@@ -6700,6 +7604,19 @@
       });
 
       body.appendChild(el('h2', { class: 'section-title' }, t_str('nextArrivals')));
+      // a11y (Phase 16): a visually-hidden live region under the heading
+      // gets the summary string written into it after each refresh, so
+      // screen-reader users hear "X buses, soonest in N minutes" without
+      // every eta-card re-firing the announcement. `aria-atomic="true"`
+      // so the whole string is read each time it changes.
+      const liveRegion = el('div', {
+        class: 'sr-only',
+        'aria-live': 'polite',
+        'aria-atomic': 'true',
+        role: 'status',
+      });
+      body.appendChild(liveRegion);
+      const liveLast = { text: '' };
       const list = el('div', { class: 'arrival-list' });
 
       routes.forEach((r) => {
@@ -6708,13 +7625,15 @@
           // upstream horizon. Render the dimmed placeholder card so the
           // user can still see the route; the "View schedule" CTA flips
           // them to the Schedule tab where the timetable preview lives.
-          list.appendChild(buildNoEtaCard(
-            r.co,
-            r.route,
-            r.destTc,
-            r.destEn,
-            switchTo ? () => switchTo('schedule') : null,
-          ));
+          list.appendChild(
+            buildNoEtaCard(
+              r.co,
+              r.route,
+              r.destTc,
+              r.destEn,
+              switchTo ? () => switchTo('schedule') : null
+            )
+          );
           return;
         }
 
@@ -6726,7 +7645,9 @@
         const left = el('div', { class: 'arrival-card-left' });
         left.appendChild(el('div', { class: 'arrival-card-route' }, r.route));
         const meta = el('div', { class: 'arrival-card-meta' });
-        meta.appendChild(el('span', { class: 'arrival-card-op' }, t_str(opCoKey(r.co))));
+        meta.appendChild(
+          el('span', { class: 'arrival-card-op' }, t_str(busetaUtils.opCoKey(r.co)))
+        );
         const destStr = pickFirst(r.destTc, r.destEn);
         if (destStr) meta.appendChild(el('span', { class: 'arrival-card-dest' }, `往 ${destStr}`));
         left.appendChild(meta);
@@ -6738,7 +7659,7 @@
           if (i === 0) {
             const pcls = ['arrival-card-primary'];
             if (a.minutes != null && a.minutes > 0 && a.minutes <= 2) pcls.push('is-soon');
-            const isNow = (a.minutes == null || a.minutes <= 0);
+            const isNow = a.minutes == null || a.minutes <= 0;
             if (isNow) pcls.push('is-now');
             const primary = el('div', { class: pcls.join(' ') });
             if (isNow) {
@@ -6747,18 +7668,38 @@
               primary.appendChild(el('span', { class: 'arrival-card-mins' }, String(a.minutes)));
               primary.appendChild(document.createTextNode(' ' + t_str('minShort')));
             }
-            primary.appendChild(el('span', { class: 'arrival-card-clock' }, formatHMTimestamp(a.eta)));
+            primary.appendChild(
+              el('span', { class: 'arrival-card-clock' }, formatHMTimestamp(a.eta))
+            );
             right.appendChild(primary);
           } else {
             const sec = el('div', { class: 'arrival-card-secondary' });
-            sec.appendChild(document.createTextNode(`${a.minutes} ${t_str('minShort')} · ${formatHMTimestamp(a.eta)}`));
-            if (a.rmk === 'Last Bus') sec.appendChild(el('span', { class: 'arrival-card-tag' }, t_str('lastBus') || 'Last'));
+            sec.appendChild(
+              document.createTextNode(
+                `${a.minutes} ${t_str('minShort')} · ${formatHMTimestamp(a.eta)}`
+              )
+            );
+            if (a.rmk === 'Last Bus')
+              sec.appendChild(
+                el('span', { class: 'arrival-card-tag' }, t_str('lastBus') || 'Last')
+              );
             right.appendChild(sec);
           }
         });
         card.appendChild(right);
         list.appendChild(card);
       });
+
+      // a11y (Phase 16): write a one-shot summary into the live region
+      // after every refresh so screen-reader users hear how many buses
+      // are arriving soon without each `eta-card` change re-firing. We
+      // only update the textContent when the summary actually changes
+      // to avoid the screen reader announcing the same thing twice.
+      const next = busetaUtils.buildStopViewSummary(busetaUtils.summariseSoon(routes), t_str);
+      if (next !== liveLast.text) {
+        liveRegion.textContent = next;
+        liveLast.text = next;
+      }
 
       body.appendChild(list);
       if (mapEl) body.appendChild(mapEl);
@@ -6775,7 +7716,7 @@
   // Signature:
   //   buildNoEtaCard(co, route, destTc, destEn, onSchedule)
   //     co         - operator id ("KMB", "CTB", …) used to pick the pill
-  //                  label via t_str(opCoKey(co)).
+  //                  label via t_str(busetaUtils.opCoKey(co)).
   //     route      - route number string ("1A", "KMB 970", …).
   //     destTc     - Traditional-Chinese destination (may be '').
   //     destEn     - English destination (may be '').
@@ -6788,7 +7729,7 @@
     // ---- left: operator pill + route number + destination (TC + EN) ----
     const left = el('div', { class: 'route-card-left' });
     const head = el('div', { class: 'route-card-head' });
-    head.appendChild(el('span', { class: 'route-card-op' }, t_str(opCoKey(co))));
+    head.appendChild(el('span', { class: 'route-card-op' }, t_str(busetaUtils.opCoKey(co))));
     head.appendChild(el('span', { class: 'route-card-num' }, route));
     left.appendChild(head);
 
@@ -6803,12 +7744,20 @@
 
     // ---- right: muted "暫無到站時間" + hint + "View schedule" link ----
     const right = el('div', { class: 'route-card-right' });
-    const label = el('div', {
-      class: 'route-card-mins stop-no-upcoming-eta',
-    }, t_str('stopNoUpcomingEta'));
-    const hint = el('div', {
-      class: 'stop-no-upcoming-eta-hint',
-    }, t_str('stopNoUpcomingEtaHint'));
+    const label = el(
+      'div',
+      {
+        class: 'route-card-mins stop-no-upcoming-eta',
+      },
+      t_str('stopNoUpcomingEta')
+    );
+    const hint = el(
+      'div',
+      {
+        class: 'stop-no-upcoming-eta-hint',
+      },
+      t_str('stopNoUpcomingEtaHint')
+    );
     right.appendChild(label);
     right.appendChild(hint);
     if (typeof onSchedule === 'function') {
@@ -6821,7 +7770,11 @@
       cta.appendChild(document.createTextNode(' ›'));
       cta.addEventListener('click', (ev) => {
         ev.preventDefault();
-        try { onSchedule(); } catch (_) { /* swallow: schedule panel may be missing */ }
+        try {
+          onSchedule();
+        } catch (_) {
+          /* swallow: schedule panel may be missing */
+        }
       });
       right.appendChild(cta);
     }
@@ -6868,9 +7821,7 @@
       // v34: a poisoned/unknown stop gets the rich empty state via
       // buildStopEmptyState's CTAs + the new back-to-home pill so the
       // user has somewhere to go from this dead-end page.
-      body.replaceChildren(
-        el('p', { class: 'empty' }, t_str('stopNotFound')),
-      );
+      body.replaceChildren(el('p', { class: 'empty' }, t_str('stopNotFound')));
       appendStopUnknownCTA(body, stopCode);
       return;
     }
@@ -6878,46 +7829,60 @@
     // LRT stops currently lack WGS84 coords in the official sources. The
     // map section is only rendered when we actually have lat/lng.
 
-    fetchLrtSchedule(stationId).then((resp) => {
-      if (!resp || !Array.isArray(resp.platform_list)) {
-        body.replaceChildren(el('p', { class: 'empty' }, t_str('noEta')));
-        // v34: same back-to-home CTA pattern as the bus + GMB stop
-        // views so the user always has somewhere to go.
-        appendStopUnknownCTA(body, stopCode);
-        return;
-      }
-      const wrap = el('div', { class: 'eta-list-wrap' });
-      resp.platform_list.forEach((p) => {
-        const heading = el('div', { class: 'eta-dir' }, `${t_str('platform')} ${p.platform_id}`);
-        wrap.appendChild(heading);
-        const list = el('div', { class: 'list' });
-        (p.route_list || []).forEach((tr) => {
-          const row = el('a', {
-            class: 'row',
-            href: `#/route/LRT/${encodeURIComponent(tr.route_no)}/1/${encodeURIComponent(stopCode)}`,
+    fetchLrtSchedule(stationId)
+      .then((resp) => {
+        if (!resp || !Array.isArray(resp.platform_list)) {
+          body.replaceChildren(el('p', { class: 'empty' }, t_str('noEta')));
+          // v34: same back-to-home CTA pattern as the bus + GMB stop
+          // views so the user always has somewhere to go.
+          appendStopUnknownCTA(body, stopCode);
+          return;
+        }
+        const wrap = el('div', { class: 'eta-list-wrap' });
+        resp.platform_list.forEach((p) => {
+          const heading = el('div', { class: 'eta-dir' }, `${t_str('platform')} ${p.platform_id}`);
+          wrap.appendChild(heading);
+          const list = el('div', { class: 'list' });
+          (p.route_list || []).forEach((tr) => {
+            const row = el('a', {
+              class: 'row',
+              href: `#/route/LRT/${encodeURIComponent(tr.route_no)}/1/${encodeURIComponent(stopCode)}`,
+            });
+            row.appendChild(makeBadge('LRT'));
+            const main = el('div', { class: 'row-main' });
+            main.appendChild(
+              el(
+                'div',
+                { class: 'row-title' },
+                tr.route_no,
+                el('span', { style: 'color: var(--muted); margin: 0 6px; font-weight: 500;' }, '·'),
+                tr.dest_ch || tr.dest_en || ''
+              )
+            );
+            const min = parseInt(tr.time_en, 10);
+            main.appendChild(el('div', { class: 'row-sub' }, tr.special ? t_str('scheduled') : ''));
+            row.appendChild(main);
+            const meta = el('div', { class: 'row-meta' });
+            if (Number.isFinite(min)) {
+              meta.appendChild(
+                el(
+                  'span',
+                  { class: 'row-eta' + (min <= 2 ? ' is-soon' : '') },
+                  `${min} ${t_str('minShort')}`
+                )
+              );
+            } else {
+              meta.appendChild(el('span', { class: 'row-eta' }, tr.time_ch || tr.time_en || '–'));
+            }
+            row.appendChild(meta);
+            row.appendChild(makeChev());
+            list.appendChild(row);
           });
-          row.appendChild(makeBadge('LRT'));
-          const main = el('div', { class: 'row-main' });
-          main.appendChild(el('div', { class: 'row-title' }, tr.route_no,
-            el('span', { style: 'color: var(--muted); margin: 0 6px; font-weight: 500;' }, '·'),
-            tr.dest_ch || tr.dest_en || ''));
-          const min = parseInt(tr.time_en, 10);
-          main.appendChild(el('div', { class: 'row-sub' }, tr.special ? t_str('scheduled') : ''));
-          row.appendChild(main);
-          const meta = el('div', { class: 'row-meta' });
-          if (Number.isFinite(min)) {
-            meta.appendChild(el('span', { class: 'row-eta' + (min <= 2 ? ' is-soon' : '') }, `${min} ${t_str('minShort')}`));
-          } else {
-            meta.appendChild(el('span', { class: 'row-eta' }, tr.time_ch || tr.time_en || '–'));
-          }
-          row.appendChild(meta);
-          row.appendChild(makeChev());
-          list.appendChild(row);
+          wrap.appendChild(list);
         });
-        wrap.appendChild(list);
-      });
-      body.replaceChildren(wrap);
-    }).catch(() => body.replaceChildren(el('p', { class: 'empty' }, t_str('noEta'))));
+        body.replaceChildren(wrap);
+      })
+      .catch(() => body.replaceChildren(el('p', { class: 'empty' }, t_str('noEta'))));
 
     startEtaRefresh(renderStopDetail);
   }
@@ -6944,7 +7909,9 @@
     const gmbSeedNameEn = (gmbSeed && gmbSeed.nameEn) || '';
     const gmbSeedNameSc = (gmbSeed && gmbSeed.nameSc) || '';
     if (gmbSeedUnknown) pruneRecentStops();
-    header.appendChild(buildStopHeader(stopId, gmbSeedNameTc, gmbSeedNameEn, 'GMB', gmbSeedNameSc, gmbSeedUnknown));
+    header.appendChild(
+      buildStopHeader(stopId, gmbSeedNameTc, gmbSeedNameEn, 'GMB', gmbSeedNameSc, gmbSeedUnknown)
+    );
     body.appendChild(el('p', { class: 'muted' }, t_str('loading')));
 
     // Try to enrich the stop with a real name + coordinates.
@@ -6953,71 +7920,92 @@
       // have it either, keep the friendly fallback + ID sub-line. If
       // meta came back, the unknown flag is cleared and the ID sub-line
       // disappears in the next render.
-      if (meta) header.replaceChildren(...buildStopHeader(stopId, meta.nameTc || stopId, meta.nameEn || '', 'GMB', meta.nameSc || '', false).childNodes);
+      if (meta)
+        header.replaceChildren(
+          ...buildStopHeader(
+            stopId,
+            meta.nameTc || stopId,
+            meta.nameEn || '',
+            'GMB',
+            meta.nameSc || '',
+            false
+          ).childNodes
+        );
       // Stash for the map append after the routes list renders.
       state._lastGmbStopMeta = meta || null;
       // Cache the resolved name on the recent entry so 最近查過 shows the
       // real GMB stop name instead of just the numeric operator ID.
-      if (meta && meta.nameTc) enrichRecentStop(stopId, meta.nameTc, meta.nameSc || '', meta.nameEn || '');
+      if (meta && meta.nameTc)
+        enrichRecentStop(stopId, meta.nameTc, meta.nameSc || '', meta.nameEn || '');
     });
 
-    fetchGmbStopRoutes(stopId).then(async (resp) => {
-      const list = (resp && Array.isArray(resp.data)) ? resp.data : [];
-      if (list.length === 0) {
-        body.replaceChildren(el('p', { class: 'empty' }, t_str('noEta')));
-        // v34: surface the back-to-home CTA so they have somewhere to go
-        // when the GMB upstream returns nothing for this ID.
-        appendStopUnknownCTA(body, stopId);
-        return;
-      }
-      // Fetch ETA per route×stop_seq for first route only, then show others as "schedule only".
-      const rows = [];
-      for (const r of list) {
-        rows.push({
-          routeId: r.route_id, routeSeq: r.route_seq, stopSeq: r.stop_seq, name: r.name_tc,
-          _routeSeqStop: `${r.route_seq}_${r.stop_seq}`,
-        });
-      }
-      // Take the first route, get its current/next, leave the rest as info-only.
-      const head = rows[0];
-      let etaInfo = null;
-      try {
-        const etaResp = await fetchGmbStopEta(head.routeId, head.routeSeq, head.stopSeq);
-        if (etaResp && etaResp.data && etaResp.data.eta && etaResp.data.eta[0]) {
-          etaInfo = etaResp.data.eta[0];
+    fetchGmbStopRoutes(stopId)
+      .then(async (resp) => {
+        const list = resp && Array.isArray(resp.data) ? resp.data : [];
+        if (list.length === 0) {
+          body.replaceChildren(el('p', { class: 'empty' }, t_str('noEta')));
+          // v34: surface the back-to-home CTA so they have somewhere to go
+          // when the GMB upstream returns nothing for this ID.
+          appendStopUnknownCTA(body, stopId);
+          return;
         }
-      } catch {}
+        // Fetch ETA per route×stop_seq for first route only, then show others as "schedule only".
+        const rows = [];
+        for (const r of list) {
+          rows.push({
+            routeId: r.route_id,
+            routeSeq: r.route_seq,
+            stopSeq: r.stop_seq,
+            name: r.name_tc,
+            _routeSeqStop: `${r.route_seq}_${r.stop_seq}`,
+          });
+        }
+        // Take the first route, get its current/next, leave the rest as info-only.
+        const head = rows[0];
+        let etaInfo = null;
+        try {
+          const etaResp = await fetchGmbStopEta(head.routeId, head.routeSeq, head.stopSeq);
+          if (etaResp && etaResp.data && etaResp.data.eta && etaResp.data.eta[0]) {
+            etaInfo = etaResp.data.eta[0];
+          }
+        } catch {}
 
-      const wrap = el('div');
-      wrap.appendChild(el('h2', { class: 'section-title' }, t_str('showingStop', list.length)));
-      const ul = el('div', { class: 'list' });
-      rows.forEach((row) => {
-        // Anchor the route detail at THIS stop_seq so the user lands at
-        // their current stop, just like justarrived.grok.me.
-        const href = `#/route/GMB/${encodeURIComponent(row.routeId)}/${encodeURIComponent(row.routeSeq)}/${encodeURIComponent(row.stopSeq)}`;
-        const li = el('a', { class: 'row', href });
-        li.appendChild(makeBadge('GMB'));
-        const main = el('div', { class: 'row-main' });
-        main.appendChild(el('div', { class: 'row-title' }, row.name || ''));
-        main.appendChild(el('div', { class: 'row-sub' }, `${t_str('route')} #${row.routeId}`));
-        li.appendChild(main);
-        li.appendChild(el('div', { class: 'row-meta' },
-          row === head && etaInfo
-            ? el('span', { class: 'row-eta' }, `${etaInfo.diff} ${t_str('minShort')}`)
-            : el('div', { class: 'row-dim' }, t_str('scheduled'))));
-        li.appendChild(makeChev());
-        ul.appendChild(li);
-      });
-      wrap.appendChild(ul);
-      body.replaceChildren(wrap);
-      // Append the map at the bottom (justarrived.grok.me pattern).
-      const meta = state._lastGmbStopMeta;
-      state._lastGmbStopMeta = null;
-      if (meta && Number.isFinite(meta.lat) && Number.isFinite(meta.lng)) {
-        const mapEl = renderStopMap(meta.lat, meta.lng, nameFor(meta) || stopId);
-        if (mapEl.firstChild) body.appendChild(mapEl);
-      }
-    }).catch(() => body.replaceChildren(el('p', { class: 'empty' }, t_str('noEta'))));
+        const wrap = el('div');
+        wrap.appendChild(el('h2', { class: 'section-title' }, t_str('showingStop', list.length)));
+        const ul = el('div', { class: 'list' });
+        rows.forEach((row) => {
+          // Anchor the route detail at THIS stop_seq so the user lands at
+          // their current stop, just like justarrived.grok.me.
+          const href = `#/route/GMB/${encodeURIComponent(row.routeId)}/${encodeURIComponent(row.routeSeq)}/${encodeURIComponent(row.stopSeq)}`;
+          const li = el('a', { class: 'row', href });
+          li.appendChild(makeBadge('GMB'));
+          const main = el('div', { class: 'row-main' });
+          main.appendChild(el('div', { class: 'row-title' }, row.name || ''));
+          main.appendChild(el('div', { class: 'row-sub' }, `${t_str('route')} #${row.routeId}`));
+          li.appendChild(main);
+          li.appendChild(
+            el(
+              'div',
+              { class: 'row-meta' },
+              row === head && etaInfo
+                ? el('span', { class: 'row-eta' }, `${etaInfo.diff} ${t_str('minShort')}`)
+                : el('div', { class: 'row-dim' }, t_str('scheduled'))
+            )
+          );
+          li.appendChild(makeChev());
+          ul.appendChild(li);
+        });
+        wrap.appendChild(ul);
+        body.replaceChildren(wrap);
+        // Append the map at the bottom (justarrived.grok.me pattern).
+        const meta = state._lastGmbStopMeta;
+        state._lastGmbStopMeta = null;
+        if (meta && Number.isFinite(meta.lat) && Number.isFinite(meta.lng)) {
+          const mapEl = renderStopMap(meta.lat, meta.lng, nameFor(meta) || stopId);
+          if (mapEl.firstChild) body.appendChild(mapEl);
+        }
+      })
+      .catch(() => body.replaceChildren(el('p', { class: 'empty' }, t_str('noEta'))));
 
     startEtaRefresh(renderStopDetail);
   }
@@ -7036,29 +8024,40 @@
 
     // ---- top action bar ----
     const topbar = el('div', { class: 'stop-topbar' });
-    topbar.appendChild(el('a', {
-      class: 'stop-back',
-      'aria-label': t_str('back'),
-      href: '#/',
-    }, (function () {
-      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-      svg.setAttribute('viewBox', '0 0 24 24');
-      svg.setAttribute('width', '22'); svg.setAttribute('height', '22');
-      svg.setAttribute('aria-hidden', 'true');
-      const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      p.setAttribute('fill', 'none'); p.setAttribute('stroke', 'currentColor');
-      p.setAttribute('stroke-width', '2'); p.setAttribute('stroke-linecap', 'round');
-      p.setAttribute('stroke-linejoin', 'round'); p.setAttribute('d', 'M15 6l-6 6 6 6');
-      svg.appendChild(p);
-      return svg;
-    })()));
+    topbar.appendChild(
+      el(
+        'a',
+        {
+          class: 'stop-back',
+          'aria-label': t_str('back'),
+          href: '#/',
+        },
+        (function () {
+          const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+          svg.setAttribute('viewBox', '0 0 24 24');
+          svg.setAttribute('width', '22');
+          svg.setAttribute('height', '22');
+          svg.setAttribute('aria-hidden', 'true');
+          const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          p.setAttribute('fill', 'none');
+          p.setAttribute('stroke', 'currentColor');
+          p.setAttribute('stroke-width', '2');
+          p.setAttribute('stroke-linecap', 'round');
+          p.setAttribute('stroke-linejoin', 'round');
+          p.setAttribute('d', 'M15 6l-6 6 6 6');
+          svg.appendChild(p);
+          return svg;
+        })()
+      )
+    );
 
     const topRight = el('div', { class: 'stop-topbar-right' });
     // The pill shows the *current* language; clicking cycles to the next one.
-    const langPill = el('span', { class: 'stop-lang-pill' },
-      state.lang === 'zh-Hant' ? '繁體中文'
-        : state.lang === 'zh-Hans' ? '简体中文'
-        : 'English');
+    const langPill = el(
+      'span',
+      { class: 'stop-lang-pill' },
+      state.lang === 'zh-Hant' ? '繁體中文' : state.lang === 'zh-Hans' ? '简体中文' : 'English'
+    );
     topRight.appendChild(langPill);
 
     const isFav = state.savedStops.some((s) => sameStop(s, { stop: stopId }));
@@ -7069,7 +8068,9 @@
       'aria-pressed': String(isFav),
       onclick: () => {
         toggleSaveStop({ stop: stopId });
-        head.replaceChildren(...buildStopHeader(stopId, nameTc, nameEn, co, undefined, stopUnknown).childNodes);
+        head.replaceChildren(
+          ...buildStopHeader(stopId, nameTc, nameEn, co, undefined, stopUnknown).childNodes
+        );
       },
     });
     star.appendChild(starIconSVG(isFav));
@@ -7079,11 +8080,13 @@
 
     // ---- operator pill (small, above title) ----
     if (co && co !== 'STOP') {
-      head.appendChild(el('span', { class: 'stop-op-pill' }, t_str(opCoKey(co))));
+      head.appendChild(el('span', { class: 'stop-op-pill' }, t_str(busetaUtils.opCoKey(co))));
     }
 
     // ---- main stop name ----
-    head.appendChild(el('h1', { class: 'stop-name' }, nameFor({ nameTc, nameSc: nameSc || '', nameEn }) || stopId));
+    head.appendChild(
+      el('h1', { class: 'stop-name' }, nameFor({ nameTc, nameSc: nameSc || '', nameEn }) || stopId)
+    );
     // v34: When the stop is unresolvable, surface the raw ID as a muted
     // sub-line so the user can still copy / share / debug it. Truncated
     // to 8 chars + an ellipsis — long enough to identify the bug, short
@@ -7091,7 +8094,9 @@
     if (stopUnknown) {
       const raw = String(stopId || '');
       const short = raw.length > 8 ? raw.slice(0, 8) + '…' : raw;
-      head.appendChild(el('p', { class: 'stop-name-id' }, `${t_str('stopUnknownIdLabel')}: ${short}`));
+      head.appendChild(
+        el('p', { class: 'stop-name-id' }, `${t_str('stopUnknownIdLabel')}: ${short}`)
+      );
     }
     if (nameEn) head.appendChild(el('p', { class: 'stop-name-en' }, nameEn));
 
@@ -7101,35 +8106,51 @@
     // ---- "updated HH:MM" + refresh button ----
     const meta = el('div', { class: 'stop-meta' });
     const updateLeft = el('div', { class: 'stop-meta-left' });
-    updateLeft.appendChild(el('p', { class: 'stop-updated-when', 'data-bind': 'stop-updated-when' }, t_str('updatedJust')));
+    updateLeft.appendChild(
+      el(
+        'p',
+        { class: 'stop-updated-when', 'data-bind': 'stop-updated-when' },
+        t_str('updatedJust')
+      )
+    );
     // QW-8: countdown chip — counts down to the next auto-refresh.
-    updateLeft.appendChild(buildRefreshProgress((state._nextRefreshAt || (Date.now() + REFRESH_INTERVAL_MS))));
+    updateLeft.appendChild(
+      buildRefreshProgress(state._nextRefreshAt || Date.now() + REFRESH_INTERVAL_MS)
+    );
     meta.appendChild(updateLeft);
-    const refreshBtn = el('button', {
-      type: 'button',
-      class: 'stop-refresh',
-      'aria-label': t_str('refresh'),
-      onclick: () => {
-        if (typeof state._refreshStop === 'function') {
-          // Respect the current tab: live refresh re-renders the arrivals,
-          // schedule refresh re-pulls the timetable.
-          state._refreshStop({ mode: state._stopViewMode === 'schedule' ? 'schedule' : 'live' });
-        } else {
-          location.reload();
-        }
+    const refreshBtn = el(
+      'button',
+      {
+        type: 'button',
+        class: 'stop-refresh',
+        'aria-label': t_str('refresh'),
+        onclick: () => {
+          if (typeof state._refreshStop === 'function') {
+            // Respect the current tab: live refresh re-renders the arrivals,
+            // schedule refresh re-pulls the timetable.
+            state._refreshStop({ mode: state._stopViewMode === 'schedule' ? 'schedule' : 'live' });
+          } else {
+            location.reload();
+          }
+        },
       },
-    }, refreshIconSVG());
-    const shareBtn = el('button', {
-      type: 'button',
-      class: 'share-btn stop-share',
-      'aria-label': t_str('shareLinkAria'),
-      title: t_str('shareLink'),
-      onclick: (ev) => {
-        ev.stopPropagation();
-        const url = location.origin + location.pathname + `#/stop/${encodeURIComponent(stopId)}`;
-        copyShareLink(url, t_str('shareLinkAria'));
+      refreshIconSVG()
+    );
+    const shareBtn = el(
+      'button',
+      {
+        type: 'button',
+        class: 'share-btn stop-share',
+        'aria-label': t_str('shareLinkAria'),
+        title: t_str('shareLink'),
+        onclick: (ev) => {
+          ev.stopPropagation();
+          const url = location.origin + location.pathname + `#/stop/${encodeURIComponent(stopId)}`;
+          copyShareLink(url, t_str('shareLinkAria'));
+        },
       },
-    }, shareIconSVG());
+      shareIconSVG()
+    );
     meta.appendChild(refreshBtn);
     meta.appendChild(shareBtn);
     head.appendChild(meta);
@@ -7147,19 +8168,28 @@
     if (!panel) return;
     const wrap = el('div', { class: 'stop-unknown-cta' });
     wrap.appendChild(el('p', { class: 'stop-unknown-sub' }, t_str('stopUnknownSub')));
-    const cta = el('a', {
-      class: 'stop-unknown-back',
-      href: '#/',
-      role: 'button',
-    }, t_str('stopUnknownCtaBack'));
+    const cta = el(
+      'a',
+      {
+        class: 'stop-unknown-back',
+        href: '#/',
+        role: 'button',
+      },
+      t_str('stopUnknownCtaBack')
+    );
     wrap.appendChild(cta);
     panel.appendChild(wrap);
   }
 
   function toggleSaveStop(s) {
     const i = state.savedStops.findIndex((x) => sameStop(x, s));
-    if (i >= 0) { state.savedStops.splice(i, 1); toast(t_str('unsave')); }
-    else { state.savedStops.push(s); toast(t_str('saved')); }
+    if (i >= 0) {
+      state.savedStops.splice(i, 1);
+      toast(t_str('unsave'));
+    } else {
+      state.savedStops.push(s);
+      toast(t_str('saved'));
+    }
     persist();
     pushRecent({ ...s });
   }
@@ -7185,7 +8215,9 @@
     showView('view-error');
     const view = renderInto('error', 'error');
     const btn = $('#errorRetry', view);
-    btn.addEventListener('click', () => { location.hash = '#/'; });
+    btn.addEventListener('click', () => {
+      location.hash = '#/';
+    });
   }
 
   // ------------------------------------------------------------------
@@ -7199,22 +8231,23 @@
     // bootstrap in index.html installs `window.__buseta.loadPlannerScript`
     // and `loadPlannerCss` which fetch + inject them on demand and cache
     // the promise so subsequent navigations don't refetch.
-    const ready = (window.__buseta
-      ? Promise.all([
-          window.__buseta.loadPlannerScript(),
-          window.__buseta.loadPlannerCss(),
-        ])
-      : Promise.reject(new Error('Lazy planner loader missing')));
-    ready.then(() => {
-      if (window.Planner && typeof window.Planner.renderPlanner === 'function') {
-        window.Planner.renderPlanner(view);
-      } else {
-        view.innerHTML = '<div class="container" style="padding: 24px 16px; color: var(--muted);">Trip planner failed to load.</div>';
-      }
-    }).catch((err) => {
-      console.warn('Planner load failed', err);
-      view.innerHTML = '<div class="container" style="padding: 24px 16px; color: var(--muted);">Trip planner failed to load.</div>';
-    });
+    const ready = window.__buseta
+      ? Promise.all([window.__buseta.loadPlannerScript(), window.__buseta.loadPlannerCss()])
+      : Promise.reject(new Error('Lazy planner loader missing'));
+    ready
+      .then(() => {
+        if (window.Planner && typeof window.Planner.renderPlanner === 'function') {
+          window.Planner.renderPlanner(view);
+        } else {
+          view.innerHTML =
+            '<div class="container" style="padding: 24px 16px; color: var(--muted);">Trip planner failed to load.</div>';
+        }
+      })
+      .catch((err) => {
+        console.warn('Planner load failed', err);
+        view.innerHTML =
+          '<div class="container" style="padding: 24px 16px; color: var(--muted);">Trip planner failed to load.</div>';
+      });
   }
 
   // ------------------------------------------------------------------
@@ -7240,48 +8273,71 @@
 
     // Header: back chevron + title.
     const topbar = el('div', { class: 'settings-topbar' });
-    topbar.appendChild(el('a', {
-      class: 'settings-back',
-      href: '#/',
-      'aria-label': t_str('back'),
-    }, (function () {
-      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-      svg.setAttribute('viewBox', '0 0 24 24');
-      svg.setAttribute('width', '22'); svg.setAttribute('height', '22');
-      svg.setAttribute('aria-hidden', 'true');
-      const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      p.setAttribute('fill', 'none'); p.setAttribute('stroke', 'currentColor');
-      p.setAttribute('stroke-width', '2'); p.setAttribute('stroke-linecap', 'round');
-      p.setAttribute('stroke-linejoin', 'round'); p.setAttribute('d', 'M15 6l-6 6 6 6');
-      svg.appendChild(p);
-      return svg;
-    })()));
+    topbar.appendChild(
+      el(
+        'a',
+        {
+          class: 'settings-back',
+          href: '#/',
+          'aria-label': t_str('back'),
+        },
+        (function () {
+          const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+          svg.setAttribute('viewBox', '0 0 24 24');
+          svg.setAttribute('width', '22');
+          svg.setAttribute('height', '22');
+          svg.setAttribute('aria-hidden', 'true');
+          const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          p.setAttribute('fill', 'none');
+          p.setAttribute('stroke', 'currentColor');
+          p.setAttribute('stroke-width', '2');
+          p.setAttribute('stroke-linecap', 'round');
+          p.setAttribute('stroke-linejoin', 'round');
+          p.setAttribute('d', 'M15 6l-6 6 6 6');
+          svg.appendChild(p);
+          return svg;
+        })()
+      )
+    );
     topbar.appendChild(el('h1', { class: 'settings-title' }, t_str('settingsTitle')));
     container.appendChild(topbar);
 
     // ----- Section: Theme -----
     container.appendChild(el('h2', { class: 'settings-section-title' }, t_str('settingsTheme')));
-    const themeCard = el('div', { class: 'settings-card', role: 'radiogroup', 'aria-label': t_str('settingsTheme') });
+    const themeCard = el('div', {
+      class: 'settings-card',
+      role: 'radiogroup',
+      'aria-label': t_str('settingsTheme'),
+    });
     const modes = [
       { key: 'system', labelKey: 'themeSystem' },
-      { key: 'light',  labelKey: 'themeLight' },
-      { key: 'dark',   labelKey: 'themeDark' },
+      { key: 'light', labelKey: 'themeLight' },
+      { key: 'dark', labelKey: 'themeDark' },
     ];
     let storedTheme;
-    try { storedTheme = localStorage.getItem(STORAGE_KEYS.THEME); } catch { storedTheme = null; }
-    const currentTheme = (VALID_THEMES.has(storedTheme) && storedTheme !== 'system') ? storedTheme : 'system';
+    try {
+      storedTheme = localStorage.getItem(STORAGE_KEYS.THEME);
+    } catch {
+      storedTheme = null;
+    }
+    const currentTheme =
+      VALID_THEMES.has(storedTheme) && storedTheme !== 'system' ? storedTheme : 'system';
     modes.forEach((m) => {
       const isOn = currentTheme === m.key;
-      const btn = el('button', {
-        type: 'button',
-        class: 'settings-pill' + (isOn ? ' is-on' : ''),
-        role: 'radio',
-        'aria-checked': isOn ? 'true' : 'false',
-        onclick: () => {
-          setTheme(m.key);
-          renderSettings();
+      const btn = el(
+        'button',
+        {
+          type: 'button',
+          class: 'settings-pill' + (isOn ? ' is-on' : ''),
+          role: 'radio',
+          'aria-checked': isOn ? 'true' : 'false',
+          onclick: () => {
+            setTheme(m.key);
+            renderSettings();
+          },
         },
-      }, t_str(m.labelKey));
+        t_str(m.labelKey)
+      );
       themeCard.appendChild(btn);
       // i18n re-apply doesn't catch programmatic text — labelKey is
       // already resolved via t_str() above, so no follow-up needed.
@@ -7297,19 +8353,33 @@
     // ----- Section: About -----
     container.appendChild(el('h2', { class: 'settings-section-title' }, t_str('settingsAbout')));
     const about = el('div', { class: 'settings-card settings-about' });
-    about.appendChild(el('p', { class: 'settings-about-row' }, [
-      el('span', { class: 'settings-about-label' }, t_str('settingsVersion')),
-      el('span', { class: 'settings-about-value' }, 'v' + (window.__busetaVersion || '—')),
-    ]));
-    about.appendChild(el('p', { class: 'settings-about-row' }, [
-      el('span', { class: 'settings-about-label' }, t_str('settingsDataSource')),
-      el('span', { class: 'settings-about-value' }, t_str('footerAttribution').split('：')[0] || t_str('settingsDataSource')),
-    ]));
-    about.appendChild(el('a', {
-      class: 'settings-link',
-      href: '#/',
-      'aria-label': t_str('settingsBackHome'),
-    }, t_str('settingsBackHome')));
+    about.appendChild(
+      el('p', { class: 'settings-about-row' }, [
+        el('span', { class: 'settings-about-label' }, t_str('settingsVersion')),
+        el('span', { class: 'settings-about-value' }, 'v' + (window.__busetaVersion || '—')),
+      ])
+    );
+    about.appendChild(
+      el('p', { class: 'settings-about-row' }, [
+        el('span', { class: 'settings-about-label' }, t_str('settingsDataSource')),
+        el(
+          'span',
+          { class: 'settings-about-value' },
+          t_str('footerAttribution').split('：')[0] || t_str('settingsDataSource')
+        ),
+      ])
+    );
+    about.appendChild(
+      el(
+        'a',
+        {
+          class: 'settings-link',
+          href: '#/',
+          'aria-label': t_str('settingsBackHome'),
+        },
+        t_str('settingsBackHome')
+      )
+    );
     container.appendChild(about);
 
     view.appendChild(container);
@@ -7322,12 +8392,15 @@
     const key = item.stop
       ? JSON.stringify({ stop: item.stop, co: item.co || 'STOP' })
       : JSON.stringify(makeRouteKey(item.co, item.route, item.dir, item.service));
-    state.recent = [item, ...state.recent.filter((x) => {
-      const k = x.stop
-        ? JSON.stringify({ stop: x.stop, co: x.co || 'STOP' })
-        : JSON.stringify(makeRouteKey(x.co, x.route, x.dir, x.service));
-      return k !== key;
-    })].slice(0, 20);
+    state.recent = [
+      item,
+      ...state.recent.filter((x) => {
+        const k = x.stop
+          ? JSON.stringify({ stop: x.stop, co: x.co || 'STOP' })
+          : JSON.stringify(makeRouteKey(x.co, x.route, x.dir, x.service));
+        return k !== key;
+      }),
+    ].slice(0, 20);
     persist();
   }
 
@@ -7348,9 +8421,9 @@
     if (nameTc === stopId) return;
     // Strip the trailing "(ST905)" suffix from upstream / direct-fetch names
     // so the recent row title reads "大學站" instead of "大學站 (ST905)".
-    const cleanTc = stripKmbOpSuffix(nameTc) || nameTc;
-    const cleanSc = stripKmbOpSuffix(nameSc) || nameSc;
-    const cleanEn = stripKmbOpSuffix(nameEn) || nameEn;
+    const cleanTc = busetaUtils.stripKmbOpSuffix(nameTc) || nameTc;
+    const cleanSc = busetaUtils.stripKmbOpSuffix(nameSc) || nameSc;
+    const cleanEn = busetaUtils.stripKmbOpSuffix(nameEn) || nameEn;
     let changed = false;
     state.recent.forEach((x) => {
       if (x.stop !== stopId) return;
@@ -7422,13 +8495,19 @@
       const ms = Math.max(0, next - Date.now());
       const sec = Math.ceil(ms / 1000);
       if (text) text.textContent = t_str('refreshProgressLabel', sec);
-      if (bar) bar.style.setProperty('--refresh-progress', String(Math.max(0, Math.min(1, ms / REFRESH_INTERVAL_MS))));
+      if (bar)
+        bar.style.setProperty(
+          '--refresh-progress',
+          String(Math.max(0, Math.min(1, ms / REFRESH_INTERVAL_MS)))
+        );
     });
   }
   function updateRouteTimestamp() {
     // Both route and stop views have an "updated HH:MM" element — find the
     // one in the currently visible view so refresh never bleeds across views.
-    const candidates = document.querySelectorAll('[data-bind="route-updated-when"], [data-bind="stop-updated-when"]');
+    const candidates = document.querySelectorAll(
+      '[data-bind="route-updated-when"], [data-bind="stop-updated-when"]'
+    );
     if (!candidates.length) return;
     const d = new Date();
     const hh = String(d.getHours()).padStart(2, '0');
@@ -7445,7 +8524,10 @@
     });
   }
   function stopEtaRefresh() {
-    if (state.refreshTimer) { clearInterval(state.refreshTimer); state.refreshTimer = null; }
+    if (state.refreshTimer) {
+      clearInterval(state.refreshTimer);
+      state.refreshTimer = null;
+    }
     // Pause the vehicle-map auto-refresh too so navigating away from
     // the route detail view drops the 30s polling. startVehicleRefresh
     // is called by renderBusRoute when the map is first rendered.
@@ -7491,9 +8573,9 @@
   // clean URL has no query string — just the same hash path the current
   // view was reached from (e.g. `#/stop/ST905` or `#/route/KMB/272A/O/1`).
   // ------------------------------------------------------------------
-  let qrModalNode = null;       // cached DOM node, recreated on demand
-  let qrModalTimer = null;       // auto-close timer for the QR popover
-  let qrLibPromise = null;       // one-shot lazy-load of assets/qrcode.js
+  let qrModalNode = null; // cached DOM node, recreated on demand
+  let qrModalTimer = null; // auto-close timer for the QR popover
+  let qrLibPromise = null; // one-shot lazy-load of assets/qrcode.js
 
   // Lazy-load the vendored QR generator (assets/qrcode.js) the first time
   // we need to draw a QR. After the first success we cache the promise so
@@ -7540,7 +8622,9 @@
         await navigator.clipboard.writeText(url);
         return true;
       }
-    } catch (_) { /* fall through to legacy path */ }
+    } catch (_) {
+      /* fall through to legacy path */
+    }
     try {
       const ta = document.createElement('textarea');
       ta.value = url;
@@ -7592,11 +8676,15 @@
       'aria-live': 'polite',
     });
     const card = el('div', { class: 'qr-modal-card' });
-    const close = el('button', {
-      type: 'button',
-      class: 'qr-modal-close',
-      'aria-label': t_str('back'),
-    }, '×');
+    const close = el(
+      'button',
+      {
+        type: 'button',
+        class: 'qr-modal-close',
+        'aria-label': t_str('back'),
+      },
+      '×'
+    );
     close.addEventListener('click', closeQrModal);
     const title = el('p', { class: 'qr-modal-title' }, t_str('shareLink'));
     const imgWrap = el('div', { class: 'qr-modal-img' });
@@ -7621,25 +8709,43 @@
     };
     wrap.addEventListener('keydown', onKey);
     wrap._onKey = onKey;
+    // a11y: Phase 15 — focus trap. Tab cycles within the modal so a
+    // keyboard user can't escape to the page behind. Focus moves to the
+    // close button on open and returns to the trigger on close. The
+    // trigger is the share button that opened the modal — passed via
+    // the `label` caller path is the share button's text; we look up
+    // the live activeElement (which is whatever focused element opened
+    // the modal via copyShareLink's call site). Saved on `wrap` so
+    // closeQrModal can hand it to the trap later.
+    wrap._trigger = document.activeElement;
+    if (typeof busetaUtils.createFocusTrap === 'function') {
+      wrap._focusTrap = busetaUtils.createFocusTrap(wrap, {
+        initialFocus: close,
+        returnFocus: wrap._trigger,
+      });
+      wrap._focusTrap.activate();
+    }
     // Animate in
     requestAnimationFrame(() => wrap.classList.add('is-on'));
     // Auto-close after 8s
     clearTimeout(qrModalTimer);
     qrModalTimer = setTimeout(closeQrModal, 8000);
     // Lazy-load the QR lib and draw
-    ensureQrLib().then(() => {
-      if (!qrModalNode || qrModalNode !== wrap) return;
-      try {
-        const svg = qrToSvg(url, 120);
-        imgWrap.innerHTML = svg;
-      } catch (err) {
-        console.warn('qr render failed', err);
-        imgWrap.textContent = t_str('qrFailed');
-      }
-    }).catch((err) => {
-      console.warn('qr lib load failed', err);
-      if (imgWrap) imgWrap.textContent = t_str('qrFailed');
-    });
+    ensureQrLib()
+      .then(() => {
+        if (!qrModalNode || qrModalNode !== wrap) return;
+        try {
+          const svg = qrToSvg(url, 120);
+          imgWrap.innerHTML = svg;
+        } catch (err) {
+          console.warn('qr render failed', err);
+          imgWrap.textContent = t_str('qrFailed');
+        }
+      })
+      .catch((err) => {
+        console.warn('qr lib load failed', err);
+        if (imgWrap) imgWrap.textContent = t_str('qrFailed');
+      });
   }
 
   function closeQrModal() {
@@ -7648,8 +8754,20 @@
     if (qrModalNode) {
       const node = qrModalNode;
       node.classList.remove('is-on');
+      // a11y: Phase 15 — deactivate the focus trap so Tab cycles the
+      // page again and focus returns to the trigger button.
+      if (node._focusTrap) {
+        try {
+          node._focusTrap.deactivate();
+        } catch (_) {
+          /* swallow — focus restoration is best-effort */
+        }
+        node._focusTrap = null;
+      }
       // Drop from the DOM after the fade-out
-      setTimeout(() => { if (node.parentNode) node.parentNode.removeChild(node); }, 180);
+      setTimeout(() => {
+        if (node.parentNode) node.parentNode.removeChild(node);
+      }, 180);
       qrModalNode = null;
     }
   }
@@ -7663,7 +8781,10 @@
     svg.setAttribute('aria-hidden', 'true');
     // Two interlocking chain links — Material-style.
     const p1 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    p1.setAttribute('d', 'M10.59 13.41a1 1 0 0 1 0-1.41l3-3a1 1 0 1 1 1.41 1.41l-3 3a1 1 0 0 1-1.41 0z');
+    p1.setAttribute(
+      'd',
+      'M10.59 13.41a1 1 0 0 1 0-1.41l3-3a1 1 0 1 1 1.41 1.41l-3 3a1 1 0 0 1-1.41 0z'
+    );
     p1.setAttribute('fill', 'none');
     p1.setAttribute('stroke', 'currentColor');
     p1.setAttribute('stroke-width', '1.8');
@@ -7688,7 +8809,6 @@
     svg.appendChild(p3);
     return svg;
   }
-
 
   // ------------------------------------------------------------------
   // Local notifications (Web Notification API)
@@ -7731,7 +8851,9 @@
       });
     };
     (state.savedStops || []).forEach(push);
-    (state.recent || []).forEach((r) => { if (r && r.stop) push(r); });
+    (state.recent || []).forEach((r) => {
+      if (r && r.stop) push(r);
+    });
     return out;
   }
 
@@ -7748,9 +8870,12 @@
   }
   function refreshNotifTimer() {
     stopNotifTimer();
-    if (state.notifEnabled && notifSupported()
-        && typeof document !== 'undefined'
-        && document.visibilityState === 'visible') {
+    if (
+      state.notifEnabled &&
+      notifSupported() &&
+      typeof document !== 'undefined' &&
+      document.visibilityState === 'visible'
+    ) {
       ensureNotifTimer();
       // Fire an immediate tick so returning to the tab doesn't wait 20s
       // before the first edge-crossing notification.
@@ -7776,14 +8901,16 @@
     }
     state.notifInFlight = true;
     try {
-      const results = await Promise.all(stops.map(async (s) => {
-        try {
-          const etaResp = await fetchEtaForStopLocal(s.stop);
-          return { stop: s, eta: (etaResp && Array.isArray(etaResp.data)) ? etaResp.data : [] };
-        } catch (e) {
-          return { stop: s, eta: [] };
-        }
-      }));
+      const results = await Promise.all(
+        stops.map(async (s) => {
+          try {
+            const etaResp = await fetchEtaForStopLocal(s.stop);
+            return { stop: s, eta: etaResp && Array.isArray(etaResp.data) ? etaResp.data : [] };
+          } catch (e) {
+            return { stop: s, eta: [] };
+          }
+        })
+      );
 
       // Update the edge map for every observed (stop, co, route, dir,
       // serviceType). Fire a notification only on the above → below
@@ -7792,19 +8919,21 @@
       const threshold = Number(state.notifThresholdMin) || 5;
       for (const r of results) {
         if (!r.eta || r.eta.length === 0) continue;
-        const stopName = nameFor({
-          nameTc: r.stop.nameTc,
-          nameSc: r.stop.nameSc,
-          nameEn: r.stop.nameEn,
-        }) || String(r.stop.stop);
+        const stopName =
+          nameFor({
+            nameTc: r.stop.nameTc,
+            nameSc: r.stop.nameSc,
+            nameEn: r.stop.nameEn,
+          }) || String(r.stop.stop);
         for (const item of r.eta) {
           if (!item || !item.eta) continue;
           const minutes = minutesUntil(item.eta);
           if (minutes == null) continue;
-          const co = (r.stop.co && r.stop.co !== 'STOP')
-            ? r.stop.co
-            : classifyKmbOp(item.route, '', item.dest_tc || '');
-          const serviceType = (item.service_type != null) ? String(item.service_type) : '1';
+          const co =
+            r.stop.co && r.stop.co !== 'STOP'
+              ? r.stop.co
+              : busetaUtils.classifyKmbOp(item.route, '', item.dest_tc || '');
+          const serviceType = item.service_type != null ? String(item.service_type) : '1';
           const dir = item.dir || '';
           const key = `${r.stop.stop}|${co}|${item.route}|${dir}|${serviceType}`;
           seenKeys.add(key);
@@ -7853,9 +8982,7 @@
     const dest = pickFirst(item.dest_tc, item.dest_en) || '';
     const route = item.route || '';
     const safeStop = String(stopName || '').replace(/[\r\n]+/g, ' ');
-    const title = dest
-      ? `${route} → ${safeStop}`
-      : `${route} · ${safeStop}`;
+    const title = dest ? `${route} → ${safeStop}` : `${route} · ${safeStop}`;
     const body = t_str('notifMinutesAway', minutes);
     const tag = `eta-threshold:${stopKey}`;
     try {
@@ -7870,8 +8997,12 @@
       // Clicking the notification focuses the matching stop view if the
       // tab is in the background.
       n.onclick = () => {
-        try { window.focus(); } catch (_) {}
-        try { n.close(); } catch (_) {}
+        try {
+          window.focus();
+        } catch (_) {}
+        try {
+          n.close();
+        } catch (_) {}
         try {
           const stopId = String(stopKey.split('|')[0] || '');
           if (stopId) location.hash = `#/stop/${encodeURIComponent(stopId)}`;
@@ -7891,7 +9022,9 @@
     if (!notifSupported()) return;
     if (!enabled) {
       state.notifEnabled = false;
-      try { localStorage.setItem(STORAGE_KEYS.NOTIF_ENABLED, '0'); } catch (_) {}
+      try {
+        localStorage.setItem(STORAGE_KEYS.NOTIF_ENABLED, '0');
+      } catch (_) {}
       stopNotifTimer();
       return;
     }
@@ -7908,17 +9041,23 @@
       // Stays disabled — the UI will flip the toggle back and surface a
       // denied banner on the next render.
       state.notifEnabled = false;
-      try { localStorage.setItem(STORAGE_KEYS.NOTIF_ENABLED, '0'); } catch (_) {}
+      try {
+        localStorage.setItem(STORAGE_KEYS.NOTIF_ENABLED, '0');
+      } catch (_) {}
       return;
     }
     state.notifEnabled = true;
-    try { localStorage.setItem(STORAGE_KEYS.NOTIF_ENABLED, '1'); } catch (_) {}
+    try {
+      localStorage.setItem(STORAGE_KEYS.NOTIF_ENABLED, '1');
+    } catch (_) {}
     refreshNotifTimer();
   }
   function setNotifThreshold(min) {
     const n = Number(min);
     state.notifThresholdMin = NOTIF_THRESHOLDS.includes(n) ? n : 5;
-    try { localStorage.setItem(STORAGE_KEYS.NOTIF_THRESHOLD, String(state.notifThresholdMin)); } catch (_) {}
+    try {
+      localStorage.setItem(STORAGE_KEYS.NOTIF_THRESHOLD, String(state.notifThresholdMin));
+    } catch (_) {}
     // Threshold changed → reset the edge map so re-firing is possible
     // even if the previous threshold was a different value.
     state.notifEdge.clear();
@@ -7978,21 +9117,29 @@
     // default would be.
     const pills = el('div', { class: 'notif-threshold' });
     pills.appendChild(el('span', { class: 'notif-threshold-label' }, t_str('notifThreshold')));
-    const pillRow = el('div', { class: 'notif-threshold-pills', role: 'radiogroup', 'aria-label': t_str('notifThreshold') });
+    const pillRow = el('div', {
+      class: 'notif-threshold-pills',
+      role: 'radiogroup',
+      'aria-label': t_str('notifThreshold'),
+    });
     NOTIF_THRESHOLDS.forEach((m) => {
       const isOn = state.notifThresholdMin === m;
-      const pill = el('button', {
-        type: 'button',
-        class: 'notif-threshold-pill' + (isOn ? ' is-on' : ''),
-        role: 'radio',
-        'aria-checked': isOn ? 'true' : 'false',
-        disabled: state.notifEnabled ? null : 'disabled',
-        onclick: () => {
-          if (!state.notifEnabled) return;
-          setNotifThreshold(m);
-          renderNotifSettings(container);
+      const pill = el(
+        'button',
+        {
+          type: 'button',
+          class: 'notif-threshold-pill' + (isOn ? ' is-on' : ''),
+          role: 'radio',
+          'aria-checked': isOn ? 'true' : 'false',
+          disabled: state.notifEnabled ? null : 'disabled',
+          onclick: () => {
+            if (!state.notifEnabled) return;
+            setNotifThreshold(m);
+            renderNotifSettings(container);
+          },
         },
-      }, t_str('notifThreshold' + m));
+        t_str('notifThreshold' + m)
+      );
       pillRow.appendChild(pill);
     });
     pills.appendChild(pillRow);
@@ -8024,28 +9171,31 @@
   // Language
   // ------------------------------------------------------------------
   function applyLang() {
-    document.documentElement.lang = state.lang === 'en' ? 'en'
-      : state.lang === 'zh-Hans' ? 'zh-Hans' : 'zh-Hant';
+    document.documentElement.lang =
+      state.lang === 'en' ? 'en' : state.lang === 'zh-Hans' ? 'zh-Hans' : 'zh-Hant';
     // Show the CURRENT language on the toggle pill (not the next one).
     // The button label cycles 繁體中文 → 简体中文 → English on each click.
     const btn = document.getElementById('langToggle');
     if (btn) {
       const cur = btn.querySelector('.lang-current');
       if (cur) {
-        cur.textContent = state.lang === 'zh-Hant' ? '繁體中文'
-          : state.lang === 'zh-Hans' ? '简体中文'
-          : 'English';
+        cur.textContent =
+          state.lang === 'zh-Hant' ? '繁體中文' : state.lang === 'zh-Hans' ? '简体中文' : 'English';
       }
-      btn.setAttribute('aria-label', state.lang === 'zh-Hant' ? '切換語言'
-        : state.lang === 'zh-Hans' ? '切换语言'
-        : 'Switch language');
+      btn.setAttribute(
+        'aria-label',
+        state.lang === 'zh-Hant'
+          ? '切換語言'
+          : state.lang === 'zh-Hans'
+            ? '切换语言'
+            : 'Switch language'
+      );
     }
     applyI18n(document.body);
   }
   function toggleLang() {
     // Cycle: zh-Hant → zh-Hans → en → zh-Hant
-    state.lang = state.lang === 'zh-Hant' ? 'zh-Hans'
-      : state.lang === 'zh-Hans' ? 'en' : 'zh-Hant';
+    state.lang = state.lang === 'zh-Hant' ? 'zh-Hans' : state.lang === 'zh-Hans' ? 'en' : 'zh-Hant';
     persist();
     applyLang();
     onHashChange();
@@ -8066,15 +9216,20 @@
       if (mql && typeof mql.addEventListener === 'function') {
         mql.addEventListener('change', () => {
           let stored;
-          try { stored = localStorage.getItem(STORAGE_KEYS.THEME); }
-          catch { stored = null; }
+          try {
+            stored = localStorage.getItem(STORAGE_KEYS.THEME);
+          } catch {
+            stored = null;
+          }
           if (!(VALID_THEMES.has(stored) && stored !== 'system')) {
             // Either genuinely unpressed, or on 'system' — re-resolve.
             setTheme('system');
           }
         });
       }
-    } catch { /* matchMedia unavailable */ }
+    } catch {
+      /* matchMedia unavailable */
+    }
     updateClock();
     setInterval(updateClock, 30_000);
 
@@ -8092,11 +9247,12 @@
     // (e.g. cold start while the radio is off).
     try {
       const storedOffline = readOfflineFlag();
-      const liveOffline = (typeof navigator !== 'undefined'
-        && navigator.onLine === false);
+      const liveOffline = typeof navigator !== 'undefined' && navigator.onLine === false;
       isOffline = storedOffline || liveOffline;
       if (isOffline) writeOfflineFlag(true);
-    } catch { /* no DOM / no localStorage */ }
+    } catch {
+      /* no DOM / no localStorage */
+    }
     // React to connectivity changes for the rest of the session.
     window.addEventListener('online', () => setOffline(false));
     window.addEventListener('offline', () => setOffline(true));
@@ -8110,11 +9266,17 @@
     // loadIndex resolves into state.index and the watcher below re-renders
     // the current view once it lands so populated lists replace the
     // empty-state placeholders we show in the meantime.
-    loadIndex().then(() => {
-      try { if (currentRoute() === 'home') renderHome(); } catch (e) { /* noop */ }
-    }).catch((err) => {
-      console.error('Index build failed', err);
-    });
+    loadIndex()
+      .then(() => {
+        try {
+          if (currentRoute() === 'home') renderHome();
+        } catch (e) {
+          /* noop */
+        }
+      })
+      .catch((err) => {
+        console.error('Index build failed', err);
+      });
 
     if (!location.hash) location.hash = '#/';
     // Probe the browser's remembered permission state on boot so the
