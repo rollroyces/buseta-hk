@@ -84,6 +84,42 @@ op)` covering 27 KMB / LWB operator suffixes. 12 cases.
   `${etaCount(count)}, ${soonest} ${minShort}` composition in the stop-view
   live region. Chinese leads with the duration, English uses "arriving in the
   next N minutes".
+- **`CHANGELOG.md` (this file)** (PR #21): backfilled in Keep a Changelog
+  1.1.0 format. Linked from `README.md` so contributors can find the per-PR
+  history.
+- **Cache-buster consistency test** (PR #22): `tests/unit/cache-buster.test.js`
+  scrapes the six live cache-buster values from `index.html` + `sw.js`
+  via plain regex and enforces six invariants (every value is a positive
+  integer; `meta >= max(asset ?v=)`; `sw.js CACHE >= max(asset ?v=)`;
+  `app.js?v >= style.css?v`; `planner.js?v >= planner.css?v`; all values
+  < 9999). 6 cases.
+- **`docs/cache-strategy.md`** (PR #23): the source-of-truth doc the
+  cache-buster test cites. Documents the six knobs, when each is bumped,
+  the six invariants, two worked examples (Phase 16 + Phase 19), how to
+  add a new asset, and what the strategy does _not_ cover. 134 lines.
+- **ESLint 9 flat config** (PR #24): `eslint.config.mjs` (128 lines, three
+  scoped blocks for `src/utils/` + `tests/` + `scripts/`). Pinned
+  `@eslint/js` + `globals` as direct devDependencies. Previously `npm run
+lint` errored with "ESLint couldn't find an eslint.config.* file".
+  The legacy monolith (`app.js`, `planner.js`, `sw.js`) is explicitly
+  excluded with a comment explaining why.
+- **`.editorconfig`** (PR #24): UTF-8, LF, trim trailing whitespace,
+  final newline, 2-space indent. Makefiles use tabs, Python uses
+  4 spaces.
+- **`scripts/check-cache-buster.js`** (PR #25): Node CLI mirror of
+  `tests/unit/cache-buster.test.js`. Same regexes, same invariants,
+  same exit codes. Useful for pre-commit hooks and CI runners without
+  Vitest. Mirrors the pattern of `scripts/check-i18n.js` (Phase 9).
+- **`npm run check` aggregator** (PR #25): runs
+  `lint + lint:i18n + lint:cache-buster + format:check + test` end-to-end
+  in ~45s. `npm run check:fix` is the auto-fix variant
+  (`lint:fix + format`). All 189 tests + all 6 cache-buster invariants +
+  ESLint + Prettier pass in one command.
+- **GitHub Actions CI workflow** (PR #26): `.github/workflows/ci.yml`
+  calls `npm run check` on every PR to `main`, every push to `main`,
+  and on manual dispatch. `actions/checkout@v4` + `actions/setup-node@v4`
+  (Node 20, npm cache) + `npm ci --no-audit --no-fund` + `npm run check`.
+  Permissions: `contents: read` only.
 
 ### Changed
 
@@ -94,6 +130,11 @@ op)` covering 27 KMB / LWB operator suffixes. 12 cases.
 - **`globalThis.busetaUtils` pattern** (PR #4 onwards): every `src/utils/`
   module uses `export …` for Vitest + `globalThis.busetaUtils = Object.assign(...)`
   for in-browser classic-script use. Idempotent on multiple loads.
+- **`assets/*.json` excluded from Prettier** (PR #25): added to
+  `.prettierignore` with a comment explaining why. Mirrors ESLint's
+  existing `assets/**` ignore. Hand-curated reference data with
+  intentional formatting — reformatting would obscure content changes
+  in PR diffs.
 
 ### Fixed
 
@@ -114,5 +155,11 @@ op)` covering 27 KMB / LWB operator suffixes. 12 cases.
 - **Local `mapWithCap` in `planner.js`** (PR #20): four callsites now route
   through `busetaUtils.mapWithCap`. Single source of truth for bound-
   concurrency futures (cancellation, AbortSignal).
+- **Stale `TODO(v38)` comment in `app.js`** (PR #22): replaced by a `NOTE`
+  pointing at the v53 / Phase 11 + 12 implementation (the helper now
+  lives in `src/utils/routes-by-stop.js` and is populated by
+  `prefetchRouteStops()`). The function `findTerminusRoutesForStop` is
+  still legitimately used as the `terminusMatches` half of the merged
+  lookup — this is purely a comment cleanup.
 
 [Unreleased]: https://github.com/rollroyces/buseta-hk/compare/v53...HEAD
