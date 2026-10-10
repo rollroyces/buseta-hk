@@ -1,6 +1,13 @@
 name: Lighthouse CI
 
-on:
+# `on` is quoted as `"on"` — see ci.yml for the rationale (YAML 1.1
+# boolean literal). Strict YAML parsers would otherwise interpret
+# `on:` as `true:` and the workflow would never trigger. GitHub
+# Actions handles unquoted `on:` fine at runtime; we use the quoted
+# form here for consistency with ci.yml (Phase 25) and to make the
+# file portable to other YAML readers (tests/unit/yaml-lint.test.js
+# from Phase 28, etc.).
+"on":
   pull_request:
     branches: [main]
   workflow_dispatch:
