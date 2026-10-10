@@ -178,6 +178,13 @@ lint` errored with "ESLint couldn't find an eslint.config.* file".
   Contributors on Windows check out LF files; binary files
   (minified, images, gzipped JSON) are marked as such so Git
   doesn't try to diff or normalize them.
+- **`SECURITY.md`** (PR #36): the last Phase 1 deliverable.
+  GitHub-recommended structure: supported versions, three
+  reporting channels (private advisory → DM → public issue),
+  coordinated disclosure policy, response targets (7d ack /
+  14d triage / 30d severe fix), and explicit in-scope /
+  out-of-scope boundaries. `CONTRIBUTING.md` updated to point
+  at it. Closes the Phase 1 community-health gap.
 
 ### Changed
 
