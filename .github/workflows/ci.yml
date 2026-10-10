@@ -1,0 +1,59 @@
+name: CI
+
+# `on` is a YAML 1.1 boolean literal — `on:` parses as `true:` and the
+# workflow never triggers. Quote it. This is a known GitHub Actions
+# gotcha that the official starter workflows all work around the same way.
+"on":
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Minimal permissions — CI just reads the repo and reports status.
+# No write access, no PR-comment-write, no anything else.
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: npm run check
+    runs-on: ubuntu-latest
+    # Fail fast on PR branches if any prior job already failed (we only
+    # have one job today, but this keeps the door open for adding more).
+    needs: []
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          # Don't `npm ci` yet — we want the cache primed by `npm ci`
+          # *and* we want failures from a missing/locked package.json
+          # to surface as a distinct step ("Install") rather than
+          # mixed into the test step.
+
+      - name: Install dependencies
+        # `npm ci` is reproducible (uses package-lock.json exactly)
+        # and faster than `npm install` in CI. The lockfile was last
+        # refreshed by Phase 23 + Phase 24.
+        run: npm ci --no-audit --no-fund
+
+      - name: Run full check aggregator
+        # The aggregator runs, in order:
+        #   1. lint                 (eslint .)
+        #   2. lint:i18n            (node scripts/check-i18n.js)
+        #   3. lint:cache-buster    (node scripts/check-cache-buster.js)
+        #   4. format:check         (prettier --check .)
+        #   5. test                 (vitest run, 189/189 tests)
+        # See package.json's `scripts.check` for the exact command chain.
+        run: npm run check
+
+      # The aggregator already exits non-zero on any failure, so the
+      # workflow fails the job automatically — no explicit `if: failure()`
+      # block needed. We keep this comment so future contributors
+      # understand why there's no "report" step.
