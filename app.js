@@ -7584,6 +7584,19 @@
       });
 
       body.appendChild(el('h2', { class: 'section-title' }, t_str('nextArrivals')));
+      // a11y (Phase 16): a visually-hidden live region under the heading
+      // gets the summary string written into it after each refresh, so
+      // screen-reader users hear "X buses, soonest in N minutes" without
+      // every eta-card re-firing the announcement. `aria-atomic="true"`
+      // so the whole string is read each time it changes.
+      const liveRegion = el('div', {
+        class: 'sr-only',
+        'aria-live': 'polite',
+        'aria-atomic': 'true',
+        role: 'status',
+      });
+      body.appendChild(liveRegion);
+      const liveLast = { text: '' };
       const list = el('div', { class: 'arrival-list' });
 
       routes.forEach((r) => {
@@ -7656,6 +7669,17 @@
         card.appendChild(right);
         list.appendChild(card);
       });
+
+      // a11y (Phase 16): write a one-shot summary into the live region
+      // after every refresh so screen-reader users hear how many buses
+      // are arriving soon without each `eta-card` change re-firing. We
+      // only update the textContent when the summary actually changes
+      // to avoid the screen reader announcing the same thing twice.
+      const next = busetaUtils.buildStopViewSummary(busetaUtils.summariseSoon(routes), t_str);
+      if (next !== liveLast.text) {
+        liveRegion.textContent = next;
+        liveLast.text = next;
+      }
 
       body.appendChild(list);
       if (mapEl) body.appendChild(mapEl);

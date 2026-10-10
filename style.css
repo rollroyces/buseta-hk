@@ -161,6 +161,21 @@ h3 {
   top: 8px;
 }
 
+/* Visually-hidden but readable by screen readers. Used by Phase 16's
+   aria-live summary region so the announcement is delivered to AT
+   users without taking up visual space on the page. */
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
 /* ------------------------------ topbar ------------------------------ */
 .topbar {
   position: fixed;
