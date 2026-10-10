@@ -8,10 +8,13 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "lint:i18n": "node scripts/check-i18n.js",
+    "lint:cache-buster": "node scripts/check-cache-buster.js",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "check": "npm run lint && npm run lint:i18n && npm run lint:cache-buster && npm run format:check && npm test",
+    "check:fix": "npm run lint:fix && npm run format"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
