@@ -26,9 +26,6 @@
   'use strict';
 
   // ---- Tunables ---------------------------------------------------------
-  const WALK_M_PER_MIN = 60; // walking speed
-  const BUS_KMH = 12; // average bus speed (busway included)
-  const BUS_KMH_M_PER_MIN = (BUS_KMH * 1000) / 60; // 200 m/min
   const TRANSFER_WALK_LIMIT_M = 500; // reject transfer legs that need a walk > this
   // v51 — loosened from 350m. Some HK bus
   // interchanges (e.g. 大圍站公共運輸交匯處,
@@ -248,24 +245,7 @@
     return out;
   }
 
-  // Haversine (mirrors app.js, kept self-contained).
-  function haversine(lat1, lng1, lat2, lng2) {
-    const R = 6371;
-    const toRad = (x) => (x * Math.PI) / 180;
-    const dLat = toRad(lat2 - lat1);
-    const dLng = toRad(lng2 - lng1);
-    const a =
-      Math.sin(dLat / 2) ** 2 +
-      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
-    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  }
-
-  function walkMinutes(meters) {
-    return meters / WALK_M_PER_MIN;
-  }
-  function rideMinutes(meters) {
-    return meters / BUS_KMH_M_PER_MIN;
-  }
+  // Haversine / walkMinutes / rideMinutes moved to src/utils/geo.js and src/utils/time.js — Phase 3 modularization
 
   // ---- v47 — Real walking path via public GraphHopper demo ------------
   // The flat 60 m/min haversine estimate (walkMinutes above) is fast but
@@ -278,7 +258,7 @@
   //
   // Public demo is fair-use. Cache aggressively (rounded coords ~1 m
   // precision) so back-to-back searches don't hammer the demo. On any
-  // failure we fall back to walkMinutes() so the planner still works.
+  // failure we fall back to busetaUtils.walkMinutes() so the planner still works.
   const _walkRouteCache = new Map(); // "lat,lng|lat,lng" → {meters, seconds, geometry} | null
   const WALK_ROUTE_URL = 'https://routing.openstreetmap.de/routed-foot/route/v1/foot/';
   async function fetchRealWalkRoute(lat1, lng1, lat2, lng2) {
@@ -290,7 +270,7 @@
     )
       return null;
     // Skip trivial distances (<50 m straight-line) — no routing value.
-    if (haversine(lat1, lng1, lat2, lng2) < 0.05) return null;
+    if (busetaUtils.haversine(lat1, lng1, lat2, lng2) < 0.05) return null;
     const k1 = `${lat1.toFixed(5)},${lng1.toFixed(5)}`;
     const k2 = `${lat2.toFixed(5)},${lng2.toFixed(5)}`;
     const key = `${k1}>${k2}`;
@@ -348,8 +328,8 @@
         routed: true,
       };
     }
-    const m = haversine(lat1, lng1, lat2, lng2) * 1000;
-    return { meters: m, minutes: walkMinutes(m), geometry: null, routed: false };
+    const m = busetaUtils.haversine(lat1, lng1, lat2, lng2) * 1000;
+    return { meters: m, minutes: busetaUtils.walkMinutes(m), geometry: null, routed: false };
   }
   function totalKm(legs) {
     let m = 0;
@@ -620,7 +600,7 @@
       const a = stops[i],
         b = stops[i + 1];
       if (!a || !b || !Number.isFinite(a.lat) || !Number.isFinite(b.lat)) continue;
-      m += haversine(a.lat, a.lng, b.lat, b.lng) * 1000;
+      m += busetaUtils.haversine(a.lat, a.lng, b.lat, b.lng) * 1000;
     }
     return m / 1000;
   }
@@ -629,7 +609,7 @@
   function walkMinutesTo(lat, lng, idx, stopId) {
     const ll = stopLatLng(idx, stopId);
     if (!ll || !Number.isFinite(lat) || !Number.isFinite(lng)) return Infinity;
-    return walkMinutes(haversine(lat, lng, ll.lat, ll.lng) * 1000);
+    return busetaUtils.walkMinutes(busetaUtils.haversine(lat, lng, ll.lat, ll.lng) * 1000);
   }
 
   // ---- v48 — cross-mode nearest-rail-station lookup ------------------
@@ -660,7 +640,7 @@
       const sLat = Number.isFinite(s.lat) ? s.lat : null;
       const sLng = Number.isFinite(s.lng) ? s.lng : null;
       if (sLat == null || sLng == null) return;
-      const d = haversine(lat, lng, sLat, sLng) * 1000;
+      const d = busetaUtils.haversine(lat, lng, sLat, sLng) * 1000;
       if (d > max) return;
       out.push({ code, lat: sLat, lng: sLng, distMeters: d });
     });
@@ -680,7 +660,7 @@
       const sLat = Number.isFinite(s.lat) ? s.lat : null;
       const sLng = Number.isFinite(s.lng) ? s.lng : null;
       if (sLat == null || sLng == null) return;
-      const d = haversine(lat, lng, sLat, sLng) * 1000;
+      const d = busetaUtils.haversine(lat, lng, sLat, sLng) * 1000;
       if (d > max) return;
       out.push({ code, lat: sLat, lng: sLng, distMeters: d });
     });
@@ -716,7 +696,7 @@
       const sLat = Number.isFinite(s.lat) ? s.lat : null;
       const sLng = Number.isFinite(s.lng) ? s.lng : null;
       if (sLat == null || sLng == null) return;
-      const d = haversine(lat, lng, sLat, sLng) * 1000;
+      const d = busetaUtils.haversine(lat, lng, sLat, sLng) * 1000;
       if (d > max) return;
       if (d < bestDist) {
         bestDist = d;
@@ -874,7 +854,7 @@
       const dIdx = stops.findIndex((s) => s.stop === dest.stop);
       if (oIdx < 0 || dIdx < 0 || dIdx <= oIdx) return null;
       const rideKm = routeDistanceKm(stops, oIdx, dIdx);
-      const rideMin = rideMinutes(rideKm * 1000);
+      const rideMin = busetaUtils.rideMinutes(rideKm * 1000);
       // v47 — real walking path via walkLeg() (GraphHopper demo, haversine
       // fallback). Each router awaits its own walks; routers run in parallel
       // via Promise.all in search(), so the GraphHopper RTT (~250 ms)
@@ -1029,7 +1009,7 @@
                 from: originStop,
                 to: alight.stop,
                 meters: ride1Km * 1000,
-                minutes: rideMinutes(ride1Km * 1000),
+                minutes: busetaUtils.rideMinutes(ride1Km * 1000),
               },
               {
                 kind: 'walk',
@@ -1048,7 +1028,7 @@
                 from: board2.stop,
                 to: destStop,
                 meters: ride2Km * 1000,
-                minutes: rideMinutes(ride2Km * 1000),
+                minutes: busetaUtils.rideMinutes(ride2Km * 1000),
               },
             ],
           });
@@ -1191,7 +1171,7 @@
                     from: originStop,
                     to: alight1.stop,
                     meters: ride1Km * 1000,
-                    minutes: rideMinutes(ride1Km * 1000),
+                    minutes: busetaUtils.rideMinutes(ride1Km * 1000),
                   },
                   {
                     kind: 'walk',
@@ -1210,7 +1190,7 @@
                     from: stops2[a2].stop,
                     to: alight2.stop,
                     meters: ride2Km * 1000,
-                    minutes: rideMinutes(ride2Km * 1000),
+                    minutes: busetaUtils.rideMinutes(ride2Km * 1000),
                   },
                   {
                     kind: 'walk',
@@ -1229,7 +1209,7 @@
                     from: stops3[a3].stop,
                     to: destStop,
                     meters: ride3Km * 1000,
-                    minutes: rideMinutes(ride3Km * 1000),
+                    minutes: busetaUtils.rideMinutes(ride3Km * 1000),
                   },
                 ],
               });
@@ -1287,7 +1267,7 @@
 
   function xferMeters(s1, s2) {
     if (!Number.isFinite(s1.lat) || !Number.isFinite(s2.lat)) return 0;
-    return haversine(s1.lat, s1.lng, s2.lat, s2.lng) * 1000;
+    return busetaUtils.haversine(s1.lat, s1.lng, s2.lat, s2.lng) * 1000;
   }
 
   // ---- MTR + LRT (Light Rail) routing --------------------------------
@@ -1663,7 +1643,8 @@
           Number.isFinite(toMeta.lat) &&
           Number.isFinite(toMeta.lng)
         ) {
-          rideMeters = haversine(fromMeta.lat, fromMeta.lng, toMeta.lat, toMeta.lng) * 1000;
+          rideMeters =
+            busetaUtils.haversine(fromMeta.lat, fromMeta.lng, toMeta.lat, toMeta.lng) * 1000;
         }
         legs.push({
           kind: 'ride',
@@ -3456,7 +3437,7 @@
         }
         sub.appendChild(el('span', { class: 'planner-suggest-id' }, String(match.stop)));
         if (userLoc && ll) {
-          const km = haversine(userLoc.lat, userLoc.lng, ll.lat, ll.lng);
+          const km = busetaUtils.haversine(userLoc.lat, userLoc.lng, ll.lat, ll.lng);
           sub.appendChild(
             el('span', { class: 'planner-suggest-dist' }, t_str('plannerSuggestDistance', km))
           );

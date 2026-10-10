@@ -24,3 +24,10 @@ export function isDisruptionExpired(it) {
   }
   return typeof it.until === 'string' && it.until < todayHkt;
 }
+
+// When loaded as a classic script, attach to globalThis.busetaUtils.
+if (typeof globalThis !== 'undefined') {
+  globalThis.busetaUtils = Object.assign(globalThis.busetaUtils || {}, {
+    isDisruptionExpired,
+  });
+}

@@ -24,13 +24,14 @@ describe('walkMinutes', () => {
 });
 
 describe('rideMinutes', () => {
-  it('derives from 20 km/h', () => {
-    expect(BUS_KMH_M_PER_MIN).toBeCloseTo((20 * 1000) / 60, 5);
+  it('derives from 12 km/h (matches planner.js inline value)', () => {
+    expect(BUS_KMH_M_PER_MIN).toBeCloseTo((12 * 1000) / 60, 5);
+    expect(BUS_KMH_M_PER_MIN).toBe(200); // 200 m/min
   });
 
   it('returns minutes at the bus speed', () => {
-    // 20 km/h = 333.33 m/min, so 1000 m ≈ 3 minutes
-    expect(rideMinutes(1000)).toBeCloseTo(3, 1);
+    // 12 km/h = 200 m/min, so 1000 m = 5 minutes
+    expect(rideMinutes(1000)).toBeCloseTo(5, 1);
   });
 
   it('handles zero', () => {

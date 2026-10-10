@@ -3459,7 +3459,10 @@
     if (!state.lastSearchQ && state.userLoc && state.index) {
       const nearest = Array.from(state.index.stops.values())
         .filter((s) => Number.isFinite(s.lat) && Number.isFinite(s.lng))
-        .map((s) => ({ s, d: haversine(state.userLoc.lat, state.userLoc.lng, s.lat, s.lng) }))
+        .map((s) => ({
+          s,
+          d: busetaUtils.haversine(state.userLoc.lat, state.userLoc.lng, s.lat, s.lng),
+        }))
         .sort((a, b) => a.d - b.d)[0];
       if (nearest) {
         const name = nameFor(nearest.s);
@@ -3847,7 +3850,10 @@
     if (!state.userLoc || !state.index) return null;
     const nearbyStops = Array.from(state.index.stops.values())
       .filter((s) => Number.isFinite(s.lat) && Number.isFinite(s.lng))
-      .map((s) => ({ s, d: haversine(state.userLoc.lat, state.userLoc.lng, s.lat, s.lng) }))
+      .map((s) => ({
+        s,
+        d: busetaUtils.haversine(state.userLoc.lat, state.userLoc.lng, s.lat, s.lng),
+      }))
       .sort((a, b) => a.d - b.d);
     const top = nearbyStops[0];
     if (!top) return null;
@@ -3881,7 +3887,9 @@
     main.appendChild(el('span', { class: 'nearest-stop-name' }, name));
     row.appendChild(main);
 
-    row.appendChild(el('span', { class: 'nearest-stop-dist nearby-dist' }, formatDistance(top.d)));
+    row.appendChild(
+      el('span', { class: 'nearest-stop-dist nearby-dist' }, busetaUtils.formatDistance(top.d))
+    );
     row.appendChild(makeChev());
     return row;
   }
@@ -4407,19 +4415,7 @@
   // treated as indefinite ("until further notice") and never expire via
   // this check. Unparseable `until` values also fall through to false so
   // a typo doesn't hide a real alert.
-  function isDisruptionExpired(it) {
-    if (!it || !it.until) return false;
-    // toLocaleDateString with 'en-CA' produces YYYY-MM-DD, the same
-    // shape our JSON uses, so a plain string compare is chronological.
-    let todayHkt;
-    try {
-      todayHkt = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Hong_Kong' });
-    } catch (_) {
-      // Older browsers without full Intl support — fall back to UTC.
-      todayHkt = new Date().toISOString().slice(0, 10);
-    }
-    return typeof it.until === 'string' && it.until < todayHkt;
-  }
+  // isDisruptionExpired moved to src/utils/disruptions.js — Phase 3 modularization
 
   // Filter the curated disruption list down to entries that apply to at
   // least one route in `state.savedRoutes` or the route-shaped entries of
@@ -4443,7 +4439,7 @@
 
     return items.filter((it) => {
       if (!it || !it.route) return false;
-      if (isDisruptionExpired(it)) return false;
+      if (busetaUtils.isDisruptionExpired(it)) return false;
       if (it.co) return wanted.has(`${it.co}\t${it.route}`);
       return wanted.has(`\t${it.route}`);
     });
@@ -4493,7 +4489,7 @@
     // --- Nearby bus stops (only KMB/CTB/etc — stops we have lat/lng for) ---
     const nearbyStops = Array.from(state.index.stops.values())
       .filter((s) => Number.isFinite(s.lat) && Number.isFinite(s.lng))
-      .map((s) => ({ s, d: haversine(loc.lat, loc.lng, s.lat, s.lng) }))
+      .map((s) => ({ s, d: busetaUtils.haversine(loc.lat, loc.lng, s.lat, s.lng) }))
       .filter((x) => x.d < 1.2)
       .sort((a, b) => a.d - b.d)
       .slice(0, 12);
@@ -4557,7 +4553,7 @@
     const nearbyMtr = Array.from(state.index.mtr.values())
       .filter((st) => st && !st._isLine)
       .filter((st) => Number.isFinite(st.lat) && Number.isFinite(st.lng))
-      .map((st) => ({ st, d: haversine(loc.lat, loc.lng, st.lat, st.lng) }))
+      .map((st) => ({ st, d: busetaUtils.haversine(loc.lat, loc.lng, st.lat, st.lng) }))
       .filter((x) => x.d < 1.5)
       .sort((a, b) => a.d - b.d)
       .slice(0, 6);
@@ -4612,7 +4608,7 @@
       row.appendChild(makeBadge(stop.co || 'STOP'));
       const main = el('div', { class: 'row-main' });
       main.appendChild(el('div', { class: 'row-title' }, name));
-      main.appendChild(el('div', { class: 'row-sub' }, formatDistance(dist)));
+      main.appendChild(el('div', { class: 'row-sub' }, busetaUtils.formatDistance(dist)));
       row.appendChild(main);
       const meta = el('div', { class: 'row-meta' });
       if (etas.length > 0) meta.appendChild(etaSpan(etas[0].eta));
@@ -4639,7 +4635,11 @@
       const main = el('div', { class: 'row-main' });
       main.appendChild(el('div', { class: 'row-title' }, name));
       main.appendChild(
-        el('div', { class: 'row-sub' }, `${line ? line + ' · ' : ''}${formatDistance(item.d)}`)
+        el(
+          'div',
+          { class: 'row-sub' },
+          `${line ? line + ' · ' : ''}${busetaUtils.formatDistance(item.d)}`
+        )
       );
       row.appendChild(main);
       const meta = el('div', { class: 'row-meta' });
@@ -4703,19 +4703,7 @@
     return root;
   }
 
-  function haversine(lat1, lng1, lat2, lng2) {
-    const R = 6371;
-    const dLat = ((lat2 - lat1) * Math.PI) / 180;
-    const dLng = ((lng2 - lng1) * Math.PI) / 180;
-    const a =
-      Math.sin(dLat / 2) ** 2 +
-      Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
-    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  }
-  function formatDistance(km) {
-    if (km < 1) return `${Math.round(km * 1000)} m`;
-    return `${km.toFixed(1)} km`;
-  }
+  // haversine + formatDistance moved to src/utils/geo.js — Phase 3 modularization
 
   // ------------------------------------------------------------------
   // Row builders

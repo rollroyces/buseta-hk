@@ -38,3 +38,14 @@ export function formatDistance(km) {
   if (km < 1) return `${Math.round(km * 1000)} m`;
   return `${km.toFixed(1)} km`;
 }
+
+// When loaded as a classic script (in index.html before app.js), attach
+// the exports to globalThis.busetaUtils so app.js / planner.js can call
+// them as `busetaUtils.haversine(...)`. Idempotent — re-merges into an
+// existing namespace if multiple utils files load.
+if (typeof globalThis !== 'undefined') {
+  globalThis.busetaUtils = Object.assign(globalThis.busetaUtils || {}, {
+    haversine,
+    formatDistance,
+  });
+}

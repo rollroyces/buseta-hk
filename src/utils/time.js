@@ -6,8 +6,9 @@
  *  baseline; replaced by fetchRealWalkRoute() when GraphHopper is reachable. */
 export const WALK_M_PER_MIN = 60;
 
-/** Bus speed in km/h (assumed for the trip planner). */
-export const BUS_KMH = 20;
+/** Bus speed in km/h (assumed for the trip planner). Matches the
+ *  planner.js inline definition (12 km/h — average bus speed, busway included). */
+export const BUS_KMH = 12;
 
 /** Bus speed in metres per minute, derived from BUS_KMH. */
 export const BUS_KMH_M_PER_MIN = (BUS_KMH * 1000) / 60;
@@ -31,4 +32,16 @@ export function walkMinutes(meters) {
  */
 export function rideMinutes(meters) {
   return meters / BUS_KMH_M_PER_MIN;
+}
+
+// When loaded as a classic script (in index.html before planner.js),
+// attach the exports to globalThis.busetaUtils.
+if (typeof globalThis !== 'undefined') {
+  globalThis.busetaUtils = Object.assign(globalThis.busetaUtils || {}, {
+    walkMinutes,
+    rideMinutes,
+    WALK_M_PER_MIN,
+    BUS_KMH,
+    BUS_KMH_M_PER_MIN,
+  });
 }

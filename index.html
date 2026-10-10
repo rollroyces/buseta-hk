@@ -14,7 +14,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="BusETA" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="buseta-version" content="56" />
+    <meta name="buseta-version" content="57" />
     <!-- Main stylesheet. The original style.css is what we ship today — a
      hand-rolled minifier produced a broken style.min.css earlier, so we
      load the unminified bundle directly. v=35 ships the "show every
@@ -1486,7 +1486,7 @@
           if (this._plannerScript) return this._plannerScript;
           this._plannerScript = new Promise((resolve, reject) => {
             const s = document.createElement('script');
-            s.src = 'planner.js?v=36';
+            s.src = 'planner.js?v=37';
             s.async = false; // preserve execution order
             s.onload = () => resolve(window.Planner);
             s.onerror = () => reject(new Error('planner.js failed to load'));
@@ -1500,7 +1500,7 @@
           this._plannerCss = new Promise((resolve, reject) => {
             const l = document.createElement('link');
             l.rel = 'stylesheet';
-            l.href = 'planner.css?v=36';
+            l.href = 'planner.css?v=37';
             l.setAttribute('data-planner-css', '1');
             l.media = 'print';
             l.onload = () => {
@@ -1514,7 +1514,15 @@
         },
       };
     </script>
-    <script defer src="app.js?v=46"></script>
+    <!-- Shared utilities — must load BEFORE app.js so busetaUtils.* is
+         populated on globalThis when app.js evaluates. Each file attaches
+         its exports to globalThis.busetaUtils via the bottom-of-file
+         side effect. Source-of-truth ES modules live in src/utils/*.js
+         and are exercised by Vitest. -->
+    <script src="src/utils/geo.js?v=1"></script>
+    <script src="src/utils/time.js?v=1"></script>
+    <script src="src/utils/disruptions.js?v=1"></script>
+    <script defer src="app.js?v=47"></script>
     <script>
       // SW path must be RELATIVE — GitHub Pages serves this site under
       // /buseta-hk/ but a leading `/sw.js` would resolve to the site root
