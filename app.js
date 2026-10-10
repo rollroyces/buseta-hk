@@ -8665,6 +8665,22 @@
     };
     wrap.addEventListener('keydown', onKey);
     wrap._onKey = onKey;
+    // a11y: Phase 15 — focus trap. Tab cycles within the modal so a
+    // keyboard user can't escape to the page behind. Focus moves to the
+    // close button on open and returns to the trigger on close. The
+    // trigger is the share button that opened the modal — passed via
+    // the `label` caller path is the share button's text; we look up
+    // the live activeElement (which is whatever focused element opened
+    // the modal via copyShareLink's call site). Saved on `wrap` so
+    // closeQrModal can hand it to the trap later.
+    wrap._trigger = document.activeElement;
+    if (typeof busetaUtils.createFocusTrap === 'function') {
+      wrap._focusTrap = busetaUtils.createFocusTrap(wrap, {
+        initialFocus: close,
+        returnFocus: wrap._trigger,
+      });
+      wrap._focusTrap.activate();
+    }
     // Animate in
     requestAnimationFrame(() => wrap.classList.add('is-on'));
     // Auto-close after 8s
@@ -8694,6 +8710,16 @@
     if (qrModalNode) {
       const node = qrModalNode;
       node.classList.remove('is-on');
+      // a11y: Phase 15 — deactivate the focus trap so Tab cycles the
+      // page again and focus returns to the trigger button.
+      if (node._focusTrap) {
+        try {
+          node._focusTrap.deactivate();
+        } catch (_) {
+          /* swallow — focus restoration is best-effort */
+        }
+        node._focusTrap = null;
+      }
       // Drop from the DOM after the fade-out
       setTimeout(() => {
         if (node.parentNode) node.parentNode.removeChild(node);
