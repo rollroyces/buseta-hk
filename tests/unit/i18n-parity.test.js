@@ -45,7 +45,10 @@ function loadStrings() {
   );
   fs.writeFileSync(tmp, code);
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    // No project lint rule disallows `require` here — `require` is
+    // declared as a global in eslint.config.js for the test files —
+    // but keep a comment so future contributors know the import is
+    // intentional (vs. a missing ESM alternative).
     const mod = require(tmp);
     return mod.STRINGS_DATA;
   } finally {
