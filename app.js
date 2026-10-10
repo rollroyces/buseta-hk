@@ -8,9 +8,11 @@
      MTR heavy rail  → https://rt.data.gov.hk/v1/transport/mtr/
      MTR Light Rail  → https://rt.data.gov.hk/v1/transport/mtr/lrt/
      MTR line/station list → https://opendata.mtr.com.hk/data/
-     Stop coordinates (GMB / NLB / MTR) → third-party curated
-       dataset by hk-bus (https://data.hkbus.app/), packaged at
-       /assets/hk-stops.json (CC0-style compilation of TD sources).
+     Stop coordinates (bus / LRT / MTR / NLB) → curated bundle
+       at /assets/hk-stops.json (CC0-style compilation of TD sources,
+       third-party hk-bus dataset at https://data.hkbus.app/).
+       Per-operator catalogues live in /assets/mtr-stops.json
+       (MTR stations) and /assets/lrt-stops.json (Light Rail stops).
    ============================================================ */
 
 (() => {
