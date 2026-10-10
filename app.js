@@ -1489,7 +1489,81 @@
     // Kick off GMB route list build in the background.
     ensureGmbList().catch(() => {});
 
+    // Kick off /route-stop prefetch so via-stops light up gradually
+    // (Phase 12). Fire-and-forget: failures are per-route and don't
+    // affect the loadIndex() return value. Results land in
+    // state.routeStopsByRoute + state.routesByStop; refreshBusStopView
+    // picks them up on the next render.
+    prefetchRouteStops().catch(() => {});
+
     return state.index;
+  }
+
+  // ------------------------------------------------------------------
+  // Prefetch: /route-stop for every KMB / LWB / CTB / NWFB route
+  //   v53 (Phase 12). Resolves TODO(v38) for via-stops lookup by
+  //   populating state.routeStopsByRoute with each route's stop list.
+  //   Concurrency-capped at 8 so we don't hammer upstream during cold
+  //   load (3000+ routes × ~200ms ÷ 8 ≈ 75s wall-clock; SW caches each
+  //   response for 24h so the second visit is O(1)).
+  //
+  //   Each successful fetch incrementally rebuilds state.routesByStop
+  //   via busetaUtils.buildRoutesByStopMap — small rebuilds keep the
+  //   reverse lookup fresh as data arrives. Failures are tolerated
+  //   (just skip the route); the live panel falls back to the terminus
+  //   scan via busetaUtils.findRoutesServingStop({..., terminusMatches}).
+  // ------------------------------------------------------------------
+  function routeKey(r) {
+    return `${r.co}|${r.route}|${r.dir}|${r.service}`;
+  }
+
+  async function prefetchRouteStops() {
+    if (!state.index) return;
+    if (state.routeStopsByRoute) return; // already running or done
+    const routes = Array.from(state.index.routes.values()).concat(
+      Array.from(state.index.ctbRoutes.values())
+    );
+    // Same filter as findTerminusRoutesForStop — KMB / LWB / CTB / NWFB
+    // only. GMB / LRT / MTR are excluded (different stop enumeration
+    // model; their routes never serve a KMB-style 巴士總站).
+    const candidates = routes.filter(
+      (r) => r.co === 'KMB' || r.co === 'LWB' || r.co === 'CTB' || r.co === 'NWFB'
+    );
+    if (candidates.length === 0) return;
+
+    state.routeStopsByRoute = new Map();
+    state.routesByStop = new Map();
+
+    await busetaUtils.mapWithCap(candidates, 8, async (r) => {
+      const key = routeKey(r);
+      let raw;
+      try {
+        raw =
+          r.co === 'KMB' || r.co === 'LWB'
+            ? await fetchKmbRouteStop(r.route, r.dir, r.service)
+            : await fetchCtbRouteStop(r.route, r.dir);
+      } catch (_) {
+        return null;
+      }
+      const arr = Array.isArray(raw && raw.data) ? raw.data : [];
+      const stops = arr
+        .map((it) => ({
+          stop: String(it.stop),
+          seq: parseInt(it.seq, 10),
+          nameTc: it.name_tc || '',
+          nameEn: it.name_en || '',
+        }))
+        .filter((x) => Number.isFinite(x.seq));
+      state.routeStopsByRoute.set(key, stops);
+      // Incremental rebuild — keep state.routesByStop current as data
+      // arrives. Cheap (typically <100µs per route).
+      const merged = busetaUtils.buildRoutesByStopMap(new Map([[key, r]]), new Map([[key, stops]]));
+      for (const [stopName, set] of merged.entries()) {
+        if (!state.routesByStop.has(stopName)) state.routesByStop.set(stopName, new Set());
+        for (const item of set) state.routesByStop.get(stopName).add(item);
+      }
+      return key;
+    });
   }
 
   // Light CSV parser for the MTR/LRT files: handles quoted fields with commas.
@@ -1500,6 +1574,13 @@
   const fetchKmbRouteStop = (route, dir, service) =>
     busetaUtils.fetchJSON(
       `${API.KMB}/route-stop/${encodeURIComponent(route)}/${dir === 'I' ? 'inbound' : 'outbound'}/${encodeURIComponent(service)}`
+    );
+  // CTB / NWFB share the Citybus endpoint shape (service type defaults to 1
+  // for both — these operators don't expose per-service variants). Used by
+  // prefetchRouteStops() in Phase 12.
+  const fetchCtbRouteStop = (route, dir) =>
+    busetaUtils.fetchJSON(
+      `${API.CITYBUS}/route-stop/ctb/${encodeURIComponent(route)}/${dir === 'I' ? 'inbound' : 'outbound'}`
     );
   const fetchKmbStop = (stopId) =>
     busetaUtils.fetchJSON(`${API.KMB}/stop/${encodeURIComponent(stopId)}`);
