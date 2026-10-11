@@ -289,6 +289,26 @@
       stopNoUpcomingEta: '暫無到站時間',
       stopNoUpcomingEtaHint: '該路線暫未有實時到站資料。',
       stopNoUpcomingEtaCta: '睇時間表',
+      // Phase 41 — keyboard shortcut + skip-link labels. `a11ySkip` is
+      // read by the skip-link anchor's textContent so screen-reader
+      // users land on the same label regardless of language. The
+      // `kbd*` keys describe shortcut gestures in a compact form
+      // (e.g. "g h") that matches the help modal rows. `kbdShortcuts*`
+      // label the help modal itself.
+      a11ySkip: '跳到主要內容',
+      kbdSearch: '按 / 搜尋',
+      kbdShortcutSaved: '按 S 儲存',
+      kbdShortcutsTitle: '鍵盤快捷鍵',
+      kbdGoHome: 'g h',
+      kbdGoSaved: 'g s',
+      kbdGoPlanner: 'g p',
+      kbdGoNearby: 'g n',
+      kbdClose: 'Esc',
+      kbdShortcutsIntro: '以下係常用嘅鍵盤快捷鍵。',
+      kbdShortcutsClose: '關閉',
+      kbdSectionNavigation: '導覽',
+      kbdSectionSearch: '搜尋同收藏',
+      kbdSectionHelp: '說明',
     },
     en: {
       brandSub: 'Hong Kong Bus',
@@ -566,6 +586,23 @@
       stopNoUpcomingEta: 'No upcoming buses',
       stopNoUpcomingEtaHint: 'No live arrivals for this route right now.',
       stopNoUpcomingEtaCta: 'View schedule',
+      // Phase 41 — keyboard shortcut + skip-link labels. The literal
+      // chord keys (`g h`, `g s`, …) are identical across languages;
+      // only the prose surrounding them is translated.
+      a11ySkip: 'Skip to main content',
+      kbdSearch: 'Press / to search',
+      kbdShortcutSaved: 'Press S to save',
+      kbdShortcutsTitle: 'Keyboard shortcuts',
+      kbdGoHome: 'g h',
+      kbdGoSaved: 'g s',
+      kbdGoPlanner: 'g p',
+      kbdGoNearby: 'g n',
+      kbdClose: 'Esc',
+      kbdShortcutsIntro: 'These shortcuts work anywhere in the app.',
+      kbdShortcutsClose: 'Close',
+      kbdSectionNavigation: 'Navigation',
+      kbdSectionSearch: 'Search & save',
+      kbdSectionHelp: 'Help',
     },
     'zh-Hans': {
       brandSub: '香港巴士',
@@ -833,6 +870,23 @@
       stopNoUpcomingEta: '暂无到站时间',
       stopNoUpcomingEtaHint: '该路线暂无实时到站资料。',
       stopNoUpcomingEtaCta: '睇时间表',
+      // Phase 41 — keyboard shortcut + skip-link labels. zh-Hans keeps
+      // the literal chord keys identical across all three locales; only
+      // the surrounding prose is translated.
+      a11ySkip: '跳到主要内容',
+      kbdSearch: '按 / 搜寻',
+      kbdShortcutSaved: '按 S 储存',
+      kbdShortcutsTitle: '键盘快捷键',
+      kbdGoHome: 'g h',
+      kbdGoSaved: 'g s',
+      kbdGoPlanner: 'g p',
+      kbdGoNearby: 'g n',
+      kbdClose: 'Esc',
+      kbdShortcutsIntro: '以下系常用嘅键盘快捷键。',
+      kbdShortcutsClose: '关闭',
+      kbdSectionNavigation: '导览',
+      kbdSectionSearch: '搜寻同收藏',
+      kbdSectionHelp: '说明',
     },
   };
 
@@ -9209,6 +9263,330 @@
     persist();
     applyLang();
     onHashChange();
+  }
+
+  // ------------------------------------------------------------------
+  // Keyboard shortcuts (Phase 41)
+  //
+  // A global `keydown` listener that maps a small set of keys and
+  // two-key chords to in-app actions. Suppressed while the user is
+  // typing into an input / textarea / contenteditable so it never
+  // fights search typing. Pure dispatcher logic lives in
+  // `src/utils/keyboard-shortcuts.js` — this block is just the glue
+  // that turns chord events into BusETA mutations and view swaps.
+  //
+  // Bound:
+  //   /                → focus the search input (clears it first if
+  //                      anything is selected, so / always lands you
+  //                      on a fresh prompt).
+  //   g h / g s / g p  → navigate home / saved / planner.
+  //   g n              → navigate to the home view (which doubles as
+  //                      "nearby" — there is no dedicated /nearby
+  //                      hash route; the home view shows nearby
+  //                      content when geolocation is granted).
+  //   s                → toggle save on the current route / stop /
+  //                      MTR station view. No-op on home / search /
+  //                      planner views where there's nothing to
+  //                      save yet.
+  //   ?                → open the keyboard-shortcuts help modal.
+  //   Escape           → close any open modal OR pop one view off
+  //                      the hash history. We never swallow Esc in
+  //                      inputs (the dispatcher lets it through), so
+  //                      IME-suggest and clear-input both keep
+  //                      working naturally.
+  //
+  // The dispatcher instance is module-scoped so a hot reload /
+  // future HMR can `detach()` it without leaving a dangling listener.
+  // ------------------------------------------------------------------
+
+  let kbdHelpModal = null; // { close(): void } when open
+  let kbdDispatcher = null;
+
+  function closeKbdHelpModal() {
+    if (kbdHelpModal) {
+      try {
+        kbdHelpModal.close();
+      } catch (_) {
+        /* swallow — best effort */
+      }
+      kbdHelpModal = null;
+    }
+  }
+
+  function openKbdHelpModal() {
+    // Re-opening while already open is a no-op so users can't pile
+    // up duplicate dialogs by mashing `?`.
+    if (kbdHelpModal) return;
+    const modal = renderKbdHelpModal();
+    if (!modal) return;
+    kbdHelpModal = modal;
+    document.body.appendChild(modal.node);
+    requestAnimationFrame(() => modal.node.classList.add('is-on'));
+    const wasFocused = document.activeElement;
+    if (typeof busetaUtils.createFocusTrap === 'function') {
+      const trap = busetaUtils.createFocusTrap(modal.node, {
+        initialFocus: modal.node.querySelector('.kbd-help-close'),
+        returnFocus: wasFocused,
+      });
+      modal.trap = trap;
+      trap.activate();
+    }
+    modal._onKey = (ev) => {
+      if (ev.key === 'Escape') {
+        ev.preventDefault();
+        ev.stopPropagation();
+        closeKbdHelpModal();
+      }
+    };
+    modal.node.addEventListener('keydown', modal._onKey, true);
+    modal.node.addEventListener('click', (ev) => {
+      if (ev.target === modal.node) closeKbdHelpModal();
+    });
+    // Wrap close() with side-effect cleanup so the dispatcher's
+    // listener doesn't leak after the modal is removed.
+    const originalClose = modal.close;
+    modal.close = function patchedClose() {
+      if (modal.trap) {
+        try {
+          modal.trap.deactivate();
+        } catch (_) {
+          /* swallow */
+        }
+        modal.trap = null;
+      }
+      if (modal._onKey) {
+        modal.node.removeEventListener('keydown', modal._onKey, true);
+        modal._onKey = null;
+      }
+      originalClose();
+      if (kbdHelpModal === modal) kbdHelpModal = null;
+    };
+  }
+
+  // Build (but do not mount) the help modal. Returns
+  // `{ node, close() }`. Caller appends `node` to the document and
+  // is responsible for invoking `close()` to tear it down. We keep
+  // the construction pure so tests can introspect the DOM without
+  // touching document.body.
+  function renderKbdHelpModal() {
+    const sectionNavRows = [
+      [t_str('kbdGoHome'), t_str('homeEmptyTitle')],
+      [t_str('kbdGoSaved'), t_str('savedRoutes')],
+      [t_str('kbdGoPlanner'), t_str('navPlanner')],
+      [t_str('kbdGoNearby'), t_str('nearbyRoutes')],
+      [t_str('kbdClose'), t_str('kbdSectionSearch')],
+    ];
+    const sectionSearchRows = [
+      [t_str('kbdSearch'), t_str('searchPlaceholder')],
+      [t_str('kbdShortcutSaved'), t_str('save')],
+    ];
+    const sectionHelpRows = [['?', t_str('kbdSectionHelp')]];
+    function buildTable(rows) {
+      const tbody = document.createElement('tbody');
+      for (const [key, label] of rows) {
+        const tr = document.createElement('tr');
+        const keyCell = document.createElement('td');
+        keyCell.className = 'kbd-help-keycell';
+        const kbdEl = document.createElement('kbd');
+        kbdEl.className = 'kbd kbd-help-key';
+        kbdEl.textContent = key;
+        keyCell.appendChild(kbdEl);
+        const labelCell = document.createElement('td');
+        labelCell.className = 'kbd-help-labelcell';
+        labelCell.textContent = label;
+        tr.append(keyCell, labelCell);
+        tbody.appendChild(tr);
+      }
+      const table = document.createElement('table');
+      table.className = 'kbd-help-table';
+      table.appendChild(tbody);
+      return table;
+    }
+    function buildSection(title, rows) {
+      const wrap = document.createElement('section');
+      wrap.className = 'kbd-help-section';
+      const h = document.createElement('h3');
+      h.className = 'kbd-help-h';
+      h.textContent = title;
+      wrap.appendChild(h);
+      wrap.appendChild(buildTable(rows));
+      return wrap;
+    }
+    const wrap = document.createElement('div');
+    wrap.className = 'kbd-help-modal';
+    wrap.setAttribute('role', 'dialog');
+    wrap.setAttribute('aria-modal', 'true');
+    wrap.setAttribute('aria-labelledby', 'kbd-help-title');
+    const card = document.createElement('div');
+    card.className = 'kbd-help-card';
+    const header = document.createElement('div');
+    header.className = 'kbd-help-header';
+    const title = document.createElement('h2');
+    title.id = 'kbd-help-title';
+    title.className = 'kbd-help-title';
+    title.textContent = t_str('kbdShortcutsTitle');
+    const close = document.createElement('button');
+    close.type = 'button';
+    close.className = 'kbd-help-close';
+    close.setAttribute('aria-label', t_str('kbdShortcutsClose'));
+    close.textContent = '×';
+    close.addEventListener('click', () => wrap.close());
+    header.append(title, close);
+    const intro = document.createElement('p');
+    intro.className = 'kbd-help-intro';
+    intro.textContent = t_str('kbdShortcutsIntro');
+    card.appendChild(header);
+    card.appendChild(intro);
+    card.appendChild(buildSection(t_str('kbdSectionNavigation'), sectionNavRows));
+    card.appendChild(buildSection(t_str('kbdSectionSearch'), sectionSearchRows));
+    card.appendChild(buildSection(t_str('kbdSectionHelp'), sectionHelpRows));
+    wrap.appendChild(card);
+    wrap.close = function close() {
+      wrap.classList.remove('is-on');
+      const node = wrap;
+      setTimeout(() => {
+        if (node.parentNode) node.parentNode.removeChild(node);
+      }, 180);
+    };
+    return wrap;
+  }
+
+  function navigateTo(hash) {
+    // Programmatic navigation that keeps the existing hashchange
+    // pipeline responsible for rendering. Use `location.hash =` so
+    // the browser records a history entry — back-button still
+    // works after a chord-driven jump.
+    if (location.hash === hash) {
+      // Same hash → hashchange won't fire. Manually re-render to
+      // honor "go to current view" semantics (e.g. chord press
+      // while already on /#/home).
+      onHashChange();
+      return;
+    }
+    location.hash = hash;
+  }
+
+  function focusSearchInput() {
+    const input = document.getElementById('searchInput');
+    if (!input) {
+      // We're not on the search view — navigate first, then focus
+      // on the next tick so the view has had a chance to mount.
+      navigateTo('#/search');
+      // Defer focus to give the hashchange handler time to clone
+      // the template and populate #searchInput.
+      setTimeout(focusSearchInput, 50);
+      return;
+    }
+    try {
+      input.focus({ preventScroll: true });
+      // Place the caret at the end so the user can resume typing
+      // immediately.
+      const v = input.value || '';
+      input.setSelectionRange(v.length, v.length);
+    } catch (_) {
+      /* swallow — focus best-effort */
+    }
+  }
+
+  function toggleCurrentSave() {
+    // Walk the current view and call the matching toggleSaveX. We
+    // do this rather than pre-resolving on every keypress so a
+    // freshly navigated-to view (e.g. user pressed `g h` from the
+    // planner, then immediately `s`) gets the right handler.
+    const view = currentRoute();
+    if (view === 'route' && state.detailRoute) {
+      try {
+        toggleSaveRoute(state.detailRoute);
+        renderRouteDetail();
+      } catch (_) {
+        /* swallow */
+      }
+      return;
+    }
+    if (view === 'stop' && state.detailStop) {
+      try {
+        toggleSaveStop(state.detailStop);
+        renderStopDetail();
+      } catch (_) {
+        /* swallow */
+      }
+      return;
+    }
+    // No active detail view → nothing to save. Be silent so the
+    // keypress feels like a no-op rather than an error toast.
+  }
+
+  function escapeBack() {
+    // 1. Close any open modal/help overlay (highest-priority). The
+    //    QR modal also listens for Escape itself, but we want the
+    //    help modal to share this single dispatcher-driven
+    //    behaviour too.
+    if (kbdHelpModal) {
+      closeKbdHelpModal();
+      return;
+    }
+    // 2. If the current view has sub-state (search filter open,
+    //    open QR modal elsewhere, etc.) close it. We don't have a
+    //    unified "is there an overlay open" predicate — fall back
+    //    to the QR modal node lookup, which is the only overlay
+    //    outside the help modal today.
+    const qr = document.querySelector('.qr-modal.is-on');
+    if (qr) {
+      qr.click(); // outside-tap dismisses; OR — see below.
+      // The QR modal listens for Escape via a node-local keydown
+      // listener (added in renderQrModal). Dispatch a synthetic
+      // Escape so both paths converge.
+      try {
+        qr.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      } catch (_) {
+        /* swallow */
+      }
+      return;
+    }
+    // 3. Pop one view off. If we're on home, search, planner, or
+    //    settings, fall through to "go home" (no history) — which is
+    //    effectively a no-op for the user.
+    const view = currentRoute();
+    if (view === 'route' || view === 'stop' || view === 'settings') {
+      // Going "back" from a detail view lands on home; from a
+      // settings view lands on home too. Planner/Search have their
+      // own roots so leave them in place.
+      navigateTo('#/');
+      return;
+    }
+    if (view === 'planner' || view === 'search') {
+      navigateTo('#/');
+    }
+  }
+
+  function setupKeyboardShortcuts() {
+    if (kbdDispatcher) return; // idempotent — boot() may re-run.
+    if (typeof busetaUtils.createKeyboardDispatcher !== 'function') {
+      // Defensive: if the helper script failed to load (offline
+      // / ad-blocker), skip wiring entirely. The rest of the app
+      // still works without keyboard shortcuts.
+      return;
+    }
+    kbdDispatcher = busetaUtils.createKeyboardDispatcher({
+      onSearch: () => focusSearchInput(),
+      onGoHome: () => navigateTo('#/'),
+      onGoSaved: () => navigateTo('#/'), // home carries saved + recent
+      onGoPlanner: () => navigateTo('#/planner'),
+      onGoNearby: () => navigateTo('#/'), // home is "nearby"
+      onEscape: () => escapeBack(),
+      onSave: () => toggleCurrentSave(),
+      onHelp: () => openKbdHelpModal(),
+    });
+    kbdDispatcher.attach();
+    // Detach on `pagehide` so a future SPA-style nav doesn't leave
+    // the listener behind. Doesn't fire on tab close (browser tears
+    // the document down anyway), so it's safe to be conservative.
+    window.addEventListener('pagehide', () => {
+      if (kbdDispatcher) {
+        kbdDispatcher.detach();
+        kbdDispatcher = null;
+      }
+    });
   }
 
   // ------------------------------------------------------------------
