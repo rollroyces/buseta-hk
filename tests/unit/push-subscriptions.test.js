@@ -95,12 +95,14 @@ describe('parseVapidKey', () => {
 describe('pushSupported', () => {
   // The helper returns `false` whenever any of the three browser
   // prerequisites (`navigator.serviceWorker`, `PushManager`,
-  // `Notification`) is missing. Node environments lack all three;
-  // jsdom provides `navigator.serviceWorker` but no PushManager.
-  // Either way the answer is `false`.
-  it('returns false in a Node-like environment (no browser globals)', () => {
-    // Sanity: the Node runtime has no `navigator` global.
-    expect(typeof navigator).toBe('undefined');
+  // `Notification`) is missing. Node 22+ ships a built-in `navigator`
+  // global without `serviceWorker` or `PushManager`; jsdom provides
+  // `navigator.serviceWorker` but no `PushManager`. Either way the
+  // answer is `false`.
+  it('returns false in a Node-like environment (no PushManager, no Notification)', () => {
+    // Sanity: the Node runtime has no `PushManager` / `Notification`.
+    expect(typeof PushManager).toBe('undefined');
+    expect(typeof Notification).toBe('undefined');
     expect(pushSupported()).toBe(false);
   });
 
@@ -108,17 +110,25 @@ describe('pushSupported', () => {
     // Simulate the jsdom-like surface (serviceWorker present, no
     // PushManager) without pulling in jsdom itself — pushSupported()
     // should still bail out because PushManager is missing.
-    const origNav = globalThis.navigator;
+    //
+    // Node 22+ ships `navigator` as a read-only getter; we use
+    // `Object.defineProperty` to swap it out for the duration of
+    // the test, then restore the descriptor.
+    const navDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
     const origPM = globalThis.PushManager;
     const origNotif = globalThis.Notification;
-    globalThis.navigator = { serviceWorker: {} };
+    Object.defineProperty(globalThis, 'navigator', {
+      value: { serviceWorker: {} },
+      writable: true,
+      configurable: true,
+    });
     delete globalThis.PushManager;
     delete globalThis.Notification;
     try {
       expect(pushSupported()).toBe(false);
     } finally {
-      if (origNav === undefined) delete globalThis.navigator;
-      else globalThis.navigator = origNav;
+      if (navDescriptor) Object.defineProperty(globalThis, 'navigator', navDescriptor);
+      else delete globalThis.navigator;
       if (origPM !== undefined) globalThis.PushManager = origPM;
       if (origNotif !== undefined) globalThis.Notification = origNotif;
     }
