@@ -289,7 +289,7 @@
       stopNoUpcomingEta: '暫無到站時間',
       stopNoUpcomingEtaHint: '該路線暫未有實時到站資料。',
       stopNoUpcomingEtaCta: '睇時間表',
-      // Phase 41 — keyboard shortcut + skip-link labels. `a11ySkip` is
+// Phase 41 — keyboard shortcut + skip-link labels. `a11ySkip` is
       // read by the skip-link anchor's textContent so screen-reader
       // users land on the same label regardless of language. The
       // `kbd*` keys describe shortcut gestures in a compact form
@@ -309,6 +309,17 @@
       kbdSectionNavigation: '導覽',
       kbdSectionSearch: '搜尋同收藏',
       kbdSectionHelp: '說明',
+      // Phase 42 — Web Push (service-disruption alerts). Toggle label +
+      // body text for the settings view section. Stored in the same
+      // STRINGS table as every other user-visible string so the
+      // i18n-parity test catches missing-translation drift.
+      pushAlerts: '服務通知',
+      pushAlertsDesc: '當常用路線有臨時改道或停駛時通知您',
+      pushEnable: '啟用通知',
+      pushDisable: '停用通知',
+      pushDeniedHint: '通知已被封鎖。請到瀏覽器設定重新啟用。',
+      pushUnsupported: '此瀏覽器不支援通知功能',
+      pushNoServer: '通知已就緒，等待伺服器連線',
     },
     en: {
       brandSub: 'Hong Kong Bus',
@@ -586,7 +597,7 @@
       stopNoUpcomingEta: 'No upcoming buses',
       stopNoUpcomingEtaHint: 'No live arrivals for this route right now.',
       stopNoUpcomingEtaCta: 'View schedule',
-      // Phase 41 — keyboard shortcut + skip-link labels. The literal
+// Phase 41 — keyboard shortcut + skip-link labels. The literal
       // chord keys (`g h`, `g s`, …) are identical across languages;
       // only the prose surrounding them is translated.
       a11ySkip: 'Skip to main content',
@@ -603,6 +614,14 @@
       kbdSectionNavigation: 'Navigation',
       kbdSectionSearch: 'Search & save',
       kbdSectionHelp: 'Help',
+      // Phase 42 — Web Push (service-disruption alerts).
+      pushAlerts: 'Service alerts',
+      pushAlertsDesc: 'Notify me when a saved route is detoured or suspended',
+      pushEnable: 'Enable notifications',
+      pushDisable: 'Disable notifications',
+      pushDeniedHint: 'Notifications are blocked. Re-enable them in browser settings.',
+      pushUnsupported: 'This browser does not support notifications',
+      pushNoServer: 'Subscription saved — waiting for the push server to come online',
     },
     'zh-Hans': {
       brandSub: '香港巴士',
@@ -870,7 +889,7 @@
       stopNoUpcomingEta: '暂无到站时间',
       stopNoUpcomingEtaHint: '该路线暂无实时到站资料。',
       stopNoUpcomingEtaCta: '睇时间表',
-      // Phase 41 — keyboard shortcut + skip-link labels. zh-Hans keeps
+// Phase 41 — keyboard shortcut + skip-link labels. zh-Hans keeps
       // the literal chord keys identical across all three locales; only
       // the surrounding prose is translated.
       a11ySkip: '跳到主要内容',
@@ -887,6 +906,14 @@
       kbdSectionNavigation: '导览',
       kbdSectionSearch: '搜寻同收藏',
       kbdSectionHelp: '说明',
+      // Phase 42 — Web Push (service-disruption alerts).
+      pushAlerts: '服务通知',
+      pushAlertsDesc: '当常用路线有临时改道或停驶时通知您',
+      pushEnable: '启用通知',
+      pushDisable: '停用通知',
+      pushDeniedHint: '通知已被封锁。请到浏览器设定重新启用。',
+      pushUnsupported: '此浏览器不支援通知功能',
+      pushNoServer: '通知就绪，等待伺服器连线',
     },
   };
 
@@ -934,6 +961,11 @@
     NOTIF_ENABLED: 'buseta.notif.enabled',
     NOTIF_THRESHOLD: 'buseta.notif.threshold',
     ONBOARDED: 'buseta.onboarded',
+    // Phase 42 — serialised Web Push subscription JSON
+    // (`subscription.toJSON()`). Written when the user opts into
+    // service-disruption alerts; a future server is expected to
+    // fetch this and POST pushes against the `endpoint` URL.
+    PUSH_SUBSCRIPTION: 'buseta.push.subscription',
   };
 
   // ------------------------------------------------------------------
@@ -1089,6 +1121,10 @@
     detailStop: null,
     gmapsKey: '',
     gmapsConfigLoaded: false,
+    // Phase 42 — VAPID public key for Web Push, loaded from
+    // assets/config.json (`vapidPublicKey`). Optional until a push
+    // server is wired up; absent → subscribe fails cleanly.
+    vapidPublicKey: '',
     // In-memory only: alert banners the user has dismissed this session.
     // Keyed by route + alert type so different routes / different alerts are
     // tracked independently. Cleared on full page reload (intentional —
@@ -2064,6 +2100,13 @@
       .then((cfg) => {
         if (cfg && typeof cfg.gmapsKey === 'string') {
           state.gmapsKey = cfg.gmapsKey.trim();
+        }
+        // Phase 42 — also load the VAPID public key, used by the Web
+        // Push subscribe flow. Optional: until a push server is wired
+        // up, the field will be absent and the subscribe call fails
+        // cleanly with `reason: 'no-vapid-key'` instead of crashing.
+        if (cfg && typeof cfg.vapidPublicKey === 'string') {
+          state.vapidPublicKey = cfg.vapidPublicKey.trim();
         }
       })
       .catch(() => {});
@@ -8319,6 +8362,11 @@
   // surface so it doesn't compete with the actual home content for
   // attention. Three sections: Theme, Notifications (reuses
   // renderNotifSettings), and an About block.
+  //
+  // Phase 42 also adds a "Service alerts" section for Web Push — see
+  // the block comment above renderPushSettings() for the caveat that
+  // no push server exists yet, so subscriptions are stored client-
+  // side only.
   // ------------------------------------------------------------------
   function renderSettings() {
     showView('view-settings');
@@ -8413,6 +8461,12 @@
     const notifMount = el('div', { class: 'settings-notif-mount' });
     container.appendChild(notifMount);
     renderNotifSettings(notifMount);
+
+    // ----- Section: Service alerts (Phase 42 — Web Push) -----
+    container.appendChild(el('h2', { class: 'settings-section-title' }, t_str('pushAlerts')));
+    const pushMount = el('div', { class: 'settings-push-mount' });
+    container.appendChild(pushMount);
+    renderPushSettings(pushMount);
 
     // ----- Section: About -----
     container.appendChild(el('h2', { class: 'settings-section-title' }, t_str('settingsAbout')));
@@ -9212,6 +9266,128 @@
     if (permission === 'denied') {
       const denied = el('p', { class: 'notif-status is-denied' }, t_str('notifPermissionDenied'));
       card.appendChild(denied);
+    }
+
+    container.appendChild(card);
+  }
+
+  // ------------------------------------------------------------------
+  // Phase 42 — Web Push: "Service alerts" section in the Settings view.
+  //
+  // Web Push requires a server endpoint to actually deliver pushes.
+  // Until one is wired up, subscriptions are stored in localStorage
+  // under STORAGE_KEYS.PUSH_SUBSCRIPTION so the subscription is ready
+  // when a server is added. The UI surfaces this as a "waiting for
+  // server" hint once the user opts in. See docs/push-notifications.md
+  // for the server-side wire-up checklist (VAPID keypair, endpoint
+  // storage, payload schema).
+  //
+  // Default state: OFF. `Notification.requestPermission()` is NEVER
+  // invoked from this function — only the toggle's click handler may
+  // do so, so the request always originates from a user gesture (a
+  // W3C spec requirement).
+  // ------------------------------------------------------------------
+  function renderPushSettings(container) {
+    if (!container) return;
+    container.innerHTML = '';
+    if (!busetaUtils.pushSupported()) {
+      container.appendChild(
+        el('p', { class: 'push-status is-unsupported' }, t_str('pushUnsupported'))
+      );
+      return;
+    }
+    // The VAPID public key lives in assets/config.json (same file that
+    // hosts the Google Maps key). When the server is wired up, drop
+    // the base64url public key under `vapidPublicKey` and the
+    // subscribe call below picks it up automatically. With no key
+    // present, the toggle still renders but the subscribe call fails
+    // with `reason: 'no-vapid-key'` and we surface the same "waiting
+    // for server" hint as a successful subscription.
+    const vapidKey = state.vapidPublicKey || '';
+    const stored = storage.get(STORAGE_KEYS.PUSH_SUBSCRIPTION, null);
+    const subscribed = !!(stored && stored.endpoint);
+
+    const card = el('section', {
+      class: 'push-settings',
+      'aria-label': t_str('pushAlerts'),
+    });
+    card.appendChild(el('p', { class: 'push-desc' }, t_str('pushAlertsDesc')));
+
+    const row = el('div', { class: 'push-row' });
+    const toggle = el('button', {
+      type: 'button',
+      class: 'push-toggle' + (subscribed ? ' is-on' : ''),
+      role: 'switch',
+      'aria-checked': subscribed ? 'true' : 'false',
+      'aria-label': t_str('pushAlerts'),
+    });
+    const permission = typeof Notification !== 'undefined' ? Notification.permission : 'default';
+    if (permission === 'denied') {
+      // OS-level block — toggle is disabled, no re-request loop.
+      toggle.disabled = 'disabled';
+    }
+    if (permission !== 'denied') {
+      toggle.addEventListener('click', async () => {
+        if (subscribed) {
+          // Currently ON — turn it off.
+          await busetaUtils.pushUnsubscribe();
+          try {
+            localStorage.removeItem(STORAGE_KEYS.PUSH_SUBSCRIPTION);
+          } catch (_) {}
+          renderPushSettings(container);
+          return;
+        }
+        // Currently OFF — ask for permission, then subscribe. The
+        // request must originate from this click handler so the
+        // browser accepts the prompt as user-gesture-gated.
+        let cur = permission;
+        if (cur === 'default') {
+          try {
+            cur = await Notification.requestPermission();
+          } catch (_) {
+            cur = 'denied';
+          }
+        }
+        if (cur !== 'granted') {
+          // Either the user dismissed the prompt or the OS blocks it.
+          // Re-render so the toggle flips back + (if denied) the
+          // "blocked" hint surfaces.
+          renderPushSettings(container);
+          return;
+        }
+        const out = await busetaUtils.pushSubscribe(vapidKey);
+        if (out.ok) {
+          storage.set(STORAGE_KEYS.PUSH_SUBSCRIPTION, out.subscription);
+        } else if (out.reason !== 'denied') {
+          // 'denied' re-renders above with the existing banner; for
+          // 'no-vapid-key' / 'network-error' we still want to flip
+          // the toggle back so the user can retry.
+        }
+        renderPushSettings(container);
+      });
+    }
+    row.appendChild(toggle);
+    card.appendChild(row);
+
+    // Toggle label text — switches between "Enable" and "Disable"
+    // based on subscription state so screen readers get the right
+    // verb. Visible label sits inside the row, aria label on the
+    // button itself.
+    const labelText = el(
+      'span',
+      { class: 'push-label' },
+      subscribed ? t_str('pushDisable') : t_str('pushEnable')
+    );
+    row.insertBefore(labelText, toggle);
+
+    if (permission === 'denied') {
+      card.appendChild(el('p', { class: 'push-status is-denied' }, t_str('pushDeniedHint')));
+    } else if (subscribed) {
+      // Subscription saved — but no server has been wired up yet, so
+      // the user shouldn't expect pushes. Until then, surface a
+      // honest "waiting" hint rather than pretending the feature
+      // works end-to-end.
+      card.appendChild(el('p', { class: 'push-status is-waiting' }, t_str('pushNoServer')));
     }
 
     container.appendChild(card);
