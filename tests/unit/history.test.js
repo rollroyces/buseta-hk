@@ -1,11 +1,11 @@
-// @vitest-environment jsdom
-//
 // Tests for src/utils/history.js — the journey-history helper added
-// in Phase 44. The whole module is localStorage-backed; jsdom gives
-// us a real (per-test) localStorage so the tests can exercise the
-// read / write round-trip without mocking globalThis.
+// in Phase 44. The whole module is localStorage-backed; we install a
+// minimal in-memory localStorage stub on globalThis rather than using
+// jsdom, matching the keyboard-shortcuts pattern (see
+// tests/unit/keyboard-shortcuts.test.js for the rationale — jsdom@30
+// has a known-broken post-install on some CI runners).
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterAll } from 'vitest';
 import {
   HISTORY_KEY,
   HISTORY_CAP,
@@ -17,12 +17,40 @@ import {
   clearHistory,
 } from '../../src/utils/history.js';
 
+// Minimal localStorage stand-in. The helper only ever calls
+// .clear(), .getItem(), .setItem(), so a Map-backed stub is enough.
+// We mutate globalThis directly because history.js reads
+// `localStorage` at call-time, not via import.
+function installLocalStorageStub() {
+  const store = new Map();
+  globalThis.localStorage = {
+    clear() {
+      store.clear();
+    },
+    getItem(key) {
+      return store.has(key) ? store.get(key) : null;
+    },
+    setItem(key, value) {
+      store.set(key, String(value));
+    },
+    removeItem(key) {
+      store.delete(key);
+    },
+    key(i) {
+      return Array.from(store.keys())[i] ?? null;
+    },
+    get length() {
+      return store.size;
+    },
+  };
+}
+
 beforeEach(() => {
-  try {
-    localStorage.clear();
-  } catch {
-    /* private mode etc. */
-  }
+  installLocalStorageStub();
+});
+
+afterAll(() => {
+  delete globalThis.localStorage;
 });
 
 describe('readHistory / recordVisit', () => {

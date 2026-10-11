@@ -1,5 +1,3 @@
-// @vitest-environment jsdom
-//
 // Tests for src/utils/stops-cache.js — Phase 43's lazy-load helper
 // for assets/hk-stops.json.
 //
@@ -10,13 +8,41 @@
 //   - invalidateStopsCache() — clears memory + localStorage so
 //     tests can start with a clean slate.
 //
-// We mock globalThis.fetch for the network paths and wipe
-// localStorage between tests so the cache-miss-vs-cache-hit
-// branches are independent.
+// We mock globalThis.fetch for the network paths and install a
+// minimal localStorage stub on globalThis rather than using jsdom,
+// matching the keyboard-shortcuts pattern (see
+// tests/unit/keyboard-shortcuts.test.js for the rationale — jsdom@30
+// has a known-broken post-install on some CI runners).
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, afterAll, vi } from 'vitest';
 import { ensureStopsLoaded, getStops, invalidateStopsCache } from '../../src/utils/stops-cache.js';
 import { STOPS_CACHE_KEY, STOPS_CACHE_TS_KEY, STOPS_TTL_MS } from '../../src/utils/stops-cache.js';
+
+// Minimal localStorage stand-in. The helper only calls .clear(),
+// .getItem(), and .setItem(), so a Map-backed stub is enough.
+function installLocalStorageStub() {
+  const store = new Map();
+  globalThis.localStorage = {
+    clear() {
+      store.clear();
+    },
+    getItem(key) {
+      return store.has(key) ? store.get(key) : null;
+    },
+    setItem(key, value) {
+      store.set(key, String(value));
+    },
+    removeItem(key) {
+      store.delete(key);
+    },
+    key(i) {
+      return Array.from(store.keys())[i] ?? null;
+    },
+    get length() {
+      return store.size;
+    },
+  };
+}
 
 // A realistic but minimal stand-in for assets/hk-stops.json. The
 // real file has thousands of entries; this fixture keeps three to
@@ -37,11 +63,12 @@ describe('src/utils/stops-cache.js', () => {
     // entries — `invalidateStopsCache` is the documented reset
     // surface; clearing localStorage separately guards against
     // leakage from a previous test that bypassed the helper.
+    installLocalStorageStub();
     invalidateStopsCache();
     try {
       localStorage.clear();
     } catch {
-      /* jsdom always exposes localStorage; defensive only */
+      /* our stub always exposes localStorage; defensive only */
     }
     fetchSpy = vi.fn();
     globalThis.fetch = fetchSpy;
@@ -50,6 +77,10 @@ describe('src/utils/stops-cache.js', () => {
   afterEach(() => {
     delete globalThis.fetch;
     vi.restoreAllMocks();
+  });
+
+  afterAll(() => {
+    delete globalThis.localStorage;
   });
 
   describe('ensureStopsLoaded() — happy path', () => {
