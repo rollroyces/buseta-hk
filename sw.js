@@ -4,6 +4,11 @@
  * upstream API calls. Static JSON in /assets/ is cached lazily on first
  * fetch via the same code path.
  *
+ * v35 is the v64→v65 cache-buster bump (Phase 42 — Web Push: `push`
+ * and `notificationclick` event handlers + parseVapidKey helper.
+ * Subscription JSON lives in client-side localStorage; a future server
+ * is needed to actually deliver pushes — see docs/push-notifications.md).
+ *
  * v33 is the v60→v61 cache-buster bump (PWA install icons + favicon PNG
  * variants + iOS apple-touch-icon). The PNGs are committed to assets/
  * via scripts/build-icons.py so re-running keeps the SVG and PNG copies
@@ -33,7 +38,7 @@
  * v21 was the same forced-update after v32's QW-1 → QW-10 batch.
  * v20 was the same forced-update after the v30→v31 layout revert.
  */
-const CACHE = 'buseta-v64';
+const CACHE = 'buseta-v65';
 const SHELL = ['/', '/index.html', '/app.js', '/style.css', '/manifest.json'];
 
 // Runtime caches — separate buckets so we can evolve each strategy
@@ -338,4 +343,84 @@ self.addEventListener('fetch', (event) => {
   }
 
   // 5) Other cross-origin — network only, never cache.
+});
+
+// ------------------------------------------------------------------
+// Phase 42 — Web Push handlers.
+//
+// The client (src/utils/push-subscriptions.js + app.js settings UI)
+// stores the subscription JSON in localStorage. Until a push server
+// is wired up to actually deliver pushes, no `push` event will ever
+// fire — but the SW must still have a `push` listener, otherwise the
+// browser drops the event and the user gets nothing when the server
+// does come online.
+//
+// Payload contract (server → SW):
+//   {
+//     "title":  string  — required; shown in the notification header.
+//     "body":   string  — optional; shown beneath the title.
+//     "tag":    string  — optional; collapses repeat notifications
+//                         with the same tag (e.g. one per route).
+//     "url":    string  — optional; opened on notification click.
+//                         Defaults to the app root when absent.
+//   }
+//
+// `event.data.json()` parses the payload. We deliberately do NOT
+// `event.waitUntil` the `showNotification()` call — the OS owns the
+// notification lifetime, not the SW — so we just call and return.
+self.addEventListener('push', (event) => {
+  let payload = {};
+  try {
+    if (event.data && typeof event.data.json === 'function') {
+      payload = event.data.json();
+    }
+  } catch (_) {
+    // Non-JSON payload — fall through to an empty default. We
+    // intentionally swallow the parse error: the SW should never
+    // throw on a malformed push, or the browser treats it as a
+    // delivery failure and we get the same payload again.
+    payload = {};
+  }
+  const title = (payload && payload.title) || 'BusETA HK';
+  const options = {
+    body: (payload && payload.body) || '',
+    icon: '/assets/icon.svg',
+    badge: '/assets/icon.svg',
+    tag: (payload && payload.tag) || 'buseta-alert',
+    data: {
+      url: (payload && payload.url) || '/',
+      tag: (payload && payload.tag) || 'buseta-alert',
+    },
+    // Per-app locale would be nicer, but the SW has no access to
+    // state.lang; we accept English-fallback strings until a future
+    // phase wires a localised payload. Phase 42 stays minimal.
+  };
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+// Notification click — focus the existing client (preserves the
+// user's hash-route state) or open a new window pointing at
+// `event.notification.data.url`. The notification itself always
+// closes first so the OS-level badge clears.
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = (event.notification.data && event.notification.data.url) || '/';
+  event.waitUntil(
+    self.clients
+      .matchAll({ type: 'window', includeUncontrolled: true })
+      .then((wins) => {
+        for (const w of wins) {
+          // Reuse an already-open tab if we can find one. We don't
+          // compare URLs — the user may have navigated off the
+          // notification's target since subscribing, and forcing a
+          // hashchange feels jarring.
+          if (w && typeof w.focus === 'function') {
+            return w.focus();
+          }
+        }
+        if (self.clients.openWindow) return self.clients.openWindow(url);
+        return null;
+      })
+      .catch(() => null)
+  );
 });
