@@ -1,8 +1,11 @@
-// @vitest-environment jsdom
-//
 // Tests for src/utils/push-subscriptions.js — the Web Push subscription
-// helpers. jsdom doesn't simulate `PushManager` / `navigator.serviceWorker`,
-// so we mostly verify the "unsupported" envelope + the pure decode helper.
+// helpers. The source guards every browser API with `typeof` checks
+// (returning the "unsupported" envelope when `navigator`, `PushManager`,
+// or `Notification` is undefined), so the tests run fine in the default
+// Node environment without jsdom. We verify the "unsupported" branch
+// (which is what Node + CI runners will always hit) and the pure decode
+// helper. A real browser would exercise the same logic against actual
+// PushManager / Notification globals.
 
 import { describe, it, expect } from 'vitest';
 import {
