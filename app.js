@@ -292,7 +292,7 @@
       stopNoUpcomingEta: '暫無到站時間',
       stopNoUpcomingEtaHint: '該路線暫未有實時到站資料。',
       stopNoUpcomingEtaCta: '睇時間表',
-// Phase 41 — keyboard shortcut + skip-link labels. `a11ySkip` is
+      // Phase 41 — keyboard shortcut + skip-link labels. `a11ySkip` is
       // read by the skip-link anchor's textContent so screen-reader
       // users land on the same label regardless of language. The
       // `kbd*` keys describe shortcut gestures in a compact form
@@ -614,7 +614,7 @@
       stopNoUpcomingEta: 'No upcoming buses',
       stopNoUpcomingEtaHint: 'No live arrivals for this route right now.',
       stopNoUpcomingEtaCta: 'View schedule',
-// Phase 41 — keyboard shortcut + skip-link labels. The literal
+      // Phase 41 — keyboard shortcut + skip-link labels. The literal
       // chord keys (`g h`, `g s`, …) are identical across languages;
       // only the prose surrounding them is translated.
       a11ySkip: 'Skip to main content',
@@ -921,7 +921,7 @@
       stopNoUpcomingEta: '暂无到站时间',
       stopNoUpcomingEtaHint: '该路线暂无实时到站资料。',
       stopNoUpcomingEtaCta: '睇时间表',
-// Phase 41 — keyboard shortcut + skip-link labels. zh-Hans keeps
+      // Phase 41 — keyboard shortcut + skip-link labels. zh-Hans keeps
       // the literal chord keys identical across all three locales; only
       // the surrounding prose is translated.
       a11ySkip: '跳到主要内容',
