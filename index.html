@@ -17,7 +17,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="BusETA" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="buseta-version" content="75" />
+    <meta name="buseta-version" content="76" />
     <!-- Main stylesheet. The original style.css is what we ship today — a
      hand-rolled minifier produced a broken style.min.css earlier, so we
      load the unminified bundle directly. v=35 ships the "show every
@@ -1177,6 +1177,12 @@
 
       <!-- Settings view (QW-3) — Theme + Notifications + About -->
       <section id="view-settings" class="view" hidden aria-hidden="true"></section>
+
+      <!-- Journey history view (Phase 44) — localStorage-backed list of
+           every route / stop / station the user has opened, grouped by
+           day. Privacy footnote at the bottom explains the on-device
+           storage. -->
+      <section id="view-history" class="view" hidden aria-hidden="true"></section>
     </main>
 
     <nav class="bottom-nav" role="navigation" aria-label="主要選單">
@@ -1220,6 +1226,20 @@
           />
         </svg>
         <span class="nav-label" data-i18n="navPlanner">行程</span>
+        <span class="nav-rule" aria-hidden="true"></span>
+      </a>
+      <a class="nav-item" data-route="history" href="#/history" aria-label="瀏覽紀錄">
+        <svg class="nav-icon" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+          <circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.8" />
+          <path
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            d="M12 7.5V12l3 2.2"
+          />
+        </svg>
+        <span class="nav-label" data-i18n="navHistory">紀錄</span>
         <span class="nav-rule" aria-hidden="true"></span>
       </a>
     </nav>
@@ -1485,6 +1505,44 @@
       </div>
     </template>
 
+    <!-- Journey history view template (Phase 44). The renderHistory
+         renderer in app.js fills the [data-bind="historyBody"] mount
+         with one of three day-grouped sections (today / yesterday /
+         earlier) plus a privacy footnote at the bottom. -->
+    <template id="tpl-history">
+      <div class="container history-view">
+        <div class="history-topbar">
+          <a class="history-back" href="#/" aria-label="返回">
+            <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+              <path
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M15 6l-6 6 6 6"
+              />
+            </svg>
+          </a>
+          <h1 class="history-title" data-i18n="historyTitle">瀏覽紀錄</h1>
+        </div>
+        <div data-bind="historyBody"></div>
+        <div class="history-foot">
+          <button
+            class="btn-secondary history-clear"
+            type="button"
+            data-bind="historyClear"
+            data-i18n="historyClear"
+          >
+            清除全部
+          </button>
+          <p class="history-privacy" data-i18n="historyPrivacy">
+            瀏覽紀錄只儲存喺你嘅裝置，唔會上傳到任何伺服器，亦唔包含任何個人識別資訊。
+          </p>
+        </div>
+      </div>
+    </template>
+
     <script>
       /* Lazy planner loader — planner.js + planner.min.css are only fetched the
    first time the user navigates to #/planner. They are cached at the
@@ -1544,7 +1602,9 @@
     <script src="src/utils/stop-view-summary.js?v=1"></script>
     <script src="src/utils/debug-log.js?v=1"></script>
     <script src="src/utils/trams.js?v=1"></script>
-    <script defer src="app.js?v=64"></script>
+    <script src="src/utils/share-target.js?v=1"></script>
+    <script src="src/utils/history.js?v=1"></script>
+    <script defer src="app.js?v=65"></script>
     <script>
       // SW path must be RELATIVE — GitHub Pages serves this site under
       // /buseta-hk/ but a leading `/sw.js` would resolve to the site root

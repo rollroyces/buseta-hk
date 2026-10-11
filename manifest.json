@@ -9,6 +9,16 @@
   "theme_color": "#0A1628",
   "lang": "zh-Hant",
   "orientation": "portrait",
+  "share_target": {
+    "action": "/index.html",
+    "method": "GET",
+    "enctype": "application/x-www-form-urlencoded",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
   "icons": [
     {
       "src": "assets/bus-192.png",
