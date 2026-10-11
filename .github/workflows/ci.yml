@@ -30,7 +30,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '22.22.2'
           cache: 'npm'
           # Don't `npm ci` yet — we want the cache primed by `npm ci`
           # *and* we want failures from a missing/locked package.json
