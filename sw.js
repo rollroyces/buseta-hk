@@ -33,7 +33,7 @@
  * v21 was the same forced-update after v32's QW-1 → QW-10 batch.
  * v20 was the same forced-update after the v30→v31 layout revert.
  */
-const CACHE = 'buseta-v64';
+const CACHE = 'buseta-v65';
 const SHELL = ['/', '/index.html', '/app.js', '/style.css', '/manifest.json'];
 
 // Runtime caches — separate buckets so we can evolve each strategy
@@ -111,7 +111,7 @@ self.addEventListener('activate', (event) => {
             .filter((k) => {
               if (k === 'buseta-eta-v1') return true; // poisoned, drop
               const m = /^buseta-v(\d+)$/.exec(k);
-              if (m) return parseInt(m[1], 10) < 44;
+              if (m) return parseInt(m[1], 10) < 65;
               return (
                 k !== CACHE && k !== ASSET_CACHE && k !== ETA_CACHE && k !== TD_DISRUPTION_CACHE
               );
