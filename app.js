@@ -26,6 +26,7 @@
       loading: '載入緊資料…',
       navHome: '主頁',
       navSearch: '搜尋',
+      navHistory: '紀錄',
       langOther: 'English',
       savedRoutes: '收藏路線',
       savedStops: '收藏車站',
@@ -322,6 +323,17 @@
       pushDeniedHint: '通知已被封鎖。請到瀏覽器設定重新啟用。',
       pushUnsupported: '此瀏覽器不支援通知功能',
       pushNoServer: '通知已就緒，等待伺服器連線',
+      // Phase 44 — share-target + journey-history.
+      sharedFromAnotherApp: '從分享連結開啟',
+      lookingForSharedRoute: (target) => `正在為您尋找 ${target}`,
+      historyTitle: '瀏覽紀錄',
+      historyToday: '今天',
+      historyYesterday: '昨天',
+      historyEarlier: '更早',
+      historyClear: '清除全部',
+      historyEmpty: '尚無瀏覽紀錄',
+      historyRemove: '移除',
+      historyPrivacy: '瀏覽紀錄只儲存在你嘅裝置，唔會上傳到任何伺服器，亦唔包含任何個人識別資訊。',
     },
     en: {
       brandSub: 'Hong Kong Bus',
@@ -329,6 +341,7 @@
       loading: 'Loading data…',
       navHome: 'Home',
       navSearch: 'Search',
+      navHistory: 'History',
       langOther: '繁體中文',
       savedRoutes: 'Saved routes',
       savedStops: 'Saved stops',
@@ -626,6 +639,18 @@
       pushDeniedHint: 'Notifications are blocked. Re-enable them in browser settings.',
       pushUnsupported: 'This browser does not support notifications',
       pushNoServer: 'Subscription saved — waiting for the push server to come online',
+      // Phase 44 — share-target + journey-history.
+      sharedFromAnotherApp: 'Opened from share',
+      lookingForSharedRoute: (target) => `Looking up ${target}`,
+      historyTitle: 'Recently viewed',
+      historyToday: 'Today',
+      historyYesterday: 'Yesterday',
+      historyEarlier: 'Earlier',
+      historyClear: 'Clear all',
+      historyEmpty: 'No history yet',
+      historyRemove: 'Remove',
+      historyPrivacy:
+        'Recently-viewed history is stored on your device only — it is never uploaded and contains no identifying information.',
     },
     'zh-Hans': {
       brandSub: '香港巴士',
@@ -633,6 +658,7 @@
       loading: '载入紧资料…',
       navHome: '主页',
       navSearch: '搜寻',
+      navHistory: '纪录',
       langOther: 'English',
       savedRoutes: '收藏路线',
       savedStops: '收藏车站',
@@ -920,6 +946,17 @@
       pushDeniedHint: '通知已被封锁。请到浏览器设定重新启用。',
       pushUnsupported: '此浏览器不支援通知功能',
       pushNoServer: '通知就绪，等待伺服器连线',
+      // Phase 44 — share-target + journey-history.
+      sharedFromAnotherApp: '从分享连结开启',
+      lookingForSharedRoute: (target) => `正在为您寻找 ${target}`,
+      historyTitle: '浏览纪录',
+      historyToday: '今天',
+      historyYesterday: '昨天',
+      historyEarlier: '更早',
+      historyClear: '清除全部',
+      historyEmpty: '尚无浏览纪录',
+      historyRemove: '移除',
+      historyPrivacy: '浏览纪录只储存喺你嘅装置，唔会上传到任何伺服器，亦唔包含任何个人识别资讯。',
     },
   };
 
@@ -1122,6 +1159,10 @@
     _geoAsked: false,
     refreshTimer: null,
     lastSearchQ: '',
+    // Phase 44 — when a share-target boot pre-fills the search box,
+    // the renderer can show the "looking up X" toast using this
+    // transient flag. Cleared by the search renderer after first use.
+    _sharedLookup: '',
     filter: 'ALL',
     detailRoute: null,
     detailStop: null,
@@ -3079,6 +3120,10 @@
     if (h === '/search') return { view: 'search' };
     if (h === '/planner') return { view: 'planner' };
     if (h === '/settings') return { view: 'settings' };
+    // Phase 44 — journey-history view. Added as a sibling of the
+    // bottom-nav; the renderer reads busetaUtils.getHistoryGroupedByDay
+    // and renders three day buckets.
+    if (h === '/history') return { view: 'history' };
     // /route/<co>/<route>/<dir>/<service>[/<stop_seq>]
     let m = h.match(/^\/route\/([^/]+)\/([^/]+)\/([^/]+)\/([^/]+)(?:\/([^/]+))?$/);
     if (m) {
@@ -3109,6 +3154,10 @@
       'view-error',
       'view-planner',
       'view-settings',
+      // Phase 44 — journey-history view sits alongside the existing
+      // detail views; the renderer flips `hidden` on the matching
+      // section so only one is visible at a time.
+      'view-history',
     ].forEach((id) => {
       const node = document.getElementById(id);
       if (!node) return;
@@ -3148,6 +3197,8 @@
     let active = 'home';
     if (r.view === 'search') active = 'search';
     else if (r.view === 'planner') active = 'planner';
+    else if (r.view === 'history')
+      active = 'history'; // Phase 44
     else if (r.view === 'home') active = 'home';
     else if (r.view === 'route' || r.view === 'stop')
       active = null; // QW-9: no nav item lit on detail
@@ -3183,6 +3234,11 @@
         break;
       case 'settings':
         renderSettings();
+        break;
+      // Phase 44 — journey-history view (localStorage-backed list of
+      // route / stop / station visits, grouped by day).
+      case 'history':
+        renderHistory();
         break;
       case 'route':
         renderRoute(r);
@@ -3554,6 +3610,85 @@
     return block;
   }
 
+  // Phase 44 — small "Recently viewed" rail inserted into the home
+  // view directly under savedRoutes. Reads from
+  // busetaUtils.getHistory() and renders up to 5 entries using the
+  // same routeRow / stopRow helpers so the visual chrome matches
+  // the rest of the home view. Silent no-op when the history is
+  // empty (no header, no rail).
+  function renderHomeHistoryRail(container) {
+    let entries;
+    try {
+      entries = busetaUtils.getHistory();
+    } catch (_) {
+      entries = [];
+    }
+    if (!entries || entries.length === 0) return;
+    const top = entries.slice(0, 5);
+    const wrap = el('section', {
+      class: 'home-history-rail',
+      'aria-label': t_str('historyTitle'),
+    });
+    wrap.appendChild(el('h2', { class: 'section-title' }, t_str('historyTitle')));
+    const list = el('div', { class: 'list' });
+    top.forEach((entry) => {
+      if (entry.kind === busetaUtils.HISTORY_KINDS.ROUTE) {
+        const parts = String(entry.id).split('|');
+        const meta =
+          (state.index &&
+            (state.index.routes.get(entry.id) || state.index.ctbRoutes.get(entry.id))) ||
+          null;
+        list.appendChild(
+          routeRow({
+            co: parts[0] || entry.co || '',
+            route: parts[1] || '',
+            dir: parts[2] || '',
+            service: parts[3] || '',
+            destTc: meta ? meta.destTc : '',
+            destEn: meta ? meta.destEn : '',
+            origTc: meta ? meta.origTc : '',
+            origEn: meta ? meta.origEn : '',
+          })
+        );
+      } else {
+        // Stop / station entry — re-use the same row helper as the
+        // rest of the home view so the badge / chev line up.
+        list.appendChild(
+          stopRow({
+            stop: entry.id,
+            co: entry.co || '',
+            nameTc: entry.nameTc || entry.name || '',
+            nameEn: entry.nameEn || '',
+          })
+        );
+      }
+    });
+    wrap.appendChild(list);
+    // "Open the full history" link. Routes to /history so a tap on
+    // the link navigates the same way every other nav-style anchor
+    // does (hash routing).
+    const more = el(
+      'a',
+      {
+        class: 'home-history-more',
+        href: '#/history',
+      },
+      t_str('historyTitle')
+    );
+    wrap.appendChild(more);
+    // Insert at the top of the container, right after savedRoutes but
+    // before savedStops. The position matches the spec ("below the
+    // saved routes"). We rely on the savedStops heading still being
+    // in its template-defined position; if it's been moved/removed
+    // the rail becomes the next-to-last block, which is fine.
+    const anchor = container.querySelector('[data-bind="savedStops"]');
+    if (anchor) {
+      container.insertBefore(wrap, anchor);
+    } else {
+      container.appendChild(wrap);
+    }
+  }
+
   function renderHome() {
     showView('view-home');
     const view = renderInto('home', 'home');
@@ -3674,6 +3809,13 @@
       state.savedRoutes.forEach((r) => ul.appendChild(routeRow(r)));
       savedRoutesEl.appendChild(ul);
     }
+
+    // Phase 44 — small "Recently viewed" rail with the 5 most-recent
+    // journey-history entries (route / stop / station). Only renders
+    // when the user has actually opened something; otherwise the
+    // saved-stops / recent-search sections carry the home view on
+    // their own.
+    renderHomeHistoryRail(container);
 
     const savedStopsEl = $('[data-bind="savedStops"]', view);
     if (state.savedStops.length === 0) {
@@ -3862,6 +4004,21 @@
       }
     } else {
       input.value = state.lastSearchQ;
+    }
+    // Phase 44 — when a share-target boot pre-populated the query,
+    // show the "looking up X" toast once so the user understands the
+    // result list isn't something they typed. Cleared after the first
+    // render so a normal `/search` visit doesn't show the toast.
+    if (state._sharedLookup) {
+      const lookup = state._sharedLookup;
+      state._sharedLookup = '';
+      setTimeout(() => {
+        try {
+          toast(t_str('lookingForSharedRoute', lookup), 2400);
+        } catch (_) {
+          /* toast may not be wired yet */
+        }
+      }, 0);
     }
     input.addEventListener(
       'input',
@@ -5314,6 +5471,11 @@
     stopEtaRefresh();
     // Track every route visit in 最近查過 (not just saved ones).
     pushRecent({ co: r.co, route: r.route, dir: r.dir, service: r.service });
+    // Phase 44 — journey-history log. Mirrors pushRecent's
+    // dedup-and-promote behaviour but stores more (name + ts) and
+    // caps higher (HISTORY_CAP=100). Recorded for every route open,
+    // not just saves.
+    recordHistoryRouteVisit(r);
 
     // --- MTR heavy rail line ---
     if (r.co === 'MTR' && r.dir === 'LINE') {
@@ -7196,6 +7358,8 @@
     stopEtaRefresh();
     // Track every stop visit in 最近查過 (not just saved ones).
     pushRecent({ stop: r.stop, co: r.co });
+    // Phase 44 — journey-history log. Recorded for every stop open.
+    recordHistoryStopVisit(r);
 
     // Dispatch on co.
     if (r.co === 'MTR') return renderMtrStationView(r.stop);
@@ -8466,6 +8630,156 @@
   }
 
   // ------------------------------------------------------------------
+  // Journey-history view (Phase 44)
+  //
+  // Renders the busetaUtils.getHistoryGroupedByDay() output as three
+  // sections — Today / Yesterday / Earlier — each with the entry name
+  // + a per-row remove button. The view also exposes a "clear all"
+  // button and a privacy footnote (see tpl-history in index.html).
+  //
+  // Entries are pure localStorage state — refreshing the page or
+  // navigating away and back re-reads from storage. Re-rendering is
+  // cheap (no network).
+  // ------------------------------------------------------------------
+  function renderHistory() {
+    showView('view-history');
+    const view = renderInto('history', 'history');
+    const body = $('[data-bind="historyBody"]', view);
+    if (!body) return;
+    body.innerHTML = '';
+
+    let groups;
+    try {
+      groups = busetaUtils.getHistoryGroupedByDay();
+    } catch (_) {
+      groups = { today: [], yesterday: [], earlier: [] };
+    }
+    const total = groups.today.length + groups.yesterday.length + groups.earlier.length;
+
+    if (total === 0) {
+      body.appendChild(buildEmptyStateBlock({ textKey: 'historyEmpty' }));
+    } else {
+      if (groups.today.length) {
+        body.appendChild(buildHistorySection('historyToday', groups.today, view));
+      }
+      if (groups.yesterday.length) {
+        body.appendChild(buildHistorySection('historyYesterday', groups.yesterday, view));
+      }
+      if (groups.earlier.length) {
+        body.appendChild(buildHistorySection('historyEarlier', groups.earlier, view));
+      }
+    }
+
+    // "Clear all" — only meaningful when there's something to clear.
+    const clearBtn = $('[data-bind="historyClear"]', view);
+    if (clearBtn) {
+      clearBtn.hidden = total === 0;
+      clearBtn.addEventListener('click', () => {
+        try {
+          busetaUtils.clearHistory();
+        } catch (_) {
+          /* swallow — storage may be unavailable */
+        }
+        renderHistory();
+      });
+    }
+
+    // Re-apply i18n on any dynamically-built labels (the per-row
+    // remove aria-labels use data-i18n, but they live inside the
+    // section that was just appended after renderInto's pass).
+    applyI18n(view);
+  }
+
+  // Render one day-grouped section (Today / Yesterday / Earlier) of
+  // the History view. Each section gets a section-title heading plus a
+  // list of `historyRow`s; long-press / right-click on a row triggers
+  // removal of that single entry.
+  function buildHistorySection(titleKey, entries, root) {
+    const wrap = el('section', { class: 'history-section', 'aria-label': t_str(titleKey) });
+    wrap.appendChild(el('h2', { class: 'section-title' }, t_str(titleKey)));
+    const list = el('div', { class: 'list' });
+    entries.forEach((entry) => list.appendChild(historyRow(entry, root)));
+    wrap.appendChild(list);
+    return wrap;
+  }
+
+  // Build a single journey-history row (route or stop) plus its
+  // remove button. The row itself is the same shape as the existing
+  // routeRow / stopRow so a tap navigates back into the detail view;
+  // the remove × sits on the right and stops propagation so a tap on
+  // it doesn't navigate.
+  function historyRow(entry, root) {
+    // Reuse the same row builders so the visual chrome matches the
+    // rest of the app (operator badge, chev, dim label, etc.).
+    let row;
+    if (entry.kind === busetaUtils.HISTORY_KINDS.ROUTE) {
+      // Re-hydrate the route meta from the current index so the
+      // destination sub-line stays informative. Mirrors the home-view
+      // `recent` branch.
+      const meta =
+        (state.index &&
+          (state.index.routes.get(entry.id) || state.index.ctbRoutes.get(entry.id))) ||
+        null;
+      const parts = String(entry.id).split('|');
+      row = routeRow({
+        co: parts[0] || entry.co || '',
+        route: parts[1] || '',
+        dir: parts[2] || '',
+        service: parts[3] || '',
+        destTc: meta ? meta.destTc : '',
+        destEn: meta ? meta.destEn : '',
+        origTc: meta ? meta.origTc : '',
+        origEn: meta ? meta.origEn : '',
+      });
+    } else {
+      // Stop / station entry.
+      row = stopRow({
+        stop: entry.id,
+        co: entry.co || '',
+        nameTc: entry.nameTc || entry.name || '',
+        nameEn: entry.nameEn || '',
+      });
+    }
+    // Add the per-row remove × as a trailing control. We use a button
+    // so it's keyboard-accessible (long-press / right-click on touch
+    // surfaces maps to the same `click` handler via the contextmenu
+    // hook below).
+    const remove = el(
+      'button',
+      {
+        class: 'history-row-remove',
+        type: 'button',
+        'aria-label': t_str('historyRemove'),
+        title: t_str('historyRemove'),
+        onclick: (ev) => {
+          ev.preventDefault();
+          ev.stopPropagation();
+          try {
+            busetaUtils.removeHistoryEntry(entry.kind, entry.id);
+          } catch (_) {
+            /* ignore — best-effort */
+          }
+          renderHistory();
+        },
+        oncontextmenu: (ev) => {
+          // Right-click on the row also removes — matches the long-
+          // press affordance described in the spec.
+          ev.preventDefault();
+          try {
+            busetaUtils.removeHistoryEntry(entry.kind, entry.id);
+          } catch (_) {
+            /* ignore — best-effort */
+          }
+          renderHistory();
+        },
+      },
+      '×'
+    );
+    row.appendChild(remove);
+    return row;
+  }
+
+  // ------------------------------------------------------------------
   // Planner view (A → B trip planner) — rendering lives in planner.js
   // ------------------------------------------------------------------
   function renderPlannerView() {
@@ -8658,6 +8972,59 @@
       }),
     ].slice(0, 20);
     persist();
+  }
+
+  // Phase 44 — record a route visit in the journey-history log. The
+  // helper does the index lookup once to surface a useful `name` so
+  // the History view's per-row label doesn't read just the raw route
+  // number. Failures (no index yet, no route meta) are swallowed —
+  // they're cosmetic, the entry is still recorded.
+  function recordHistoryRouteVisit(r) {
+    if (!r || !r.co || !r.route || !r.dir || !r.service) return;
+    try {
+      const key = makeRouteKey(r.co, r.route, r.dir, r.service);
+      const meta =
+        (state.index && (state.index.routes.get(key) || state.index.ctbRoutes.get(key))) || null;
+      const name = meta
+        ? `${r.co} ${r.route} · ${pickFirst(meta.destTc, meta.destEn)}`
+        : `${r.co} ${r.route}`;
+      busetaUtils.recordVisit({
+        kind: busetaUtils.HISTORY_KINDS.ROUTE,
+        id: key,
+        co: r.co,
+        name,
+        ts: Date.now(),
+      });
+    } catch (_) {
+      /* best-effort */
+    }
+  }
+
+  // Phase 44 — record a stop / station visit in the journey-history
+  // log. The name comes from the stop-index lookup; if the index
+  // doesn't know the stop yet (e.g. a KMB operator ID before the
+  // index is built), the entry still gets recorded with an empty
+  // name — `enrichHistoryStop` will backfill it once the operator
+  // endpoint resolves the real name.
+  function recordHistoryStopVisit(r) {
+    if (!r || !r.stop) return;
+    try {
+      const idxMeta = state.index && state.index.stops.get(r.stop);
+      const opMeta =
+        !idxMeta && state.index && state.index.kmbOperatorId
+          ? state.index.kmbOperatorId.get(r.stop)
+          : null;
+      const name = idxMeta ? nameFor(idxMeta) : opMeta ? nameFor(opMeta) : '';
+      busetaUtils.recordVisit({
+        kind: busetaUtils.HISTORY_KINDS.STOP,
+        id: String(r.stop),
+        co: r.co || '',
+        name,
+        ts: Date.now(),
+      });
+    } catch (_) {
+      /* best-effort */
+    }
   }
 
   // After a stop view resolves its real name from the operator endpoint, write
@@ -9906,6 +10273,68 @@
   // ------------------------------------------------------------------
   // Boot
   // ------------------------------------------------------------------
+
+  // Phase 44 — PWA share-target handler. Called once at the very
+  // start of `boot()` so the share decision can route before the
+  // first onHashChange fires. Reads `location.search`, parses via
+  // busetaUtils.parseShareTarget, then either:
+  //   - sets the hash to the shared stop / route URL (so the existing
+  //     renderStop / renderRoute path picks it up), or
+  //   - sets the hash to `#/search?q=...` so the search view's
+  //     pre-fill mechanism kicks in, or
+  //   - leaves the default `#/` in place when there's nothing
+  //     actionable.
+  // After routing, the `?text=...&url=...` query string is stripped
+  // from the URL via `replaceState` so a manual refresh doesn't
+  // re-trigger the share-routing.
+  function handleShareTargetOnBoot() {
+    if (typeof window === 'undefined' || !window.location) return;
+    const sp = new URLSearchParams(location.search);
+    const text = sp.get('text');
+    const url = sp.get('url');
+    if (!text && !url) return;
+    const decision = busetaUtils.parseShareTarget({ text: text || '', url: url || '' });
+    // Strip the share-target params up-front so any navigation we
+    // make below lands on a clean URL — otherwise replaceState below
+    // would be racing with the hashchange.
+    try {
+      const cleanUrl = location.pathname + (location.hash || '#/');
+      history.replaceState(null, '', cleanUrl);
+    } catch (_) {
+      /* replaceState may be blocked — non-fatal */
+    }
+    if (decision.kind === 'stop' || decision.kind === 'route') {
+      // Navigate to the shared detail view. The hashchange handler
+      // will call renderStop / renderRoute which records the visit
+      // in history (so the user sees the entry in the History view).
+      location.hash = decision.hash;
+      // Brief toast so the user understands where they landed.
+      setTimeout(() => {
+        try {
+          toast(t_str('sharedFromAnotherApp'), 2400);
+        } catch (_) {
+          /* toast may not be wired yet */
+        }
+      }, 0);
+    } else if (decision.kind === 'search') {
+      // Set the search view + pre-fill the query. The search renderer
+      // reads `state.lastSearchQ` on mount, so writing it here means
+      // the results show without any extra keystroke.
+      state.lastSearchQ = decision.query;
+      // Mark the share as the source so the renderer can show the
+      // "looking up X" toast.
+      state._sharedLookup = decision.query;
+      location.hash = '#/search';
+      setTimeout(() => {
+        try {
+          toast(t_str('lookingForSharedRoute', decision.query), 2400);
+        } catch (_) {
+          /* toast may not be wired yet */
+        }
+      }, 0);
+    }
+  }
+
   async function boot() {
     loadState();
     applyLang();
@@ -9989,6 +10418,15 @@
       });
 
     if (!location.hash) location.hash = '#/';
+
+    // Phase 44 — PWA share-target handling. When the OS hands the app
+    // a shared text/URL via manifest.json's `share_target`, the boot
+    // URL carries `?text=...&url=...` query params. We parse them
+    // once at startup and route to the right view, then strip the
+    // params from the URL so a manual refresh doesn't re-trigger the
+    // share-routing logic.
+    handleShareTargetOnBoot();
+
     // Probe the browser's remembered permission state on boot so the
     // banner can immediately reflect "blocked at browser level" without
     // waiting for the user to click and hit a silent denial.
