@@ -185,6 +185,56 @@ lint` errored with "ESLint couldn't find an eslint.config.* file".
   14d triage / 30d severe fix), and explicit in-scope /
   out-of-scope boundaries. `CONTRIBUTING.md` updated to point
   at it. Closes the Phase 1 community-health gap.
+- **`src/utils/keyboard-shortcuts.js`** (PR #46 / Phase 41):
+  `createChordTracker(now)` + `attachKeyboardShortcuts({onNavigate,
+onSave, onClose, onHelp})` adding a global keyboard layer on top
+  of the Phase 13–18 a11y baseline. 31 unit cases. `g h`, `g s`,
+  `g p`, `g n` for two-key navigation; `/` focuses the search
+  input; `s` toggles save on a detail view; `Esc` closes modals;
+  `?` opens a shortcut help modal. Inputs / textareas /
+  contenteditables suppress all chords. A visible `<a class="skip-link"
+href="#main-content">` joins the existing CSS class so the link
+  reveals on Tab. Cache-buster bumps: meta 75 → 76, app.js?v 64 →
+  65, style.css?v 39 → 40.
+- **`src/utils/push-subscriptions.js`** (PR #46 / Phase 42):
+  Web Push opt-in surface. SW `push` + `notificationclick`
+  handlers ship ready, but actual delivery requires a backend
+  (documented in `docs/push-notifications.md`). Settings view
+  hosts the toggle; permission is requested only on explicit user
+  gesture. Subscriptions persist in `localStorage.buseta.push.subscription`.
+  12 unit cases (VAPID-key base64url decoder + unsupported-env
+  envelope). Cache-buster bumps: meta 76 (unchanged), app.js?v
+  65 (unchanged), sw.js CACHE buseta-v64 → buseta-v65.
+- **`src/utils/stops-cache.js`** (PR #46 / Phase 43):
+  `ensureStopsLoaded()` de-duplicates concurrent callers, hydrates
+  from `localStorage.buseta.stops.v1` on warm-cache, refetches
+  after a 7-day TTL. Drops `assets/hk-stops.json` (~190 KB) off
+  the home-view critical path; triggers on nearby view, search
+  typeahead, route and stop detail render. 31 unit cases.
+  `docs/performance.md` documents the strategy. Cache-buster
+  bumps unchanged from Phase 42.
+- **`src/utils/share-target.js`** (PR #46 / Phase 44):
+  `parseShareTarget(input)` decodes `manifest.json`'s
+  `share_target` payload (plain object or URLSearchParams or
+  query string) into a `{kind, hash, …}` decision. Priority order:
+  url hash > text hash > free-text search > none. Robust against
+  share-text wrappers (`"check https://…#/stop/xyz789 out"`) and
+  malformed percent-encoding. 17 unit cases.
+- **`src/utils/history.js`** (PR #46 / Phase 44):
+  `recordVisit`, `getHistory`, `getHistoryGroupedByDay(now)`,
+  `removeHistoryEntry`, `clearHistory`. localStorage-backed
+  journey-history rail; capped at 100 entries; dedups
+  consecutive `kind:id`; sorted DESC by `ts`. The dedicated
+  `/history` hash view renders grouped Today / Yesterday /
+  Earlier lists with per-entry remove buttons and a "clear all"
+  action. Home view surfaces the most-recent 5 below the saved
+  routes. 30 unit cases. STRINGS entries for `sharedFromAnotherApp`,
+  `lookingForSharedRoute` (templated), `historyTitle`, `historyToday`,
+  `historyYesterday`, `historyEarlier`, `historyClear`, `historyEmpty`,
+  `historyRemove`, `historyPrivacy` added across all three locales.
+  `manifest.json` gains a `share_target` block so the PWA registers
+  as a system share target on Android / desktop. Cache-buster
+  bumps unchanged from Phase 43.
 
 ### Changed
 
