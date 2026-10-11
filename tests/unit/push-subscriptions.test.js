@@ -93,12 +93,35 @@ describe('parseVapidKey', () => {
 });
 
 describe('pushSupported', () => {
-  // jsdom exposes a `navigator.serviceWorker` stub but no `PushManager`.
-  it('returns false in jsdom (no PushManager)', () => {
-    // jsdom ships `serviceWorker` on navigator but lacks the
-    // PushManager global — `pushSupported()` should bail out.
-    expect(typeof navigator).toBe('object');
+  // The helper returns `false` whenever any of the three browser
+  // prerequisites (`navigator.serviceWorker`, `PushManager`,
+  // `Notification`) is missing. Node environments lack all three;
+  // jsdom provides `navigator.serviceWorker` but no PushManager.
+  // Either way the answer is `false`.
+  it('returns false in a Node-like environment (no browser globals)', () => {
+    // Sanity: the Node runtime has no `navigator` global.
+    expect(typeof navigator).toBe('undefined');
     expect(pushSupported()).toBe(false);
+  });
+
+  it('returns false when navigator.serviceWorker exists but PushManager is missing', () => {
+    // Simulate the jsdom-like surface (serviceWorker present, no
+    // PushManager) without pulling in jsdom itself — pushSupported()
+    // should still bail out because PushManager is missing.
+    const origNav = globalThis.navigator;
+    const origPM = globalThis.PushManager;
+    const origNotif = globalThis.Notification;
+    globalThis.navigator = { serviceWorker: {} };
+    delete globalThis.PushManager;
+    delete globalThis.Notification;
+    try {
+      expect(pushSupported()).toBe(false);
+    } finally {
+      if (origNav === undefined) delete globalThis.navigator;
+      else globalThis.navigator = origNav;
+      if (origPM !== undefined) globalThis.PushManager = origPM;
+      if (origNotif !== undefined) globalThis.Notification = origNotif;
+    }
   });
 });
 

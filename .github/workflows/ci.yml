@@ -30,12 +30,17 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
           # Don't `npm ci` yet — we want the cache primed by `npm ci`
           # *and* we want failures from a missing/locked package.json
           # to surface as a distinct step ("Install") rather than
           # mixed into the test step.
+          #
+          # jsdom 30 declares `"node": "^22.22.2 || ^24.15.0 || >=26.0.0"`
+          # — a transitive dep (@exodus/bytes/encoding-lite.js) is
+          # ESM-only, and Node 20's CJS `require()` can't load it.
+          # 22 is the lowest version that satisfies jsdom 30's engines.
 
       - name: Install dependencies
         # `npm ci` is reproducible (uses package-lock.json exactly)
