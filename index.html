@@ -632,6 +632,52 @@
        - planner.min.js re-minified (76323 → ~75 KB expected);
          planner.min.css unchanged (no CSS shipped this round).
 
+     v=78 ships "lazy-load hk-stops.json" on top of v77. The 190 KB
+     stop-coordinate asset (assets/hk-stops.json) used to ride
+     `loadIndex()`'s eager `Promise.all` and travel the wire on
+     every home-view mount even if the user never tapped "use my
+     location" or typed a search. After this round the file only
+     fetches when a feature actually needs it (nearby stops, search
+     pre-fill, stop / route view enrichment, recent-stops name
+     resolution). Repeat visits hit the localStorage mirror
+     (7-day TTL, matches ROUTE_STOPS_MAX_AGE_MS) so the network
+     round-trip happens once per device per week, not on every
+     page load.
+       - app.js: loadIndex() drops the hk-stops fetch from its
+         `Promise.all`; the curated GMB / NLB / MTR stops + their
+         coords are now merged into `state.index.stops` lazily by
+         `mergeHkStopsIntoIndex()`, which is called from a small
+         number of trigger points: renderSearch's typeahead (when
+         the user types a query), buildNearestStopPill /
+         populateNearbyInto (when state.userLoc is set),
+         renderBusStopView / renderRouteView (when the user opens a
+         stop or route detail page), and the recent-stops row
+         enrichment on home render. Until any of those fire, the
+         ~190 KB is not requested.
+       - src/utils/stops-cache.js: NEW (Phase 43). Dual-export
+         helper mirroring src/utils/trams.js + src/utils/routes-by-
+         stop.js. Exports ensureStopsLoaded() (Promise, deduped),
+         getStops() (sync accessor), invalidateStopsCache() (test
+         reset). Promise de-dup so the first call in a tick shares
+         its promise with siblings; in-memory + localStorage (key
+         buseta.stops.v1 + ts buseta.stops.ts.v1, 7d TTL) caches;
+         fetch uses cache: 'force-cache' so the SW's ASSET_CACHE
+         bucket wins on every call after the first.
+       - index.html: new <script src="src/utils/stops-cache.js?v=1">
+         loads the helper before app.js. app.js?v=64 → ?v=65,
+         meta 75 → 76.
+       - sw.js: CACHE bumped buseta-v64 → buseta-v65 (forces clean
+         install). activate-handler drops buseta-vN for N < 65.
+         ASSET_CACHE / ETA_CACHE / TD_DISRUPTION_CACHE buckets
+         unchanged — the lazy-load defers only the FIRST fetch of
+         hk-stops.json; subsequent fetches still hit ASSET_CACHE
+         as before.
+       - 2 new i18n keys × 3 locales: loadingNearbyStops, stopsLoadError.
+       - SWR-style "loading…" hint surfaced via .muted when the
+         user has granted location but stops are still loading;
+         no new CSS — reuses the existing .muted class so the
+         win is purely informational, not visual.
+
      v=48 ships "cross-mode routing" on top of v47's walk-time. The
      user's report "● 香港 → 馬鞍山警署 (MA180) 冇直達路線，需要轉車"
      was caused by findMtrRoutes requiring both `origin.stop` and
@@ -1549,6 +1595,11 @@
          `busetaUtils.pushSubscribe` / `pushUnsubscribe` calls in the
          settings view are available the moment the toggle wires up. -->
     <script src="src/utils/push-subscriptions.js?v=1"></script>
+    <!-- Phase 43 — stops-cache helper. Lazy-loads the 190 KB
+         assets/hk-stops.json on first need (nearby view, search
+         typeahead, route/stop detail) instead of fetching on
+         home-view mount. Pure module, no DOM side-effects. -->
+    <script src="src/utils/stops-cache.js?v=1"></script>
     <script defer src="app.js?v=65"></script>
     <script>
       // SW path must be RELATIVE — GitHub Pages serves this site under

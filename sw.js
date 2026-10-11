@@ -116,7 +116,7 @@ self.addEventListener('activate', (event) => {
             .filter((k) => {
               if (k === 'buseta-eta-v1') return true; // poisoned, drop
               const m = /^buseta-v(\d+)$/.exec(k);
-              if (m) return parseInt(m[1], 10) < 44;
+              if (m) return parseInt(m[1], 10) < 65;
               return (
                 k !== CACHE && k !== ASSET_CACHE && k !== ETA_CACHE && k !== TD_DISRUPTION_CACHE
               );

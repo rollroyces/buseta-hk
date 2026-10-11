@@ -129,6 +129,8 @@
       noNearbyRoutes: '附近範圍未有常見路線。',
       noNearbyStops: '附近範圍未有常見車站。',
       noNearbyStations: '附近範圍未有港鐵站。',
+      loadingNearbyStops: '正在載入附近車站…',
+      stopsLoadError: '無法載入車站資料，請稍後再試',
       searchHint: '輸入路線編號、車站名或港鐵站',
       noFavHint: '搜尋後可以加入收藏，方便日後對陣查閱。',
       clearRecent: '清除記錄',
@@ -432,6 +434,8 @@
       noNearbyRoutes: 'No nearby routes found.',
       noNearbyStops: 'No nearby stops found.',
       noNearbyStations: 'No nearby MTR stations.',
+      loadingNearbyStops: 'Loading nearby stops…',
+      stopsLoadError: "Couldn't load stop data — please try again",
       searchHint: 'Enter route number, stop name or station',
       noFavHint: 'Search and tap the star to save routes, stops and stations for quick access.',
       clearRecent: 'Clear',
@@ -712,6 +716,8 @@
       noNearbyRoutes: '附近范围未有常见路线。',
       noNearbyStops: '附近范围未有常见车站。',
       noNearbyStations: '附近范围未有港铁站。',
+      loadingNearbyStops: '正在载入附近车站…',
+      stopsLoadError: '无法载入车站资料，请稍后再试',
       searchHint: '输入路线编号、车站名或港铁站',
       clearRecent: '清除记录',
       cleared: '已清除',
@@ -1316,8 +1322,111 @@
     return buildIndex();
   }
 
+  // Phase 43 — lazy-load helper for the curated stop catalogue
+  // (assets/hk-stops.json, ~190 KB unpacked). Replaces the inline
+  // fetch that used to ride loadIndex()'s Promise.all.
+  //
+  // Trigger surface: see callers below (`requestLocation`,
+  // `buildNearestStopPill`, `populateNearbyInto`, `renderBusStopView`,
+  // `renderRouteView`, `renderSearch` + search typeahead). The function
+  // is a thin façade over `busetaUtils.ensureStopsLoaded()` so callers
+  // can stay one keystroke deep; the merging logic also lives here
+  // because it mutates `state.index.stops`.
+  //
+  // Returns a Promise that resolves when the curated stops have been
+  // merged into `state.index.stops`. The same merge happens at most
+  // once per page load — we set `state._hkStopsMerged = true` on the
+  // first successful merge and skip future calls. A failed merge
+  // resets the flag so the next caller can retry (the helper
+  // module's own localStorage cache absorbs the second attempt's cost).
+  function mergeHkStopsIntoIndex(hkStops) {
+    if (!state.index || !state.index.stops) return Promise.resolve();
+    if (state._hkStopsMerged) return Promise.resolve();
+    if (!hkStops || typeof hkStops !== 'object') return Promise.resolve();
+    const stops = state.index.stops;
+    for (const [id, info] of Object.entries(hkStops)) {
+      if (!info) continue;
+      const lat = Number(info.lat);
+      const lng = Number(info.lng);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+      // KMB stops already have lat/lng from the official API; only fill in
+      // if missing. Other operators (GMB, MTR, NLB) only get coords here.
+      const existing = stops.get(id);
+      if (existing) {
+        if (!Number.isFinite(existing.lat) || !Number.isFinite(existing.lng)) {
+          existing.lat = lat;
+          existing.lng = lng;
+        }
+      } else {
+        // Best-effort operator tag for the curated hk-stops.json entries so
+        // they get a proper operator badge in list rows instead of the
+        // generic STOP placeholder. The hk-stops.json catalogue is
+        // (mostly) MTR stations by alphabetic code + GMB / NLB stops by
+        // numeric ID; LRT stops live in `state.index.lrt.stops` and are
+        // not duplicated here.
+        const co = /^[A-Za-z]{3,4}$/.test(id) ? 'MTR' : 'GMB';
+        stops.set(id, {
+          stop: id,
+          co,
+          nameTc: info.zh || '',
+          nameEn: info.en || '',
+          lat,
+          lng,
+        });
+      }
+    }
+    state._hkStopsMerged = true;
+    return Promise.resolve();
+  }
+
+  // Trigger hk-stops.json to load and merge into `state.index.stops`
+  // if it hasn't been already. Fire-and-forget from call sites — the
+  // resolved Promise is not awaited; the merge happens in the
+  // background and the next view render uses the freshly merged
+  // `state.index.stops`. On a cache-miss the helper module handles
+  // localStorage + de-dup; on a cache-hit it resolves synchronously.
+  //
+  // Accepts an `onMerged` callback that fires after the merge so the
+  // trigger point can re-render the view (e.g. home re-renders once
+  // the nearest-stop pill has data to render against). Callers that
+  // don't care about re-rendering can omit the callback.
+  function ensureHkStopsLoaded(opts) {
+    if (!state.index || state._hkStopsMerged) return Promise.resolve();
+    const onMerged = opts && typeof opts.onMerged === 'function' ? opts.onMerged : null;
+    const onError = opts && typeof opts.onError === 'function' ? opts.onError : null;
+    return busetaUtils
+      .ensureStopsLoaded()
+      .then((hkStops) => mergeHkStopsIntoIndex(hkStops))
+      .then(() => {
+        if (onMerged) {
+          try {
+            onMerged();
+          } catch (_) {
+            /* view render must never break the helper */
+          }
+        }
+      })
+      .catch((err) => {
+        if (onError) {
+          try {
+            onError(err);
+          } catch (_) {
+            /* swallow */
+          }
+        }
+        // Re-throw isn't desired here — call sites are
+        // fire-and-forget; the helper module's localStorage mirror
+        // makes the next attempt cheap.
+      });
+  }
+
   async function buildIndex() {
-    const [kmbRoutes, kmbStops, ctbRoutes, mtrLines, lrtRoutes, lrtStops, hkStops, mtrStops] =
+    // Phase 43 — hk-stops.json is intentionally NOT in this Promise.all.
+    // The curated stop catalogue is ~190 KB unpacked and used to ride
+    // every cold-load. We now defer it via `mergeHkStopsIntoIndex()`,
+    // which is called from a small number of trigger points (nearby
+    // UI, search typeahead, stop / route view enrichment).
+    const [kmbRoutes, kmbStops, ctbRoutes, mtrLines, lrtRoutes, lrtStops, mtrStops] =
       await Promise.all([
         busetaUtils.fetchJSON(`${API.KMB}/route/`).catch(() => null),
         busetaUtils.fetchJSON(`${API.KMB}/stop/`).catch(() => null),
@@ -1329,7 +1438,6 @@
         // ride legs. Best-effort: missing file or shape just leaves lat
         // null (legacy behaviour: leg meters fall back to 0).
         busetaUtils.fetchJSON(API.LRT_STOPS).catch(() => null),
-        busetaUtils.fetchJSON(API.HK_STOPS).catch(() => null),
         busetaUtils.fetchJSON(API.MTR_STOPS).catch(() => null),
       ]);
 
@@ -1414,39 +1522,13 @@
 
     // ---- Merge in curated stop coordinates (fills GMB stops + MTR stations
     //      + any stops that were missing WKT lat/lng) ----
-    if (hkStops && typeof hkStops === 'object') {
-      for (const [id, info] of Object.entries(hkStops)) {
-        if (!info) continue;
-        const lat = Number(info.lat);
-        const lng = Number(info.lng);
-        if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
-        // KMB stops already have lat/lng from the official API; only fill in
-        // if missing. Other operators (GMB, MTR, NLB) only get coords here.
-        const existing = stops.get(id);
-        if (existing) {
-          if (!Number.isFinite(existing.lat) || !Number.isFinite(existing.lng)) {
-            existing.lat = lat;
-            existing.lng = lng;
-          }
-        } else {
-          // Best-effort operator tag for the curated hk-stops.json entries so
-          // they get a proper operator badge in list rows instead of the
-          // generic STOP placeholder. The hk-stops.json catalogue is
-          // (mostly) MTR stations by alphabetic code + GMB / NLB stops by
-          // numeric ID; LRT stops live in `state.index.lrt.stops` and are
-          // not duplicated here.
-          const co = /^[A-Za-z]{3,4}$/.test(id) ? 'MTR' : 'GMB';
-          stops.set(id, {
-            stop: id,
-            co,
-            nameTc: info.zh || '',
-            nameEn: info.en || '',
-            lat,
-            lng,
-          });
-        }
-      }
-    }
+    // Phase 43 — deferred to `mergeHkStopsIntoIndex()` (lazy load). The
+    // curated hk-stops.json fetch used to ride this Promise.all; it now
+    // runs only when a feature (nearby UI / search / stop view / route
+    // view) actually needs stop coordinates. Until then `state.index.stops`
+    // holds only KMB + CTB stops, which is enough for the home view's
+    // baseline rendering — see `mergeHkStopsIntoIndex` for the trigger
+    // helpers and the caller list.
 
     // ---- MTR heavy rail (parse line_stations grid → StationIndex → Join with mtr-stops.json coords) ----
     if (mtrLines && Array.isArray(mtrLines)) {
@@ -2897,6 +2979,13 @@
         setLocationStatus('ok');
         toast(t_str('locationGranted'));
         rerenderLocationViews();
+        // Phase 43 — kick off the lazy hk-stops.json load so the
+        // nearest-stop pill + nearby sections have full coverage
+        // on the next render. The helper module handles localStorage
+        // + de-dup; we re-render once the merge completes via
+        // `onMerged` so the user sees the freshly-populated UI
+        // without us having to inline a polling loop here.
+        ensureHkStopsLoaded({ onMerged: () => rerenderLocationViews() });
       },
       (err) => {
         clearTimeout(geoWatchdog);
@@ -3097,9 +3186,21 @@
         break;
       case 'route':
         renderRoute(r);
+        // Phase 43 — route view renders inline per-stop rows that
+        // lean on `state.index.stops` for coords + names. The KMB /
+        // CTB stops are eager; the curated GMB / NLB / MTR stops are
+        // lazy. We kick off the lazy load here so the user sees
+        // their full route within ~100 ms of the catalogue landing.
+        // Re-render via `onMerged` so late-arriving stops replace
+        // the eager-only view.
+        ensureHkStopsLoaded({ onMerged: () => renderRoute(r) });
         break;
       case 'stop':
         renderStop(r);
+        // Phase 43 — same idea for the stop view: seed name / coords
+        // / map come from `state.index.stops`. Re-rendering once
+        // hk-stops land re-paints the heading + map.
+        ensureHkStopsLoaded({ onMerged: () => renderStop(r) });
         break;
       default:
         renderError();
@@ -3809,6 +3910,12 @@
     if (!out) return;
     out.innerHTML = '';
     const q = state.lastSearchQ;
+    // Phase 43 — kick off the hk-stops.json load lazily on the
+    // first typeahead call so the user starts seeing GMB / NLB
+    // stops in results within ~100 ms of the catalogue landing.
+    // Fire-and-forget — the helper module's promise de-dup means
+    // repeat keystrokes share the in-flight fetch.
+    if (q) ensureHkStopsLoaded();
     if (!q) {
       out.appendChild(el('p', { class: 'empty', style: 'margin-top: 8px;' }, t_str('searchHint')));
       out.appendChild(
@@ -4615,15 +4722,46 @@
 
     const loc = state.userLoc;
 
-    // --- Nearby bus stops (only KMB/CTB/etc — stops we have lat/lng for) ---
-    const nearbyStops = Array.from(state.index.stops.values())
-      .filter((s) => Number.isFinite(s.lat) && Number.isFinite(s.lng))
-      .map((s) => ({ s, d: busetaUtils.haversine(loc.lat, loc.lng, s.lat, s.lng) }))
-      .filter((x) => x.d < 1.2)
-      .sort((a, b) => a.d - b.d)
-      .slice(0, 12);
+    // Phase 43 — defer the nearby bus-stops / routes walk until
+    // hk-stops.json has loaded. Until it lands `state.index.stops`
+    // only carries KMB + CTB stops (eager from the operator APIs),
+    // so the curated GMB / NLB / MTR stops + their coords are
+    // missing. MTR stations (next section below) render without
+    // waiting because they read `state.index.mtr` instead.
+    //
+    // Loading hint uses the existing `.muted` class so the visual
+    // matches the empty-state placeholder below — no new CSS shipped.
+    const stopsReady = busetaUtils.getStops() !== null;
+    if (!stopsReady) {
+      if (status || status2) {
+        setStatus(status, t_str('loadingNearbyStops'));
+        setStatus(status2, t_str('loadingNearbyStops'));
+      } else {
+        if (stopsBlock)
+          stopsBlock.appendChild(el('p', { class: 'muted' }, t_str('loadingNearbyStops')));
+        if (routesBlock)
+          routesBlock.appendChild(el('p', { class: 'muted' }, t_str('loadingNearbyStops')));
+      }
+      ensureHkStopsLoaded({ onMerged: () => populateNearbyInto(view) });
+      // Fall through to the MTR section below.
+    }
 
-    if (nearbyStops.length === 0) {
+    // --- Nearby bus stops (only KMB/CTB/etc — stops we have lat/lng for) ---
+    let nearbyStops = [];
+    if (stopsReady) {
+      nearbyStops = Array.from(state.index.stops.values())
+        .filter((s) => Number.isFinite(s.lat) && Number.isFinite(s.lng))
+        .map((s) => ({ s, d: busetaUtils.haversine(loc.lat, loc.lng, s.lat, s.lng) }))
+        .filter((x) => x.d < 1.2)
+        .sort((a, b) => a.d - b.d)
+        .slice(0, 12);
+    }
+
+    if (!stopsReady) {
+      // Already handled by the loading hint above — skip the
+      // empty-state branch so we don't render a "no nearby stops"
+      // message on top of the loading hint.
+    } else if (nearbyStops.length === 0) {
       if (status || status2) {
         setStatus(status, t_str('noNearbyStops'));
         setStatus(status2, t_str('noNearbyRoutes'));
@@ -9826,10 +9964,18 @@
     loadGmapsConfig().catch(() => {});
 
     // Kick off the index build but DON'T await it — the splash + first
-    // home render should not block on the 5 MB hk-stops.json download.
+    // home render should not block on the index-build Promise.all.
     // loadIndex resolves into state.index and the watcher below re-renders
     // the current view once it lands so populated lists replace the
     // empty-state placeholders we show in the meantime.
+    //
+    // Phase 43 — hk-stops.json is intentionally NOT in that Promise.all
+    // anymore; the curated catalogue is now lazy-loaded only when the
+    // user actually needs stop coordinates (nearby / search / stop /
+    // route view / recent stops). Returning users who already had a
+    // location grant at last visit will see their nearby UI populate
+    // once the catalogue lands (or hit the localStorage cache) — see
+    // `ensureHkStopsLoaded` call below `requestLocation`.
     loadIndex()
       .then(() => {
         try {
