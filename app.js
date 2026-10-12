@@ -7755,7 +7755,12 @@
       // Cache the resolved name on the recent entry so 最近查過 shows the
       // real stop name on the home page instead of just the operator ID.
       // Skip for unresolvable stops — we'd just be re-poisoning the list.
-      if (!stopUnknown) enrichRecentStop(stopId, nameTc, nameSc, nameEn);
+      if (!stopUnknown) {
+        enrichRecentStop(stopId, nameTc, nameSc, nameEn);
+        // Phase 44 — also enrich the journey-history entry so the
+        // History view shows the resolved name, not the raw ID.
+        enrichHistoryStop(stopId, nameTc, nameSc, nameEn);
+      }
     });
 
     refreshBusStopView(stateRef, 'live');
@@ -8220,7 +8225,11 @@
     const stopUnknown = !stop;
     const nameTc = stop ? stop.nameTc : t_str('stopUnknownName');
     const nameEn = stop ? stop.nameEn : '';
-    if (stop) enrichRecentStop(stopCode, nameTc, stop.nameSc || '', nameEn);
+    if (stop) {
+      enrichRecentStop(stopCode, nameTc, stop.nameSc || '', nameEn);
+      // Phase 44 — also enrich the journey-history entry.
+      enrichHistoryStop(stopCode, nameTc, stop.nameSc || '', nameEn);
+    }
     if (stopUnknown) pruneRecentStops();
     header.appendChild(buildStopHeader(stopCode, nameTc, nameEn, 'LRT', '', stopUnknown));
     body.appendChild(el('p', { class: 'muted' }, t_str('loading')));
@@ -8344,8 +8353,11 @@
       state._lastGmbStopMeta = meta || null;
       // Cache the resolved name on the recent entry so 最近查過 shows the
       // real GMB stop name instead of just the numeric operator ID.
-      if (meta && meta.nameTc)
+      if (meta && meta.nameTc) {
         enrichRecentStop(stopId, meta.nameTc, meta.nameSc || '', meta.nameEn || '');
+        // Phase 44 — also enrich the journey-history entry.
+        enrichHistoryStop(stopId, meta.nameTc, meta.nameSc || '', meta.nameEn || '');
+      }
     });
 
     fetchGmbStopRoutes(stopId)
@@ -9057,6 +9069,86 @@
       changed = true;
     });
     if (changed) persist();
+  }
+
+  // Phase 44 — backfill the journey-history entry for a stop once the
+  // name resolves. Mirrors `enrichRecentStop` so the History view shows
+  // the resolved name (e.g. "大學站") instead of the raw stop ID. Called
+  // from the same code paths that resolve a stop's display name.
+  function enrichHistoryStop(stopId, nameTc, nameSc, nameEn) {
+    if (!stopId || !nameTc) return;
+    if (nameTc === stopId) return; // same guard as enrichRecentStop
+    if (typeof busetaUtils === 'undefined' || !busetaUtils.getHistory) return;
+    const cleanTc = busetaUtils.stripKmbOpSuffix(nameTc) || nameTc;
+    const cleanSc = busetaUtils.stripKmbOpSuffix(nameSc) || nameSc;
+    const cleanEn = busetaUtils.stripKmbOpSuffix(nameEn) || nameEn;
+    const list = busetaUtils.getHistory();
+    let touched = false;
+    for (const entry of list) {
+      if (entry.kind !== busetaUtils.HISTORY_KINDS.STOP) continue;
+      if (entry.id !== String(stopId)) continue;
+      if (entry.name === cleanTc) continue; // already up to date
+      entry.name = cleanTc;
+      entry.nameSc = cleanSc;
+      entry.nameEn = cleanEn;
+      touched = true;
+    }
+    if (!touched) return;
+    // Re-write the array so the change is persisted. The helper
+    // exposes `writeHistory` indirectly through `removeHistoryEntry` +
+    // re-`recordVisit` would be awkward, so we go through the public
+    // surface: read the array, splice the new entries in, write back.
+    // We don't expose `writeHistory` directly because the helper's
+    // design intentionally hides the storage key.
+    try {
+      localStorage.setItem(busetaUtils.HISTORY_KEY, JSON.stringify(list));
+    } catch (_) {
+      /* quota / private mode — best effort */
+    }
+  }
+
+  // Phase 44 — backfill empty-name journey-history entries once the
+  // index lands. Run on `loadIndex` resolution so a stop visit
+  // recorded with an empty name (because the index hadn't loaded
+  // yet at record time) gets resolved. This primarily fixes the
+  // PWA share-target boot path where `handleShareTargetOnBoot`
+  // navigates to a stop view synchronously, before loadIndex.
+  function backfillHistoryNamesFromIndex() {
+    if (!state.index || typeof busetaUtils === 'undefined' || !busetaUtils.getHistory) {
+      return;
+    }
+    const list = busetaUtils.getHistory();
+    let touched = false;
+    for (const entry of list) {
+      if (entry.name) continue; // already has a name
+      if (entry.kind === busetaUtils.HISTORY_KINDS.STOP) {
+        const idxMeta = state.index.stops.get(entry.id);
+        if (idxMeta) {
+          entry.name = busetaUtils.stripKmbOpSuffix(idxMeta.nameTc) || idxMeta.nameTc;
+          entry.nameSc = busetaUtils.stripKmbOpSuffix(idxMeta.nameSc) || idxMeta.nameSc;
+          entry.nameEn = busetaUtils.stripKmbOpSuffix(idxMeta.nameEn) || idxMeta.nameEn;
+          touched = true;
+        }
+      } else if (entry.kind === busetaUtils.HISTORY_KINDS.ROUTE) {
+        const key = entry.id; // "co|route|dir|service"
+        const meta =
+          (state.index.routes && state.index.routes.get(key)) ||
+          (state.index.ctbRoutes && state.index.ctbRoutes.get(key));
+        if (meta) {
+          const destTc = meta.destTc || '';
+          const destEn = meta.destEn || '';
+          const safeDest = (s) => busetaUtils.stripKmbOpSuffix(s) || s;
+          entry.name = `${entry.co} ${key.split('|')[1]} · ${safeDest(destTc) || safeDest(destEn)}`;
+          touched = true;
+        }
+      }
+    }
+    if (!touched) return;
+    try {
+      localStorage.setItem(busetaUtils.HISTORY_KEY, JSON.stringify(list));
+    } catch (_) {
+      /* best effort */
+    }
   }
 
   // v34 · Prune poisoned recent stop entries.
@@ -10408,6 +10500,11 @@
     loadIndex()
       .then(() => {
         try {
+          // Phase 44 — backfill empty-name history entries. A stop or
+          // route visit recorded before the index landed (e.g. via the
+          // PWA share-target boot path) has an empty name; resolve it
+          // now that the index is available.
+          backfillHistoryNamesFromIndex();
           if (currentRoute() === 'home') renderHome();
         } catch (e) {
           /* noop */
