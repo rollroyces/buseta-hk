@@ -1,0 +1,13 @@
+# Configuration for the .github/ISSUE_TEMPLATE/ directory.
+#
+# This file tells GitHub which issue templates to offer when a user
+# clicks "New issue". Without this file, GitHub offers all templates
+# in this directory alphabetically plus a blank option.
+#
+# See https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/configuring-issue-templates-for-your-repository
+
+blank_issues_enabled: false
+contact_links:
+  - name: Live app
+    url: https://rollroyces.github.io/buseta-hk/
+    about: BusETA HK itself — open it to check whether a "bug" is upstream or local.

@@ -1,0 +1,30 @@
+# EditorConfig — https://editorconfig.org
+#
+# BusETA HK uses Prettier for most JS/CSS/HTML/MD files (config in
+# .prettierrc.json). This .editorconfig file covers the few knobs
+# Prettier doesn't touch (line endings, final newline, charset,
+# indent for files Prettier doesn't claim like .gitignore, .yml,
+# JSON) plus a few sensible cross-tool defaults.
+#
+# Most modern editors pick this up automatically via the
+# EditorConfig plugin. VS Code: install `EditorConfig for VS Code`.
+# JetBrains: built-in since 2017.x.
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+# Makefiles require tabs — overriding the default.
+[Makefile]
+indent_style = tab
+
+# Python files (scripts/build-icons.py) follow PEP 8.
+[*.py]
+indent_size = 4
+max_line_length = 100
