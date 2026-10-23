@@ -17,7 +17,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="BusETA" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="buseta-version" content="78" />
+    <meta name="buseta-version" content="79" />
     <!-- Main stylesheet. The original style.css is what we ship today — a
      hand-rolled minifier produced a broken style.min.css earlier, so we
      load the unminified bundle directly. v=35 ships the "show every
@@ -1601,7 +1601,7 @@
           if (this._plannerScript) return this._plannerScript;
           this._plannerScript = new Promise((resolve, reject) => {
             const s = document.createElement('script');
-            s.src = 'planner.js?v=42';
+            s.src = 'planner.js?v=43';
             s.async = false; // preserve execution order
             s.onload = () => resolve(window.Planner);
             s.onerror = () => reject(new Error('planner.js failed to load'));
@@ -1643,6 +1643,11 @@
     <script src="src/utils/operators.js?v=1"></script>
     <script src="src/utils/text.js?v=1"></script>
     <script src="src/utils/routes-by-stop.js?v=1"></script>
+    <!-- Phase 46 — reverse-index rebuild for the route-stops snapshot.
+         Re-keys route metadata by its OWN co|route|dir|service so the
+         LWB-operated routes (indexed under a 'KMB|…' key but keyed
+         'LWB|…' in the route-stops map) resolve. Pure module. -->
+    <script src="src/utils/route-stops.js?v=1"></script>
     <script src="src/utils/concurrency.js?v=1"></script>
     <script src="src/utils/focus-trap.js?v=1"></script>
     <script src="src/utils/stop-view-summary.js?v=1"></script>
@@ -1671,7 +1676,7 @@
          Pure modules, no DOM side-effects. -->
     <script src="src/utils/share-target.js?v=1"></script>
     <script src="src/utils/history.js?v=1"></script>
-    <script defer src="app.js?v=66"></script>
+    <script defer src="app.js?v=67"></script>
     <script>
       // SW path must be RELATIVE — GitHub Pages serves this site under
       // /buseta-hk/ but a leading `/sw.js` would resolve to the site root

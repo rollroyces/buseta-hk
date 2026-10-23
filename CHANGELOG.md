@@ -295,6 +295,38 @@ href="#main-content">` joins the existing CSS class so the link
 
 ### Fixed
 
+- **localStorage quota made the whole cache layer dead** (PR #54): three
+  writers competed for the ~5 MB per-origin localStorage budget — the
+  route-stops snapshot (`buseta.route.stops`), the planner adjacency cache
+  (`buseta.planner.adj.v1`, capped at 4.5 MB on its own), and the stop
+  catalogue (`buseta.stops.v1`) — for a combined demand of roughly
+  29 MB. Every write threw `QuotaExceededError`, and `storage.set()`
+  swallowed it, so **nothing ever persisted**. Because the Phase 14
+  restore missed on every boot, the `prefetchRouteStops()` early-return
+  guard never tripped and the full ~3,000-request `/route-stop` fan-out
+  re-ran on **every** cold load, each burst also re-serialising a
+  multi-megabyte snapshot on a 2-second debounce (~1.8 s of blocked
+  main thread per load). Three changes:
+  1. `dehydrateRouteStops()` no longer serialises the derived `s`
+     half (`routesByStop`) — it is a pure transpose of the `r` half and
+     is rebuilt on load instead — and the persisted route count is
+     capped at 400 (`ROUTE_STOPS_MAX_PERSIST`), taking the payload from
+     ~7–20 MB down to ~1 MB.
+  2. The planner's reverse index (`sr`) was written **uncapped** on top
+     of the 4.5 MB `rs` half; it is now restricted to stops that appear
+     in the persisted routes, and `CACHE_MAX_BYTES` drops 4.5 MB → 1.5 MB
+     so the planner stops consuming ~90 % of the origin quota alone.
+  3. `storage.set()` and the planner's cache writer now **log**
+     `QuotaExceededError` instead of swallowing it, so this class of
+     regression is visible in the console.
+- **`src/utils/route-stops.js`** (PR #54, new): `routeMetaKey`,
+  `buildRouteMetaLookup`, `rebuildRoutesByStopIndex` — the reverse-index
+  rebuild, extracted so it is unit-testable. It exists because
+  `state.index.routes` is keyed by `makeRouteKey('KMB', …)` (the operator
+  literal is always 'KMB') while `state.routeStopsByRoute` is keyed by
+  the route metadata's own `co` — so an LWB-operated route is indexed
+  under `KMB|960|I|1` but keyed `LWB|960|I|1`. Looking routes up by the
+  index key silently missed every LWB route. 11 unit cases.
 - **Keyboard shortcuts were dead in production** (PR #53): Phase 41 added
   `src/utils/keyboard-shortcuts.js` (270 lines), wired the dispatcher into
   `app.js`, and shipped 31 passing unit tests — but `index.html` never

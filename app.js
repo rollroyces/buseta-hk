@@ -1280,7 +1280,25 @@
     set(key, value) {
       try {
         localStorage.setItem(key, JSON.stringify(value));
-      } catch {}
+      } catch (e) {
+        // Phase 46 — a QuotaExceededError here used to be swallowed
+        // entirely, which made the whole Phase 14 persistence layer
+        // silently dead: three writers (route-stops, planner adjacency,
+        // stop catalogue) together ask for ~29 MB against a ~5 MB
+        // per-origin quota, every write threw, nothing was ever
+        // persisted, and the 3,000-request /route-stop prefetch
+        // therefore re-ran on every single cold load.
+        //
+        // Log it so the next regression is visible in the console
+        // instead of inferrable only from a profiler.
+        if (e && (e.name === 'QuotaExceededError' || e.code === 22)) {
+          console.warn(
+            `[buseta] localStorage quota exceeded writing "${key}" — ` +
+              'this cache will not persist across reloads.',
+            e
+          );
+        }
+      }
     },
   };
 
@@ -1767,18 +1785,58 @@
   // lives across the SW 24h TTL — it's the longer-lived layer.
   const ROUTE_STOPS_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
-  // Serialize state.routeStopsByRoute + state.routesByStop into a
-  // JSON-safe form. Both are Map<_, Array<_>> / Map<_, Set<_>> so we
-  // round-trip via Array.from(entries) and an inner Array.from(set)
-  // for the Set values. Round-trippable by rehydrateRouteStops.
+  // Phase 46 — cap how many routes we persist.
+  //
+  // The full prefetch covers ~3,000 routes; each contributes a stop
+  // array averaging ~40 entries, so the full snapshot is roughly
+  // 7–20 MB of JSON — far past the ~5 MB per-origin localStorage
+  // quota, which meant the write ALWAYS threw and the cache NEVER
+  // persisted. Capping at 400 routes keeps the payload around ~1 MB,
+  // which fits alongside the index (~2.8 MB) and stop catalogue
+  // (~0.55 MB) inside the budget.
+  const ROUTE_STOPS_MAX_PERSIST = 400;
+
+  // Serialize state.routeStopsByRoute into a JSON-safe form.
+  //
+  // Phase 46 — we no longer persist the `s` half
+  // (`state.routesByStop`). It is a pure transpose of `r`: every entry
+  // in `routesByStop` is derivable from `routeStopsByRoute` plus the
+  // route index via `busetaUtils.buildRoutesByStopMap`. Persisting
+  // both roughly doubled the payload for zero information gain, and
+  // the combined snapshot was the single biggest reason the write
+  // blew past the localStorage quota every time.
+  //
+  // We also cap the number of routes: the live prefetch covers ~3,000
+  // routes, which is ~7–20 MB of JSON — always over quota. Keeping
+  // the newest ROUTE_STOPS_MAX_PERSIST routes lands around ~1 MB.
   function dehydrateRouteStops() {
-    if (!state.routeStopsByRoute || !state.routesByStop) return null;
+    if (!state.routeStopsByRoute) return null;
+    const entries = Array.from(state.routeStopsByRoute.entries());
+    const capped = entries.slice(Math.max(0, entries.length - ROUTE_STOPS_MAX_PERSIST));
     return {
       // Map<routeKey, Array<stopInfo>> → [[routeKey, stopInfo[]], ...]
-      r: Array.from(state.routeStopsByRoute.entries()),
-      // Map<stopName, Set<routeInfo>> → [[stopName, routeInfo[]], ...]
-      s: Array.from(state.routesByStop.entries()).map(([k, set]) => [k, Array.from(set)]),
+      r: capped,
+      // `s` is deliberately omitted — see the Phase 46 note above.
+      // Older snapshots that still carry it are read back for
+      // backwards compatibility in rehydrateRouteStops().
     };
+  }
+
+  // Rebuild the `routesByStop` reverse index from `routeStopsByRoute`
+  // plus the route index. Mirrors what the incremental prefetcher
+  // does per-route (buildRoutesByStopMap), but in one pass.
+  //
+  // The lookup is keyed by the route METADATA's own co|route|dir|service
+  // — NOT by the index map's key, which is always 'KMB|…' even for
+  // LWB-operated routes. See src/utils/route-stops.js for the full
+  // explanation; the helper is unit-tested.
+  function rebuildRoutesByStopFromIndex(routeStopsByRoute) {
+    if (!state.index) return new Map();
+    return busetaUtils.rebuildRoutesByStopIndex(
+      routeStopsByRoute,
+      state.index.routes,
+      state.index.ctbRoutes
+    );
   }
 
   function rehydrateRouteStops(raw) {
@@ -1789,11 +1847,17 @@
         if (typeof k === 'string' && Array.isArray(stops)) rMap.set(k, stops);
       }
     }
-    const sMap = new Map();
+    let sMap = new Map();
     if (Array.isArray(raw.s)) {
+      // Backwards compatibility: snapshots written before Phase 46
+      // still carry the derived `s` half — prefer it verbatim.
       for (const [k, arr] of raw.s) {
         if (typeof k === 'string' && Array.isArray(arr)) sMap.set(k, new Set(arr));
       }
+    } else if (rMap.size > 0) {
+      // Phase 46 — new-format snapshot: rebuild the reverse index from
+      // the route-stops half.
+      sMap = rebuildRoutesByStopFromIndex(rMap);
     }
     state.routeStopsByRoute = rMap;
     state.routesByStop = sMap;
