@@ -38,8 +38,62 @@
  * v21 was the same forced-update after v32's QW-1 → QW-10 batch.
  * v20 was the same forced-update after the v30→v31 layout revert.
  */
-const CACHE = 'buseta-v68';
-const SHELL = ['/', '/index.html', '/app.js', '/style.css', '/manifest.json'];
+// Phase 47 — the cache version lives in ONE place.
+//
+// The old code kept the version in two independent literals: the
+// `const CACHE = 'buseta-vN'` name AND a hardcoded `parseInt(m[1], 10) < N`
+// threshold in the activate handler's cleanup filter. Those drifted:
+// the threshold was still 44 while CACHE was buseta-v64, and then again
+// while CACHE was buseta-v66. Every drift leaks one stale cache bucket
+// per release — each ~700 KB (the app shell + the 20 src/utils scripts
+// that branch 4 caches into the version bucket), so a year of releases
+// stranded ~15 MB of a user's origin quota.
+//
+// Worse, the offline navigate fallback used `caches.match('/index.html')`,
+// which searches EVERY bucket in creation order — so an offline user
+// could be served an ancient index.html from the oldest leaked bucket.
+//
+// Deriving both from CACHE_VERSION makes the drift impossible.
+const CACHE_VERSION = 69;
+const CACHE = `buseta-v${CACHE_VERSION}`;
+
+// The app shell. `/app.js` and `/style.css` are stored WITHOUT their
+// `?v=` query string (the version lives in the bucket name), and the
+// same-origin fetch branch matches with `ignoreSearch: true`, so these
+// entries are actually reachable — before Phase 47 they were written
+// on install and then never served.
+//
+// The `src/utils/*.js` modules are included because they are the app
+// shell too: without them an offline boot has no `busetaUtils.*` and
+// every view that calls a helper breaks. `tests/unit/sw-shell.test.js`
+// asserts this list stays in sync with index.html's script tags.
+const SHELL = [
+  '/',
+  '/index.html',
+  '/app.js',
+  '/style.css',
+  '/manifest.json',
+  '/src/utils/concurrency.js',
+  '/src/utils/date.js',
+  '/src/utils/debug-log.js',
+  '/src/utils/disruption-classify.js',
+  '/src/utils/disruptions.js',
+  '/src/utils/focus-trap.js',
+  '/src/utils/geo.js',
+  '/src/utils/history.js',
+  '/src/utils/keyboard-shortcuts.js',
+  '/src/utils/network.js',
+  '/src/utils/operators.js',
+  '/src/utils/push-subscriptions.js',
+  '/src/utils/route-stops.js',
+  '/src/utils/routes-by-stop.js',
+  '/src/utils/share-target.js',
+  '/src/utils/stop-view-summary.js',
+  '/src/utils/stops-cache.js',
+  '/src/utils/text.js',
+  '/src/utils/time.js',
+  '/src/utils/trams.js',
+];
 
 // Runtime caches — separate buckets so we can evolve each strategy
 // without trashing the others. Names are versioned (`: v1`) so a
@@ -107,16 +161,19 @@ self.addEventListener('activate', (event) => {
       .keys()
       .then((keys) =>
         Promise.all(
-          // Drop legacy `buseta-vN` for N < 44; keep v44 + ASSET_CACHE
+          // Drop every legacy `buseta-vN` whose version is below the
+          // current CACHE_VERSION; keep the current bucket + ASSET_CACHE
           // + ETA_CACHE + TD_DISRUPTION_CACHE so existing offline data
-          // survives. Also explicitly drop the poisoned `buseta-eta-v1`
-          // cache (bumped to v2) so users on the v13-era poisoned SWR
-          // cache stop getting empty-body responses back.
+          // survives. The threshold is DERIVED from CACHE_VERSION (not a
+          // second hand-maintained literal) so it cannot drift.
+          // Also explicitly drop the poisoned `buseta-eta-v1` cache
+          // (bumped to v2) so users on the v13-era poisoned SWR cache
+          // stop getting empty-body responses back.
           keys
             .filter((k) => {
               if (k === 'buseta-eta-v1') return true; // poisoned, drop
               const m = /^buseta-v(\d+)$/.exec(k);
-              if (m) return parseInt(m[1], 10) < 65;
+              if (m) return parseInt(m[1], 10) < CACHE_VERSION;
               return (
                 k !== CACHE && k !== ASSET_CACHE && k !== ETA_CACHE && k !== TD_DISRUPTION_CACHE
               );
@@ -310,11 +367,17 @@ self.addEventListener('fetch', (event) => {
   // 3) Navigation requests — try the network, fall back to the
   //    pre-cached app shell. This is what lets the user land on `/`
   //    while the device has no connectivity at all.
+  //
+  //    Phase 47 — scope the fallback to the CURRENT cache bucket and
+  //    match with `ignoreSearch: true`. The old `caches.match(...)`
+  //    searched EVERY bucket in creation order, so a stale leaked
+  //    bucket could serve an ancient index.html to an offline user.
+  //    The current bucket is the only one that holds this release.
   if (req.mode === 'navigate') {
     event.respondWith(
       fetch(req)
-        .catch(() => caches.match('/index.html'))
-        .then((resp) => resp || caches.match('/index.html'))
+        .catch(() => caches.open(CACHE).then((c) => c.match('/index.html')))
+        .then((resp) => resp || caches.open(CACHE).then((c) => c.match('/index.html')))
     );
     return;
   }
@@ -322,22 +385,31 @@ self.addEventListener('fetch', (event) => {
   // 4) Other same-origin — cache-first with network fallback, then
   //    cache the fresh response (covers the SHELL entries themselves
   //    if the pre-cache step missed one for any reason).
+  //
+  //    Phase 47 — `ignoreSearch: true` is what makes the SHELL entries
+  //    reachable. The page requests `/app.js?v=67` and `/style.css?v=41`,
+  //    but SHELL stores them as `/app.js` and `/style.css` (the version
+  //    lives in the bucket name), so an exact match never hit and the
+  //    precached copies were written on install and then never served.
+  //    Also scoped to the current bucket so a leaked stale bucket can't
+  //    answer for it.
   if (reqUrl.origin === self.location.origin) {
     event.respondWith(
-      caches.match(req).then((cached) => {
-        if (cached) {
-          return cached;
-        }
-        return fetch(req)
-          .then((response) => {
-            if (response && response.ok) {
-              const clone = response.clone();
-              caches.open(CACHE).then((cache) => cache.put(req, clone));
-            }
-            return response;
-          })
-          .catch(() => new Response('', { status: 504, statusText: 'Offline' }));
-      })
+      caches.open(CACHE).then((cache) =>
+        cache.match(req, { ignoreSearch: true }).then((cached) => {
+          if (cached) {
+            return cached;
+          }
+          return fetch(req)
+            .then((response) => {
+              if (response && response.ok) {
+                cache.put(req, response.clone());
+              }
+              return response;
+            })
+            .catch(() => new Response('', { status: 504, statusText: 'Offline' }));
+        })
+      )
     );
     return;
   }
