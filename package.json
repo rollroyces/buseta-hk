@@ -1,7 +1,7 @@
 {
   "name": "buseta-hk",
   "version": "0.53.0",
-  "description": "Real-time Hong Kong transit arrivals — KMB / LWB / Citybus / Minibus / MTR. Mobile-first, bilingual (繁體中文 / English), zero build step.",
+  "description": "Real-time Hong Kong transit arrivals \u2014 KMB / LWB / Citybus / Minibus / MTR. Mobile-first, bilingual (\u7e41\u9ad4\u4e2d\u6587 / English), zero build step.",
   "private": true,
   "license": "MIT",
   "scripts": {
@@ -11,10 +11,11 @@
     "lint:cache-buster": "node scripts/check-cache-buster.js",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "vitest run",
+    "test": "vitest run --reporter=default --reporter=json --outputFile.json=vitest-report.json",
     "test:watch": "vitest",
-    "check": "npm run lint && npm run lint:i18n && npm run lint:cache-buster && npm run format:check && npm test",
-    "check:fix": "npm run lint:fix && npm run format"
+    "check": "npm run lint && npm run lint:i18n && npm run lint:cache-buster && npm run format:check && npm test && npm run lint:test-count",
+    "check:fix": "npm run lint:fix && npm run format",
+    "lint:test-count": "node scripts/check-test-count.js"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
