@@ -2914,6 +2914,132 @@ h3 {
 }
 
 /* ============================================================
+   Keyboard-shortcuts help modal
+   ------------------------------------------------------------
+   Opened with `?` (Shift + /). Built by renderKbdHelpModal()
+   in app.js — the DOM contract is:
+
+     .kbd-help-modal   overlay + focus-trap root (role=dialog)
+       .kbd-help-card    the panel
+         .kbd-help-header  title row
+           .kbd-help-title   h2
+           .kbd-help-close   × button
+         .kbd-help-intro    one-line description
+         .kbd-help-section  one per group
+           .kbd-help-h       h3 group heading
+           .kbd-help-table   two-column table
+             .kbd-help-keycell  <td> holding the <kbd>
+               .kbd-help-key      <kbd> element
+             .kbd-help-labelcell <td> holding the description
+
+   The overlay fades in via the `.is-on` class (added on the next
+   animation frame after the node is appended), matching the
+   `.qr-modal` / `.qr-modal.is-on` pattern above.
+   ============================================================ */
+.kbd-help-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+  opacity: 0;
+  transition: opacity 0.18s ease;
+  padding: 16px;
+}
+.kbd-help-modal.is-on {
+  opacity: 1;
+}
+.kbd-help-card {
+  position: relative;
+  background: var(--card);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 16px 14px 14px;
+  width: 100%;
+  max-width: 420px;
+  max-height: 82vh;
+  overflow-y: auto;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+.kbd-help-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+.kbd-help-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+}
+.kbd-help-close {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+  border-radius: var(--r-sm);
+}
+.kbd-help-close:hover,
+.kbd-help-close:active {
+  color: var(--text);
+}
+.kbd-help-intro {
+  margin: 0 0 10px;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+.kbd-help-section {
+  margin-top: 12px;
+}
+.kbd-help-h {
+  margin: 0 0 4px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+.kbd-help-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+.kbd-help-keycell {
+  width: 1%;
+  white-space: nowrap;
+  padding: 3px 10px 3px 0;
+  vertical-align: top;
+}
+.kbd-help-labelcell {
+  color: var(--text);
+  line-height: 1.4;
+}
+/* The <kbd> chip itself. `.kbd` is the shared base so future
+   surfaces can reuse it; `.kbd-help-key` scopes the sizing. */
+.kbd {
+  display: inline-block;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  padding: 1px 6px;
+  color: var(--text);
+  line-height: 1.5;
+}
+.kbd-help-key {
+  font-size: 11.5px;
+}
+
+/* ============================================================
    Service-disruption banner
    ------------------------------------------------------------
    Sits at the top of the home view, ABOVE the geo banner /

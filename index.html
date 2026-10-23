@@ -17,7 +17,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="BusETA" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="buseta-version" content="77" />
+    <meta name="buseta-version" content="78" />
     <!-- Main stylesheet. The original style.css is what we ship today — a
      hand-rolled minifier produced a broken style.min.css earlier, so we
      load the unminified bundle directly. v=35 ships the "show every
@@ -703,7 +703,7 @@
        - planner.min.js re-minified (133008 → 76323 bytes, 57.4%);
          planner.min.css unchanged.
 -->
-    <link rel="stylesheet" href="style.css?v=40" />
+    <link rel="stylesheet" href="style.css?v=41" />
     <title>BusETA HK · 巴士到站</title>
     <style id="critical-css">
       /* ============================================================
@@ -1648,6 +1648,15 @@
     <script src="src/utils/stop-view-summary.js?v=1"></script>
     <script src="src/utils/debug-log.js?v=1"></script>
     <script src="src/utils/trams.js?v=1"></script>
+    <!-- Phase 41 — keyboard-shortcut dispatcher. MUST be loaded before
+         app.js: the boot code calls
+         `busetaUtils.createKeyboardDispatcher(...)` and silently bails
+         when the helper is absent, so a missing tag here disables the
+         whole feature (no /, no g-chords, no ? help modal) while every
+         unit test still passes. `tests/unit/utils-wiring.test.js`
+         asserts that every `src/utils/*.js` referenced from app.js /
+         planner.js is actually loaded here. -->
+    <script src="src/utils/keyboard-shortcuts.js?v=1"></script>
     <!-- Phase 42 — Web Push subscription helpers. Pure module, no
          DOM side-effects; safe to load before app.js so the
          `busetaUtils.pushSubscribe` / `pushUnsubscribe` calls in the
