@@ -235,6 +235,42 @@ href="#main-content">` joins the existing CSS class so the link
   `manifest.json` gains a `share_target` block so the PWA registers
   as a system share target on Android / desktop. Cache-buster
   bumps unchanged from Phase 43.
+- **Journey-history name backfill** (PR #46): `enrichHistoryStop` +
+  `backfillHistoryNamesFromIndex` in `app.js`. A PWA share-target boot
+  navigates synchronously to a stop or route view, so the history
+  entry was written before `state.index` had loaded and landed with
+  an empty `name`. The backfill runs on `loadIndex().then(...)` and
+  resolves the name from the now-available index.
+- **README Documentation section** (PR #50): table linking
+  `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`,
+  `docs/cache-strategy.md`, `docs/push-notifications.md`,
+  `docs/performance.md`, `docs/new-operator-research.md`, and
+  `docs/trams-phase-40-design.md`.
+- **README data-sources accuracy** (PR #50): `assets/hk-stops.json`
+  described as "Curated lat/lng for GMB stops + MTR stations +
+  (bonus) NLB stops" — corrected to "~5,160 stops across all bus
+  operators + LRT + MTR + NLB", with the per-operator catalogue
+  split (`mtr-stops.json`, `lrt-stops.json`) explained.
+- **`app.js` attribution comment** (PR #50): header comment brought
+  in line with the README wording, including the per-operator
+  catalogue pointers. Cache-buster bumps: meta 76 → 77,
+  app.js?v 65 → 66, sw.js CACHE buseta-v65 → buseta-v66.
+- **Tram operator research** (PR #51): three research docs land on
+  `main` — the **Phase 37½ update** (official `data.gov.hk` datasets
+  exist for Star Ferry and for Peak Tram / Ferry / Tram inside TD's
+  aggregated `hk-td-tis_3-routes-and-fares`, but every direct CDN
+  path is gated: Star Ferry's CDN returns an empty reply and
+  `static.data.gov.hk` returns 403 even with a browser User-Agent —
+  so the data is available but the transport is not, and a
+  bundled-snapshot approach is viable); the **Phase 38½ live endpoint
+  probe** (9 stops probed against `/nextTram/geteat.php`; every one
+  returns an empty `<root/>` envelope, the server runs EOL software
+  with known unpatched CVEs, there are no CORS headers, and the data
+  endpoints are plain HTTP so mixed-content blocks browser-side
+  fetches — which makes the originally-planned Phase 39 live
+  `fetchTramETA` helper unviable); and
+  `docs/trams-phase-40-design.md` (the Phase 40 Tramways UI
+  integration plan, Option A path).
 
 ### Changed
 
