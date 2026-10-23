@@ -66,7 +66,12 @@
   // so future schema changes can invalidate it by bumping the suffix.
   const CACHE_KEY = 'buseta.planner.adj.v1';
   const CACHE_MAX_ROUTES = 400; // soft cap; evicts oldest beyond this
-  const CACHE_MAX_BYTES = 4_500_000; // ~4.5 MB — under the localStorage limit
+  // Phase 46 — lowered from 4.5 MB. The per-origin localStorage budget
+  // is ~5 MB and three writers compete for it (route-stops snapshot,
+  // this planner cache, stop catalogue). At 4.5 MB the planner alone
+  // consumed ~90% of the quota, so every other write failed. 1.5 MB
+  // leaves room for the other two.
+  const CACHE_MAX_BYTES = 1_500_000; // ~1.5 MB — leaves room for the other caches
   let _cacheLoaded = false;
   let _cacheDirty = false;
   let _cacheSaveTimer = null;
@@ -167,13 +172,36 @@
         if (bytes > CACHE_MAX_BYTES) break;
         rs[k] = slim;
       }
+      // Phase 46 — the reverse index (`sr`) was previously written
+      // UNCAPPED, so the total payload could be ~2× the intended
+      // CACHE_MAX_BYTES and blow past the per-origin localStorage
+      // quota. The `rs` half above already bounds the route count, and
+      // the reverse index is derived from exactly those routes, so we
+      // only need to serialise entries for stops that actually appear
+      // in the persisted `rs` set. Anything else is re-derivable from
+      // `rs` at load time.
+      const persistedStops = new Set();
+      for (const arr of Object.values(rs)) {
+        for (const it of arr) persistedStops.add(it.s);
+      }
       const sr = {};
-      for (const [sid, set] of _stopRoutesCache) sr[sid] = Array.from(set);
+      for (const [sid, set] of _stopRoutesCache) {
+        if (!persistedStops.has(sid)) continue;
+        sr[sid] = Array.from(set);
+      }
       const payload = JSON.stringify({ v: 1, rs, sr });
       window.localStorage.setItem(CACHE_KEY, payload);
     } catch (e) {
-      // QuotaExceededError etc. — silently drop. The next warm start will
-      // simply re-fetch.
+      // QuotaExceededError etc. — the next warm start will simply
+      // re-fetch. Phase 46: log it instead of swallowing silently, so
+      // a regression here is visible without a profiler.
+      if (e && (e.name === 'QuotaExceededError' || e.code === 22)) {
+        console.warn(
+          `[buseta] localStorage quota exceeded writing "${CACHE_KEY}" — ` +
+            'the planner adjacency cache will not persist across reloads.',
+          e
+        );
+      }
     }
   }
 
