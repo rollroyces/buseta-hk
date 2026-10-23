@@ -1,7 +1,15 @@
-// @vitest-environment jsdom
-//
 // Tests for src/utils/debug-log.js — the production-aware debug
 // logger extracted in Phase 33.
+//
+// No DOM required — the module reads a single global flag
+// (`window.busetaDebug`) and the test only needs that object to
+// exist. It used to be tagged `@vitest-environment jsdom`, which meant
+// paying the jsdom boot for a test that never touches the DOM. The
+// `window` global is stubbed below instead.
+//
+// src/utils/debug-log.js guards with `typeof window !== 'undefined'`,
+// so the stub has to be installed BEFORE debugLog() is called — which
+// is what the beforeEach hook does.
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { debugLog } from '../../src/utils/debug-log.js';
@@ -11,15 +19,14 @@ describe('src/utils/debug-log.js', () => {
 
   beforeEach(() => {
     logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-    // Reset the flag before each test so they don't bleed into each
-    // other. delete (vs setting to undefined) makes the property
-    // actually missing — closer to the production default state.
-    delete window.busetaDebug;
+    // Minimal `window` stand-in. The module only reads
+    // `window.busetaDebug`; nothing else is needed.
+    globalThis.window = {};
   });
 
   afterEach(() => {
     logSpy.mockRestore();
-    delete window.busetaDebug;
+    delete globalThis.window;
   });
 
   describe('gate behavior', () => {
