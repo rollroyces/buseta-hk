@@ -295,6 +295,21 @@ href="#main-content">` joins the existing CSS class so the link
 
 ### Fixed
 
+- **Keyboard shortcuts were dead in production** (PR #53): Phase 41 added
+  `src/utils/keyboard-shortcuts.js` (270 lines), wired the dispatcher into
+  `app.js`, and shipped 31 passing unit tests — but `index.html` never
+  got the `<script src="src/utils/keyboard-shortcuts.js?v=1">` tag. The
+  boot code bailed silently via
+  `if (typeof busetaUtils.createKeyboardDispatcher !== 'function') return;`,
+  so `/` focus-search, the `g h/s/p/n` chords, the `s` save toggle and the
+  `?` help modal never mounted in a browser. The help modal also had no
+  CSS at all (`.kbd-help-*` was absent from `style.css`). Fixed by
+  adding the script tag and a full `.kbd-help-*` / `.kbd` stylesheet.
+  Guarded going forward by **`tests/unit/utils-wiring.test.js`** (4 cases)
+  — static analysis that asserts every `busetaUtils.<name>` referenced
+  from `app.js` / `planner.js` is exported by a module AND that module is
+  loaded by `index.html`. The test was verified to fail with the exact
+  diagnostic when the tag is removed.
 - **BUS_KMH drift** (PR #4): `BUS_KMH` was previously declared once in
   `app.js` and re-declared elsewhere — refactor surfaces the duplicate and
   the test catches it.
