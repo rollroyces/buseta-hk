@@ -1,7 +1,10 @@
-// @vitest-environment jsdom
-//
 // Tests for src/utils/trams.js — the Hong Kong Tramways stop-catalogue
 // helper extracted in Phase 38.
+//
+// No DOM required — the helper only fetches and JSON-parses, so this
+// suite runs in the default `node` environment. It used to be tagged
+// `@vitest-environment jsdom`, which meant paying the jsdom boot for a
+// test that never touches the DOM.
 //
 // The bundled assets/tram-stops.json is the canonical source today; the
 // fetch helper just JSON-parses it. We mock `globalThis.fetch` so the

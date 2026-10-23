@@ -1,4 +1,10 @@
-// @vitest-environment jsdom
+// Tests for src/utils/stop-view-summary.js.
+//
+// No DOM required — `summariseSoon` / `buildStopViewSummary` are pure
+// functions over plain objects, so this suite runs in the default
+// `node` environment. It used to be tagged `@vitest-environment
+// jsdom`, which meant paying the jsdom boot for a test that never
+// touches the DOM.
 import { describe, it, expect } from 'vitest';
 import {
   summariseSoon,
