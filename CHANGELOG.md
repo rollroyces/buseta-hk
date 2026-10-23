@@ -295,6 +295,42 @@ href="#main-content">` joins the existing CSS class so the link
 
 ### Fixed
 
+- **Service-worker cache versioning drifted, leaking a bucket per release**
+  (PR #55): the cleanup threshold in `sw.js`'s activate handler was a
+  SECOND hand-maintained literal (`parseInt(m[1], 10) < 65`) that had to
+  be bumped alongside `const CACHE = 'buseta-vN'`. It drifted repeatedly
+  — 44 while CACHE was v64, then 65 while CACHE was v66 — so every
+  release stranded one stale cache bucket (~700 KB each: the app shell
+  plus the 20 `src/utils` scripts the same-origin branch caches into the
+  version bucket). A year of releases wasted ~15 MB of the user's
+  origin quota. Worse, the offline navigate fallback used a global
+  `caches.match('/index.html')`, which searches EVERY bucket in
+  creation order — so an offline user could be served an ancient
+  `index.html` from the oldest leaked bucket. Fixed by deriving both
+  from one `const CACHE_VERSION` and scoping the same-origin + navigate
+  lookups to the current bucket.
+- **The shell precache was written but never served** (PR #55): `SHELL`
+  stored `/app.js` and `/style.css` WITHOUT their `?v=` query string,
+  but the page requests `/app.js?v=67`. The same-origin branch used an
+  exact-match `caches.match(req)`, so the precached copies were written
+  on install and then never served — the offline path only worked by
+  accident, via opportunistic caching. Fixed with
+  `cache.match(req, { ignoreSearch: true })`. `SHELL` now also lists
+  all 20 `src/utils/*.js` modules, which are part of the app shell:
+  without them an offline boot has no `busetaUtils.*` and every view
+  that calls a helper breaks.
+- **`tests/unit/sw-shell.test.js`** (PR #55, new, 10 cases): asserts the
+  cleanup threshold is derived from `CACHE_VERSION` (no second
+  literal), that `SHELL` covers every `src/utils` module the page loads,
+  and that the same-origin/navigate lookups are bucket-scoped with
+  `ignoreSearch`. Verified to fail with 8 specific diagnostics against
+  the pre-Phase-47 `sw.js`.
+- **`tests/unit/helpers/strip-js-comments.js`** (PR #55, new): shared
+  comment-stripping helper. A naive `/\/\*[\s\S]*?\*\//g` mis-fires
+  when a LINE comment contains `/*` — e.g. sw.js's
+  `// The \`src/utils/*.js\` modules are included…` — and swallows
+  real code in between. Replaced with a character scanner that tracks
+  line comments, block comments, and string literals.
 - **localStorage quota made the whole cache layer dead** (PR #54): three
   writers competed for the ~5 MB per-origin localStorage budget — the
   route-stops snapshot (`buseta.route.stops`), the planner adjacency cache

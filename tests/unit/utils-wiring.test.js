@@ -35,6 +35,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve as pathResolve } from 'node:path';
+import { stripJsComments } from './helpers/strip-js-comments.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -44,15 +45,15 @@ const UTILS_DIR = pathResolve(ROOT, 'src/utils');
 
 /**
  * Strip JS comments so a commented-out `busetaUtils.foo` reference doesn't
- * count as a live dependency. Handles `//` line comments and block comments
- * (slash-star ... star-slash). Deliberately simple — it doesn't need to be a
- * full parser, only to not trip over the codebase's own commentary.
+ * count as a live dependency. Uses the shared character-scanner helper
+ * (a naive block-comment regex mis-fires when a line comment contains
+ * `/*`, e.g. `src/utils/*.js`).
  *
  * @param {string} src
  * @returns {string}
  */
 function stripComments(src) {
-  return src.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+  return stripJsComments(src);
 }
 
 /**

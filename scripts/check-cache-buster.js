@@ -61,6 +61,15 @@ function getLiveQuery(name, indexHtml) {
 }
 
 function getSwCache(swJs) {
+  // Phase 47 — sw.js now keeps the version in ONE place:
+  //
+  //   const CACHE_VERSION = 69;
+  //   const CACHE = `buseta-v${CACHE_VERSION}`;
+  //
+  // Prefer CACHE_VERSION; fall back to the older literal form so an
+  // in-flight branch that hasn't been migrated yet still reports.
+  const version = extractFirst(/^const\s+CACHE_VERSION\s*=\s*(\d+)\s*;/m, swJs);
+  if (version !== null) return version;
   return extractFirst(/^const\s+CACHE\s*=\s*['"]buseta-v(\d+)['"]/m, swJs);
 }
 
