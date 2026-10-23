@@ -295,6 +295,22 @@ href="#main-content">` joins the existing CSS class so the link
 
 ### Fixed
 
+- **CI could go green while silently skipping test files** (PR #56): when a
+  test file's worker fails to start, Vitest reports it as an _unhandled
+  error_ rather than a test failure — and the process still exits 0. The
+  suite prints `Test Files 21 passed (21) / Tests 322 passed (322) /
+Errors 4 errors` and `npm run check` goes green while quietly running
+  fewer tests than it should. This has bitten the project three times:
+  Node 20 + jsdom 30 (297 of 350 ran), Vitest 5 + jsdom 30 (322 of 376
+  ran), and Vitest 5 alone. Adds **`scripts/check-test-count.js`** +
+  **`scripts/expected-test-count.json`**: `npm test` now writes a JSON
+  report and the guard asserts the expected number of test FILES and
+  test CASES actually ran, failing the build when either is short. A
+  file whose worker never booted is simply absent from `testResults` —
+  it never shows up as "failed", which is exactly why this needed its
+  own signal. Verified: with the dependency bump that triggers the
+  failure the guard reports `only 322 test case(s) ran, expected 376 —
+54 case(s) did not execute` and exits 1.
 - **Service-worker cache versioning drifted, leaking a bucket per release**
   (PR #55): the cleanup threshold in `sw.js`'s activate handler was a
   SECOND hand-maintained literal (`parseInt(m[1], 10) < 65`) that had to

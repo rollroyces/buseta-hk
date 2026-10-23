@@ -1,0 +1,5 @@
+{
+  "_comment": "Expected vitest suite size. Bump these in the SAME commit that adds the tests. `scripts/check-test-count.js` fails the build when fewer files/cases actually ran — which is how a jsdom worker that never boots can otherwise make CI green while silently skipping tests.",
+  "testFiles": 25,
+  "testCases": 376
+}
