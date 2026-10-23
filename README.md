@@ -99,6 +99,7 @@ See [CHANGELOG.md](./CHANGELOG.md) for the full per-PR release history
 | [docs/push-notifications.md](./docs/push-notifications.md)       | Web Push backend wire-up (VAPID keypair, ingest endpoint, payload schema) |
 | [docs/performance.md](./docs/performance.md)                     | Lazy-load strategy for the stop-coordinate catalogue                      |
 | [docs/new-operator-research.md](./docs/new-operator-research.md) | New-operator backlog: HK Tramways, Star Ferry, Peak Tram                  |
+| [docs/trams-phase-40-design.md](./docs/trams-phase-40-design.md) | Tramways UI integration plan (Phase 40 rescope — Option A path)           |
 
 ## License
 

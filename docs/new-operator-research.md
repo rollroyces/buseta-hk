@@ -133,9 +133,10 @@ service, ~20 minute frequency.
 
 ### Public API
 
-**None**. Star Ferry's schedule + star + boat arrival info is only
-available on their website (`starferry.com.hk`) as HTML. There
-is no JSON endpoint, no documented API, no public data feed.
+**None directly browser-fetchable**. Star Ferry's schedule +
+star + boat arrival info is only available on their website
+(`starferry.com.hk`) as HTML. There is no JSON endpoint, no
+documented API, no public data feed accessible from JavaScript.
 
 ### Integration feasibility
 
@@ -185,6 +186,162 @@ the LRT already does for some routes).
 Defer indefinitely. The Peak Tram's single-route, ~15-min
 frequency makes real-time ETA low-value anyway — users don't
 need it for trip planning the way they do for buses.
+
+---
+
+## Phase 37½ update — Star Ferry / Peak Tram discovery (2026-10-11)
+
+> Companion note to the Phase 37 doc. The maintainer re-checked
+> `data.gov.hk` for structured Star Ferry + Peak Tram datasets
+> before declaring the candidates permanently infeasible. The
+> investigation found that structured data **does exist** for all
+> three operators the Phase 37 doc flagged — but it's behind a
+> CloudFront auth gate that prevents direct browser-side fetches.
+> This closes the "Star Ferry / Peak Tram not feasible" finding
+> with a more accurate picture: the data is available, the
+> transport is gated, but a bundled-snapshot approach (same model
+> as Phase 38's `assets/tram-stops.json`) is viable.
+
+### What was investigated
+
+The Phase 37 doc only considered each operator's own website
+(`starferry.com.hk`, `thepeaktram.com.hk`). The maintainer
+checked `data.gov.hk` for any official structured datasets
+covering these operators.
+
+### Findings
+
+**1. Star Ferry has an official data.gov.hk dataset.**
+
+- Dataset: <https://data.gov.hk/en-data/dataset/starferry-starferry-ferry-service-timetables-and-fare-tables-of-star-ferry>
+- Data provider: The "Star" Ferry Company, Limited (not Transport Department)
+- Format: CSV + XLSX (3 locales × 12 routes = 36 individual files)
+- Coverage: Central/TST timetable + fare table, Wan Chai/TST
+  timetable + fare table — all in English, 繁體中文, 简体中文
+- Last updated: 02/06/2026 (4 months ago — relatively fresh)
+- CDN: <https://www.starferry.com.hk/sites/default/files/upload/open_data/csv/...>
+
+**2. Peak Tram + Ferry + Tram are in the Transport Department's
+aggregated routes-and-fares dataset.**
+
+- Dataset: <https://data.gov.hk/en-data/dataset/hk-td-tis_3-routes-and-fares-of-public-transport>
+  (XML/CSV) / `hk-td-tis_23-routes-fares-geojson` (GeoJSON) /
+  `hk-td-tis_24-routes-fares-kml` (KML)
+- Data provider: Transport Department (TD)
+- Format: CSV / XML / GeoJSON / KML (depending on variant)
+- Frequency: biweekly (so the data is regularly refreshed)
+- Coverage: route list + stop sequence + section fare + stop
+  coordinates for ferry, peak tram, tram (in addition to bus,
+  GMB)
+
+**3. All three operators' direct CDN paths are blocked.**
+
+```
+$ curl -sS -i 'https://www.starferry.com.hk/sites/default/files/upload/open_data/csv/ferry_sf_central_tsimshatsui_timetable_eng.csv'
+curl: (52) Empty reply from server     # Star Ferry CDN is broken
+
+$ curl -sS -i 'https://static.data.gov.hk/td/routes-fares-geojson/Route_PT_PeakTram.json'
+HTTP/1.1 403 Forbidden                  # CloudFront denies programmatic access
+
+$ curl -sS -i -A "Mozilla/5.0 ..." 'https://static.data.gov.hk/td/routes-fares-geojson/Route_PT_Tram.json'
+HTTP/1.1 403 Forbidden                  # Same — User-Agent doesn't help
+
+$ curl -sS -i 'https://static.data.gov.hk/td/routes-and-fares/ROUTE_PEAK_TRAM.csv'
+HTTP/1.1 403 Forbidden                  # Same — TD direct CSV path also gated
+
+$ curl -sS 'https://static.data.gov.hk/td/routes-and-fares/ROUTE_TRAM.csv'
+ROUTE_ID,CHANGE                         # Empty body (just header, no rows)
+
+$ curl -sS -i 'https://portal.csdi.gov.hk/api/v1/dataset/?q=ferry'
+HTTP/1.1 301 Moved Permanently          # CSDI Portal is JS-driven, not a REST API
+```
+
+Same EOL-software / auth-gate pattern as the Phase 38½ finding
+for Trams — data exists, runtime fetch doesn't.
+
+### Why this changes the Phase 37 conclusion
+
+The Phase 37 doc concluded:
+
+> **Star Ferry** — Not feasible without a policy decision.
+> **Peak Tram** — Not feasible without a policy decision.
+
+Both were deemed HTML-only. The new finding shows both have
+**structured public data published on data.gov.hk** — the data
+exists, it just isn't accessible via direct runtime fetch.
+
+This doesn't make runtime integration possible (same CORS / auth
+issues as Phase 38½'s Trams finding), but it **does** open a
+bundled-snapshot path:
+
+1. Maintainer fetches the CSV / XLSX / GeoJSON once via the
+   `data.gov.hk` web UI (authenticated browser session, the
+   human-friendly path).
+2. Converts to JSON shape mirroring `assets/mtr-stops.json` /
+   `assets/tram-stops.json`.
+3. Commits as `assets/star-ferry-{routes,pi-timetables}.json` +
+   `assets/peak-tram-{routes,pi-stops}.json`.
+4. App consumes the bundled JSON exactly like it consumes the
+   Phase 38 tram stub — same `fetchStops()` / `fetchRoutes()`
+   pattern, shape-validated, null on failure, cache-busted per
+   `docs/cache-strategy.md`.
+
+### Bonus: TD's Tram data can cross-validate Phase 38's stub
+
+The Transport Department's GeoJSON Tram dataset (if accessible
+via the web UI) lists official tram stop coordinates. The Phase 38
+bundled `assets/tram-stops.json` was curated from the published
+track layout. A future PR can:
+
+1. Fetch the TD Tram GeoJSON via the web UI.
+2. Cross-check the 24 curated stop coordinates against TD's
+   official positions.
+3. Either confirm the curation or expand the bundled set with
+   stops we missed (e.g., the Admiralty mid-block stops, the Wan
+   Chai mid-block stops that Phase 40's design doc flagged as a
+   gap).
+
+This is a Phase 42+ cleanup item, not a Phase 38 follow-up
+(shipping the bundled stub now is the right call regardless of
+whether TD's data is reachable).
+
+### Updated feasibility matrix
+
+| Operator   | Phase 37 verdict         | Phase 37½ verdict                            | Path forward                                                                                                                                                   |
+| ---------- | ------------------------ | -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Star Ferry | Not feasible (HTML-only) | **Feasible as bundled snapshot**             | One-time data.gov.hk fetch → `assets/star-ferry-*.json` → same pattern as Phase 38. Phase 42+ candidate.                                                       |
+| Peak Tram  | Not feasible (HTML-only) | **Feasible as bundled snapshot**             | One-time data.gov.hk fetch → `assets/peak-tram-*.json` → same pattern. Phase 43+ candidate (lower priority — single-route, ~15-min frequency, low user value). |
+| Tram       | Best candidate           | Best candidate (already shipped in Phase 38) | ✓ Done                                                                                                                                                         |
+
+### What this update does NOT do
+
+- Does not modify `app.js`, `planner.js`, `index.html`, `sw.js`,
+  or any `src/utils/*.js`.
+- Does not bump cache-busters (docs only).
+- Does not actually fetch the Star Ferry / Peak Tram datasets —
+  that's a Phase 42+ implementation PR after the maintainer
+  weighs in on whether bundled-snapshot support for non-rail
+  operators is desirable.
+- Does not propose HTML scraping as a workaround. The data.gov.hk
+  CSV / GeoJSON path is the canonical source.
+
+### Probe artifact (curl session, verbatim)
+
+See the "Findings" section above. The 5 distinct probe failures
+establish that direct runtime access is blocked, matching the
+Phase 38½ Trams pattern.
+
+### References
+
+- Original Phase 37 research (this doc, above) — proposed the
+  HTML-only conclusion that's now superseded
+- [`docs/new-operator-research.md`](./new-operator-research.md)
+  (Phase 38½ section) — same auth-gate pattern for Trams
+- data.gov.hk Star Ferry dataset — see link above
+- data.gov.hk Transport Department routes/fares dataset — see
+  link above
+- `assets/tram-stops.json` — the bundled-snapshot pattern that
+  Star Ferry + Peak Tram would mirror
 
 ## Decision matrix for the maintainer
 
@@ -238,3 +395,186 @@ been using since #1.
 - `docs/cache-strategy.md` — discipline for the new asset /
   cache-buster knobs
 - `CONTRIBUTING.md` — "what won't be merged" rules
+
+---
+
+## Phase 38½ update — live endpoint probe (2026-10-11)
+
+> Companion note to the Phase 37 research. Before opening a Phase 39
+> "live `fetchTramETA(stopCode)` helper" PR, the maintainer re-probed
+> the live Tramways endpoint to validate the assumptions in the
+> original research. This section documents what was found and how it
+> reshapes the original 4-PR arc.
+
+### Probe methodology
+
+```
+date:           Sat, 10 Oct 2026 18:42–18:44 UTC (= 02:43–02:44 HKT)
+tool:           curl 7.x via HTTPS
+origin:         direct internet (no browser, no proxy)
+probed stops:   KTT (terminus), SHW, CEN, WAC, CWB, TIH, QUB, DGC, 92W
+probed paths:   /nextTram/geteat.php?stop_code=<code>
+                /js/googleMap.js (the JS file the hongkong-trams
+                npm wrapper evals to extract stop data)
+```
+
+### Findings
+
+1. **Server is alive but barely functional.**
+   `http://hktramways.com/nextTram/geteat.php?stop_code=KTT` returns
+   HTTP 200 OK with body `<?xml version="1.0" encoding="utf-8"?><root/>`
+   (i.e. an empty XML envelope — no `<metadata>` items, no ETAs).
+   Server header: `Apache/2.2.31 + mod_ssl/2.2.31 + OpenSSL/1.0.1e-fips
+   - PHP/5.3.26`. **All four components are end-of-life software**
+     (Apache 2.2 EOL 2017, OpenSSL 1.0.1 EOL 2016 — pre-Heartbleed-patch
+     version, PHP 5.3 EOL 2014). The combination has multiple known
+     unpatched CVEs.
+
+2. **The endpoint is empty for every probed stop.**
+   `SHW`, `CEN`, `WAC`, `CWB`, `TIH`, `QUB`, `DGC`, `92W` all either
+   time out (10 s) or return the same empty `<root/>` envelope. The
+   happy-path XML from the `hongkong-trams` npm wrapper (with
+   `<metadata eat=… eta=… is_arrived=… is_last_tram=…>` records)
+   never appears in any of the responses. **The endpoint is either
+   abandoned, rate-limited to a single trusted IP, or has been broken
+   for a while and no one noticed.**
+
+3. **No CORS headers.**
+   `OPTIONS` preflight returns 200 OK but **no
+   `Access-Control-Allow-Origin` header is set**. A browser-side
+   `fetch('http://hktramways.com/nextTram/...')` from
+   `rollroyces.github.io` would be blocked by the browser's same-
+   origin policy even if the endpoint did return data. The
+   `hongkong-trams` npm wrapper works because Node has no CORS.
+
+4. **Mixed Content (HTTP vs HTTPS).**
+   `hktramways.com` redirects `http://` → `https://` for the root page
+   (302 → `Location: https://hktramways.com/`). But the data endpoints
+   themselves (`/nextTram/geteat.php`, `/js/googleMap.js`) are served
+   over plain HTTP. Our deployed app is HTTPS (GitHub Pages); a
+   `fetch()` to plain HTTP would be blocked by the browser's mixed-
+   content policy in addition to CORS.
+
+5. **`/js/googleMap.js` is still served.**
+   `Last-Modified: Thu, 04 Mar 2021 04:46:15 GMT` — three years stale
+   on a file that the npm wrapper `eval()`s for stop data. If we ever
+   did want to populate `assets/tram-stops.json` from the upstream,
+   this is the file to scrape. But scraping it once and committing
+   the result as JSON is already what Phase 38's bundled catalogue
+   does — there's no incremental value to a runtime scrape.
+
+### Why Phase 39 as-planned is not viable
+
+The Phase 37 doc proposed Phase 39 as "live `fetchTramETA(stopCode)`
+helper + tests" — a layered enhancement on top of the Phase 38
+bundled stub. The probe invalidates this:
+
+- The live endpoint returns no data for any probed stop (empty
+  `<root/>` or 10-second timeout). A live helper would always return
+  `[]` — no better than the bundled stub already in place, and
+  worse because of the latency.
+- Even if the endpoint came back to life, CORS + mixed-content rules
+  prevent browser-side fetches. A CORS proxy (e.g. Cloudflare Worker,
+  GitHub Action, allorigins.win) is the only path, and each adds an
+  ops surface the maintainer can't responsibly maintain.
+- The endpoint's server runs EOL software with known unpatched CVEs.
+  Building a feature on top of it means inheriting the risk — and
+  when the upstream goes down (more a question of when than if),
+  the feature silently breaks.
+
+### Rescope matrix
+
+The original 4-PR arc (Phase 38 bundled → Phase 39 live → Phase 40 UI
+→ Phase 41 route catalogue) had Phase 39 as the technical-risk leg.
+With Phase 39 unviable, three viable rescopes exist:
+
+| Option                               | What changes                                                                                                                                                                                                                 | Pros                                                                                  | Cons                                                                                                                                               |
+| ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **A. Drop live fetch, skip to UI**   | Drop Phase 39. Phase 40 (UI integration) consumes the Phase 38 bundled stub directly — operator filter chip, tram-stop card variant, etc. Phase 41 (route catalogue) follows.                                                | Smallest surface, no CORS proxy, no EOL dependency, Phase 38 ships user value sooner. | No live ETAs — UI shows static "next tram not available" message (or relies on the bundled stop list as a directory).                              |
+| **B. Add a thin CORS-proxy + cache** | Phase 39 becomes "GitHub Actions cron that scrapes the endpoint server-side every 5 min and commits a tiny `assets/tram-eta-cache.json` snapshot to the repo". Browser reads the bundled snapshot, gets stale-but-real ETAs. | Real-ish data, browser stays pure, no runtime CORS issue.                             | Adds a backend-ish surface (cron + repo write), adds a CI secret for the push, and the upstream is still EOL — when it dies, so does the snapshot. |
+| **C. Defer the entire Trams arc**    | Pause. Re-evaluate in 6 months when/if the upstream stabilises.                                                                                                                                                              | Zero risk; respects the user's gate.                                                  | No new feature this round; the bundled stub already shipped in Phase 38 ships with no consumer.                                                    |
+
+### Recommendation: Option A
+
+Drop Phase 39 (live fetch) entirely. Phase 38's bundled stub becomes
+the always-on data source. Phase 40's UI integration becomes the next
+PR — it consumes the bundled stub and surfaces trams as a directory
+operator (similar to how MTR renders but without live ETAs, since
+none are available).
+
+If the upstream comes back to life later (and someone notices via the
+hamtram.com.hk homepage), a future maintainer can revive Phase 39
+under the original spec — the Phase 38 stub is forward-compatible
+with that path.
+
+### Updated arc if Option A is accepted
+
+1. **Phase 38** (already shipped via PR #39): bundled
+   `assets/tram-stops.json` + i18n STRINGS + `src/utils/trams.js`
+   stub. ✓
+2. **Phase 39** _(new)_: **dropped** per the rescope above.
+3. **Phase 40** _(next)_: trams-aware UI integration. Operator filter
+   chip on the home view, "tram stop" card variant in the stop view,
+   route-style links to nearby tram stops via the existing
+   `routesByStop` pipeline. Consumes the Phase 38 bundled stub.
+4. **Phase 41** _(deferred)_: route catalogue + tram-route card.
+   Lower priority without live ETAs to anchor the user journey;
+   revisit only if/when the upstream is revived.
+
+### What this update does NOT do
+
+- Does not modify `app.js`, `planner.js`, `index.html`, `sw.js`, or
+  any `src/utils/*.js`.
+- Does not bump cache-busters (docs only).
+- Does not add tests (no code change).
+- Does not propose a specific implementation for Phase 40 — that's
+  its own PR after the maintainer accepts the Option A rescope.
+
+### Probe artifact (curl session, verbatim)
+
+```
+$ curl -sS -i 'http://hktramways.com/nextTram/geteat.php?stop_code=KTT'
+HTTP/1.1 200 OK
+Server: Apache/2.2.31 (Unix) mod_ssl/2.2.31 OpenSSL/1.0.1e-fips DAV/2 PHP/5.3.26
+X-Powered-By: PHP/5.3.26
+Content-Type: text/html
+Content-Length: 47
+
+<?xml version="1.0" encoding="utf-8"?>
+<root/>
+
+$ curl -sS -i -X OPTIONS -H "Origin: https://rollroyces.github.io" \
+        -H "Access-Control-Request-Method: GET" \
+        'http://hktramways.com/nextTram/geteat.php?stop_code=SHW'
+HTTP/1.1 200 OK
+Server: Apache/2.2.31 (Unix) mod_ssl/2.2.31 OpenSSL/1.0.1e-fips DAV/2 PHP/5.3.26
+X-Powered-By: PHP/5.3.26
+Content-Type: text/html
+Content-Length: 47
+
+<?xml version="1.0" encoding="utf-8"?>
+<root/>
+
+$ curl -sS -i 'https://hktramways.com/nextTram/geteat.php?stop_code=SHW'
+HTTP/1.1 200 OK
+# (same empty body — HTTPS works but CORS still absent)
+
+$ curl -sS -i 'http://hktramways.com/js/googleMap.js'
+HTTP/1.1 200 OK
+Last-Modified: Thu, 04 Mar 2021 04:46:15 GMT
+Content-Length: 23090
+Content-Type: application/javascript
+
+var map;
+/*var markerArray = [ ... ]*/     # (eval-target for hongkong-trams)
+```
+
+### References
+
+- Original Phase 37 research (this doc, above) — proposed the 4-PR arc
+- `hongkong-trams` npm wrapper — <https://www.npmjs.com/package/hongkong-trams>
+  (its `index.js` source confirms the XML-on-`/nextTram/geteat.php`
+  shape; the README's "all methods return JSON" claim refers to the
+  wrapper's caller-facing API, not the upstream wire format)
+- Phase 38 bundled stub (PR #39) — `assets/tram-stops.json` +
+  `src/utils/trams.js`
